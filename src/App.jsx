@@ -1,4 +1,18 @@
 import { useState, useEffect, useRef } from "react";
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDepDBs1Oq6KpYrYGfvmvckXn94ixZcZb4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+  storageBucket: "gantt-marketing.firebasestorage.app",
+  messagingSenderId: "966398251503",
+  appId: "1:966398251503:web:d6a2173863f9ca1cfd261a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const PRIORITY = {
   高: { label: "🔴 高", color: "#ef4444", bg: "rgba(239,68,68,0.13)" },
@@ -77,21 +91,26 @@ export default function GanttMarketing() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await window.storage.get("gantt2-tasks");
-        if (r?.value) setTasks(JSON.parse(r.value));
-        const rm = await window.storage.get("gantt2-view");
-        if (rm?.value) { const {y,m}=JSON.parse(rm.value); setViewYear(y); setViewMonth(m); }
-      } catch(e) {}
+        const snap = await getDoc(doc(db, "gantt", "data"));
+        if (snap.exists()) {
+          const d = snap.data();
+          if (d.tasks) setTasks(JSON.parse(d.tasks));
+          if (d.view) { const {y,m}=JSON.parse(d.view); setViewYear(y); setViewMonth(m); }
+        }
+      } catch(e) { console.error(e); }
       setLoaded(true);
     })();
   }, []);
 
   const save = async (t, y, m) => {
     try {
-      await window.storage.set("gantt2-tasks", JSON.stringify(t));
-      await window.storage.set("gantt2-view", JSON.stringify({y,m}));
+      await setDoc(doc(db, "gantt", "data"), {
+        tasks: JSON.stringify(t),
+        view: JSON.stringify({y,m}),
+        updatedAt: new Date().toISOString()
+      });
       setSaveMsg("✓ 已儲存"); setTimeout(()=>setSaveMsg(""), 2000);
-    } catch(e) { setSaveMsg("儲存失敗"); }
+    } catch(e) { setSaveMsg("儲存失敗"); console.error(e); }
   };
   const updateTasks = (nt) => { setTasks(nt); save(nt, viewYear, viewMonth); };
 
