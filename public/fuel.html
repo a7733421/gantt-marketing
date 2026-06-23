@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出差油錢計算 — Team Gantt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f6f8;
+  --surface:#ffffff;
+  --surface2:#f0f1f4;
+  --surface3:#e8eaf0;
+  --border:#e4e6eb;
+  --border2:#d0d3db;
+  --text:#1a1d23;
+  --text2:#5a5f6e;
+  --text3:#9099aa;
+  --accent:#4f6ef7;
+  --accent-dim:#eef1fe;
+  --orange:#e8622a;
+  --orange-dim:#fdf0eb;
+  --green:#2e9e6b;
+  --green-dim:#ebf7f2;
+  --blue:#2196f3;
+  --blue-dim:#e8f4fd;
+  --red:#e53935;
+  --radius:12px;
+  --radius-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.05);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px}
+
+nav{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:0 1.5rem;height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.nav-left{display:flex;align-items:center;gap:.875rem}
+.nav-logo{font-size:13px;font-weight:700;color:var(--text2);text-decoration:none;letter-spacing:.04em}
+.nav-logo span{color:var(--accent)}
+.nav-divider{width:1px;height:16px;background:var(--border2)}
+.nav-title{font-size:13px;font-weight:600;color:var(--text)}
+
+.price-bar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:.75rem 1.5rem;display:flex;align-items:center;gap:.875rem;flex-wrap:wrap;
+}
+.price-label{font-size:12px;color:var(--text3);font-weight:500}
+.price-value{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;color:var(--orange)}
+.price-unit{font-size:12px;color:var(--text3)}
+.price-updated{font-size:11px;color:var(--text3);margin-left:auto}
+.fetch-oil-btn{
+  display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;
+  padding:6px 14px;border-radius:20px;
+  border:1px solid var(--border2);background:var(--surface2);
+  color:var(--text2);cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.fetch-oil-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.fetch-oil-btn.loading{opacity:.6;pointer-events:none}
+
+.main{display:grid;grid-template-columns:380px 1fr;height:calc(100vh - 52px - 49px)}
+@media(max-width:800px){.main{grid-template-columns:1fr;height:auto}}
+
+/* LEFT FORM */
+.form-panel{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:1.25rem}
+.panel-tabs{display:flex;gap:4px;margin-bottom:1.25rem;background:var(--surface2);border-radius:var(--radius-sm);padding:3px}
+.panel-tab{flex:1;padding:7px;font-size:12px;font-weight:500;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;border-radius:6px}
+.panel-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+
+.form-section{display:none}.form-section.active{display:block}
+.field-group{margin-bottom:.875rem}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.875rem}
+label{display:block;font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:500;letter-spacing:.03em}
+input,select{
+  width:100%;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;color:var(--text);
+  font-family:'Inter',sans-serif;transition:border-color .15s;outline:none;
+}
+input:focus,select:focus{border-color:var(--accent);background:var(--surface)}
+select option{background:var(--surface)}
+
+.car-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.875rem}
+.car-type-btn{
+  padding:10px 6px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--border);background:var(--surface2);
+  color:var(--text3);cursor:pointer;font-size:11px;font-weight:600;
+  text-align:center;transition:all .15s;line-height:1.4;
+}
+.car-type-btn .icon{font-size:20px;display:block;margin-bottom:4px}
+.car-type-btn:hover{border-color:var(--border2);color:var(--text2);background:var(--surface)}
+.car-type-btn.active[data-type="private"]{border-color:var(--orange);background:var(--orange-dim);color:var(--orange)}
+.car-type-btn.active[data-type="rent"]{border-color:var(--blue);background:var(--blue-dim);color:var(--blue)}
+.car-type-btn.active[data-type="company"]{border-color:var(--green);background:var(--green-dim);color:var(--green)}
+
+.rule-hint{
+  border-radius:var(--radius-sm);padding:8px 12px;
+  font-size:12px;color:var(--text2);margin-bottom:.875rem;
+  line-height:1.6;border:1.5px solid;
+}
+.rule-hint.private{border-color:#fdd0bb;background:var(--orange-dim)}
+.rule-hint.rent{border-color:#bbdaf9;background:var(--blue-dim)}
+.rule-hint.company{border-color:#b2e5cf;background:var(--green-dim)}
+
+.section-title{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.04em;margin-bottom:.5rem;margin-top:.25rem}
+
+.addr-wrap{position:relative;margin-bottom:.5rem}
+.addr-wrap input{padding-right:36px}
+.addr-swap-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px}
+.addr-swap-btn:hover{color:var(--accent)}
+
+.ai-btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;padding:8px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--accent);background:var(--accent-dim);
+  color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;
+  transition:all .15s;margin-bottom:.5rem;
+}
+.ai-btn:hover{background:var(--accent);color:#fff}
+.ai-btn.loading{opacity:.6;pointer-events:none}
+
+.maps-btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;padding:7px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--border2);background:transparent;
+  color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;
+  transition:all .15s;margin-bottom:.625rem;
+}
+.maps-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-dim)}
+.km-hint{font-size:11px;color:var(--text3);margin-bottom:.75rem;min-height:16px;line-height:1.5}
+
+.result-box{
+  background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:1rem;margin-bottom:.875rem;
+}
+.result-amount{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:var(--text3);margin-bottom:3px}
+.result-amount.has-value{color:var(--accent)}
+.result-formula{font-size:11px;color:var(--text3);line-height:1.6}
+
+.add-btn{
+  width:100%;padding:10px;border-radius:var(--radius-sm);
+  border:none;background:var(--accent);color:#fff;
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:opacity .15s, background .15s;letter-spacing:.02em;
+}
+.add-btn:hover{background:#3a5ce0}
+
+/* RIGHT LIST */
+.list-panel{background:var(--bg);overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column}
+.list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.list-title{font-size:13px;font-weight:600;color:var(--text2)}
+.list-actions{display:flex;gap:.5rem}
+.icon-btn{
+  padding:6px 12px;border-radius:20px;
+  border:1px solid var(--border2);background:var(--surface);
+  color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;
+  transition:all .15s;box-shadow:var(--shadow);
+}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+.trip-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1rem;margin-bottom:.625rem;
+  box-shadow:var(--shadow);transition:box-shadow .15s,border-color .15s;
+}
+.trip-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.08);border-color:var(--border2)}
+.trip-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.5rem}
+.trip-meta{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.trip-date{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;font-weight:500}
+.trip-tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;letter-spacing:.03em}
+.tag-private{background:var(--orange-dim);color:var(--orange)}
+.tag-rent{background:var(--blue-dim);color:var(--blue)}
+.tag-company{background:var(--green-dim);color:var(--green)}
+.trip-amount{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;color:var(--accent)}
+.trip-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.trip-sub{font-size:11px;color:var(--text3);margin-bottom:.5rem}
+.trip-route{font-size:11px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:5px 8px;margin-bottom:.5rem;line-height:1.5}
+.trip-footer{display:flex;align-items:center;justify-content:space-between}
+.trip-km{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 4px;transition:color .15s}
+.del-btn:hover{color:var(--red)}
+
+.summary-bar{
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:.75rem 1.5rem;display:flex;align-items:center;
+  justify-content:space-between;gap:1rem;flex-wrap:wrap;
+  box-shadow:0 -1px 4px rgba(0,0,0,.04);
+}
+.summary-item{text-align:center}
+.summary-num{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--text)}
+.summary-lbl{font-size:10px;color:var(--text3);margin-top:2px;letter-spacing:.04em;text-transform:uppercase}
+
+.empty{text-align:center;padding:3rem 1rem;color:var(--text3)}
+.empty-icon{font-size:2rem;margin-bottom:.75rem;opacity:.5}
+.empty-text{font-size:13px;line-height:1.7}
+
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1rem}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem;text-align:center}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px}
+.stat-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;color:var(--text3);font-weight:600;padding:7px 8px;border-bottom:1.5px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+td{padding:9px 8px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(10px);background:var(--text);border-radius:var(--radius);padding:10px 18px;font-size:13px;color:#fff;opacity:0;transition:all .25s;z-index:999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a class="nav-logo" href="home.html">← <span>TEAM</span> GANTT</a>
+    <div class="nav-divider"></div>
+    <span class="nav-title">出差油錢計算</span>
+  </div>
+</nav>
+
+<div class="price-bar">
+  <span class="price-label">95無鉛汽油牌價</span>
+  <span class="price-value" id="price-val">33.9</span>
+  <span class="price-unit">元/公升</span>
+  <span class="price-updated" id="price-updated">2026/6/15 中油公告</span>
+  <button class="fetch-oil-btn" id="fetch-oil-btn" onclick="fetchOilPrice()">
+    <span class="spinner" style="display:none" id="oil-spinner"></span>
+    <span id="oil-btn-text">↻ 自動抓取最新油價</span>
+  </button>
+</div>
+
+<div class="main">
+  <div class="form-panel">
+    <div class="panel-tabs">
+      <button class="panel-tab active" onclick="switchFormTab('form')">新增行程</button>
+      <button class="panel-tab" onclick="switchFormTab('stats')">人員統計</button>
+    </div>
+
+    <div class="form-section active" id="form-tab">
+      <div class="field-row">
+        <div><label>姓名</label><input type="text" id="f-name" placeholder="王小明"></div>
+        <div><label>部門</label><input type="text" id="f-dept" placeholder="業務部"></div>
+      </div>
+      <div class="field-row">
+        <div><label>日期</label><input type="date" id="f-date"></div>
+        <div><label>客戶名稱</label><input type="text" id="f-customer" placeholder="XX公司"></div>
+      </div>
+      <div class="field-group">
+        <label>拜訪目的</label>
+        <input type="text" id="f-purpose" placeholder="業務拜訪、簽約、報價...">
+      </div>
+
+      <label>車輛類型</label>
+      <div class="car-type-grid">
+        <button class="car-type-btn active" data-type="private" onclick="selectCar('private')"><span class="icon">🚗</span>私家車</button>
+        <button class="car-type-btn" data-type="rent" onclick="selectCar('rent')"><span class="icon">🚙</span>租車</button>
+        <button class="car-type-btn" data-type="company" onclick="selectCar('company')"><span class="icon">🏢</span>公司車</button>
+      </div>
+      <div class="rule-hint private" id="rule-hint">固定補助 <strong>4 元/km</strong>，補貼員工使用自有車輛</div>
+
+      <div class="section-title">行程路線</div>
+      <div class="addr-wrap">
+        <input type="text" id="f-from" value="宜蘭縣羅東鎮倉前路3號">
+        <button class="addr-swap-btn" onclick="swapAddr()">⇅</button>
+      </div>
+      <div class="addr-wrap">
+        <input type="text" id="f-to" placeholder="目的地（地址或地點名稱）">
+      </div>
+      <button class="ai-btn" id="ai-km-btn" onclick="calcDistanceAI()">
+        <span class="spinner" style="display:none" id="km-spinner"></span>
+        <span id="km-btn-text">✦ AI 自動計算公里數</span>
+      </button>
+      <button class="maps-btn" onclick="openMaps()">↗ 開啟 Google Maps 查詢距離</button>
+      <div class="km-hint" id="km-hint"></div>
+
+      <div class="field-row">
+        <div><label>行駛公里數 (km)</label><input type="number" id="f-km" placeholder="0" min="0" step="0.1" oninput="calcResult()"></div>
+        <div id="fuelcost-wrap" style="display:none"><label>加油金額 (元)</label><input type="number" id="f-fuelcost" placeholder="0" min="0" oninput="calcResult()"></div>
+      </div>
+
+      <div class="result-box">
+        <div class="result-amount" id="result-amount">—</div>
+        <div class="result-formula" id="result-formula">請填入行駛公里數</div>
+      </div>
+      <button class="add-btn" onclick="addTrip()">＋ 加入行程清單</button>
+    </div>
+
+    <div class="form-section" id="stats-tab">
+      <div id="stats-content"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">尚無行程記錄</div></div></div>
+    </div>
+  </div>
+
+  <div class="list-panel">
+    <div class="list-header">
+      <span class="list-title">行程明細 <span id="trip-count" style="color:var(--text3);font-weight:400"></span></span>
+      <div class="list-actions">
+        <button class="icon-btn" onclick="exportCSV()">⬇ CSV</button>
+        <button class="icon-btn" onclick="copyText()">⎘ 複製</button>
+      </div>
+    </div>
+    <div id="trip-list">
+      <div class="empty"><div class="empty-icon">⛽</div><div class="empty-text">尚無行程記錄<br>填寫左側表單後加入行程</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="summary-bar">
+  <div class="summary-item"><div class="summary-num" id="s-trips">0</div><div class="summary-lbl">行程筆數</div></div>
+  <div class="summary-item"><div class="summary-num" id="s-km">0</div><div class="summary-lbl">總公里數</div></div>
+  <div class="summary-item"><div class="summary-num" id="s-total">NT$ 0</div><div class="summary-lbl">總補助金額</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WORKER_URL = 'https://api-proxy.vivi7733421.workers.dev';
+const MODEL = 'google/gemini-flash-1.5';
+let trips=[], currentPrice=33.9, currentCar='private';
+const rules={
+  private:{label:'私家車',cls:'tag-private',hint:'固定補助 <strong>4 元/km</strong>，補貼員工使用自有車輛',hintCls:'private'},
+  rent:{label:'租車',cls:'tag-rent',hint:'<strong>公里 ÷ 15（km/L）× 當日油價</strong>，算出應加油費',hintCls:'rent'},
+  company:{label:'公司車',cls:'tag-company',hint:'加油費<strong>全額實報實銷</strong>，輸入收據金額即可',hintCls:'company'}
+};
+document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+
+function selectCar(type){
+  currentCar=type;
+  document.querySelectorAll('.car-type-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.car-type-btn[data-type="${type}"]`).classList.add('active');
+  const h=document.getElementById('rule-hint');
+  h.innerHTML=rules[type].hint; h.className=`rule-hint ${rules[type].hintCls}`;
+  document.getElementById('fuelcost-wrap').style.display=(type==='company')?'block':'none';
+  calcResult();
+}
+
+function calcResult(){
+  const km=parseFloat(document.getElementById('f-km').value)||0;
+  let amt=0,formula='';
+  if(currentCar==='private'){amt=4*km;formula=`固定 4 元/km × ${km} km`;}
+  else if(currentCar==='rent'){const L=km/15;amt=Math.round(L*currentPrice);formula=`${km} km ÷ 15 × ${currentPrice} 元 = ${L.toFixed(2)} 公升 → NT$ ${amt}`;}
+  else{const fc=parseFloat(document.getElementById('f-fuelcost').value)||0;amt=fc;formula=`加油收據金額：NT$ ${fc}（全額實報）`;}
+  const el=document.getElementById('result-amount');
+  el.textContent=amt>0?`NT$ ${amt.toLocaleString()}`:'—';
+  el.className='result-amount'+(amt>0?' has-value':'');
+  document.getElementById('result-formula').textContent=formula||'請填入行駛公里數';
+  return amt;
+}
+
+function swapAddr(){const a=document.getElementById('f-from'),b=document.getElementById('f-to');[a.value,b.value]=[b.value,a.value];}
+
+function openMaps(){
+  const from=document.getElementById('f-from').value.trim()||'宜蘭縣羅東鎮倉前路3號';
+  const to=document.getElementById('f-to').value.trim();
+  if(!to){showToast('請先輸入目的地');return;}
+  window.open(`https://www.google.com/maps/dir/${encodeURIComponent(from)}/${encodeURIComponent(to)}`,'_blank');
+  document.getElementById('km-hint').textContent='地圖已開啟，查看距離後填入公里數欄位';
+}
+
+async function calcDistanceAI(){
+  const from=document.getElementById('f-from').value.trim();
+  const to=document.getElementById('f-to').value.trim();
+  if(!to){showToast('請先輸入目的地');return;}
+  const btn=document.getElementById('ai-km-btn');
+  btn.classList.add('loading');
+  document.getElementById('km-spinner').style.display='inline-block';
+  document.getElementById('km-btn-text').textContent='AI 計算中...';
+  document.getElementById('km-hint').textContent='正在查詢距離...';
+  try{
+    const resp=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:MODEL,max_tokens:100,messages:[{role:'user',content:`從「${from}」到「${to}」開車距離幾公里？只回答一個數字，例如：12.5`}]})});
+    const data=await resp.json();
+    const text=(data.choices?.[0]?.message?.content||'').trim();
+    const km=parseFloat(text.match(/[\d.]+/)?.[0]);
+    if(km&&km>0){document.getElementById('f-km').value=km.toFixed(1);document.getElementById('km-hint').textContent=`✓ 約 ${km.toFixed(1)} 公里`;calcResult();}
+    else{document.getElementById('km-hint').textContent='無法取得距離，請手動輸入';}
+  }catch(e){document.getElementById('km-hint').textContent='查詢失敗，請手動輸入或用 Google Maps';}
+  btn.classList.remove('loading');
+  document.getElementById('km-spinner').style.display='none';
+  document.getElementById('km-btn-text').textContent='✦ AI 自動計算公里數';
+}
+
+async function fetchOilPrice(){
+  const btn=document.getElementById('fetch-oil-btn');
+  btn.classList.add('loading');
+  document.getElementById('oil-spinner').style.display='inline-block';
+  document.getElementById('oil-btn-text').textContent='查詢中...';
+  try{
+    const resp=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:MODEL,max_tokens:100,messages:[{role:'user',content:'台灣中油目前95無鉛汽油每公升牌價是多少元？只回答數字，例如：33.9'}]})});
+    const data=await resp.json();
+    const text=(data.choices?.[0]?.message?.content||'').trim();
+    const price=parseFloat(text.match(/[\d.]+/)?.[0]);
+    if(price&&price>20&&price<60){
+      currentPrice=price;
+      document.getElementById('price-val').textContent=price.toFixed(1);
+      const now=new Date();
+      document.getElementById('price-updated').textContent=`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} 自動抓取`;
+      calcResult();showToast(`油價更新：${price} 元/公升`);
+    }else{showToast('無法取得油價，使用現有數值');}
+  }catch(e){showToast('查詢失敗，請稍後再試');}
+  btn.classList.remove('loading');
+  document.getElementById('oil-spinner').style.display='none';
+  document.getElementById('oil-btn-text').textContent='↻ 自動抓取最新油價';
+}
+
+function addTrip(){
+  const name=document.getElementById('f-name').value.trim();
+  const dept=document.getElementById('f-dept').value.trim();
+  const date=document.getElementById('f-date').value;
+  const customer=document.getElementById('f-customer').value.trim();
+  const purpose=document.getElementById('f-purpose').value.trim();
+  const km=parseFloat(document.getElementById('f-km').value)||0;
+  const from=document.getElementById('f-from').value.trim();
+  const to=document.getElementById('f-to').value.trim();
+  const route=(from&&to)?`${from} → ${to}`:(from||to||'未填寫');
+  if(!name){showToast('請填寫出差人員姓名');return;}
+  if(km<=0&&currentCar!=='company'){showToast('請填寫行駛公里數');return;}
+  let amt=0;
+  if(currentCar==='private')amt=4*km;
+  else if(currentCar==='rent')amt=Math.round((km/15)*currentPrice);
+  else amt=parseFloat(document.getElementById('f-fuelcost').value)||0;
+  trips.push({name,dept,date,cartype:currentCar,customer,purpose,km,route,amt,price:currentPrice});
+  ['f-to','f-km','f-fuelcost','f-customer','f-purpose'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('km-hint').textContent='';
+  calcResult();renderList();updateSummary();
+  showToast(`已加入！補助 NT$ ${amt.toLocaleString()}`);
+}
+
+function renderList(){
+  const wrap=document.getElementById('trip-list');
+  document.getElementById('trip-count').textContent=trips.length?`(${trips.length})`:'';
+  if(!trips.length){wrap.innerHTML=`<div class="empty"><div class="empty-icon">⛽</div><div class="empty-text">尚無行程記錄<br>填寫左側表單後加入行程</div></div>`;return;}
+  wrap.innerHTML=[...trips].reverse().map((t,ri)=>{
+    const i=trips.length-1-ri;
+    return `<div class="trip-card">
+      <div class="trip-card-top">
+        <div class="trip-meta"><span class="trip-date">${t.date}</span><span class="trip-tag ${rules[t.cartype].cls}">${rules[t.cartype].label}</span></div>
+        <span class="trip-amount">NT$ ${t.amt.toLocaleString()}</span>
+      </div>
+      <div class="trip-name">${t.name} <span style="color:var(--text3);font-weight:400;font-size:12px">${t.dept}</span></div>
+      ${t.customer?`<div class="trip-sub">👤 ${t.customer}${t.purpose?'　'+t.purpose:''}</div>`:''}
+      <div class="trip-route">${t.route}</div>
+      <div class="trip-footer"><span class="trip-km">${t.km} km</span><button class="del-btn" onclick="delTrip(${i})">✕</button></div>
+    </div>`;
+  }).join('');
+}
+
+function delTrip(i){if(!confirm('確定刪除此行程？'))return;trips.splice(i,1);renderList();updateSummary();}
+
+function updateSummary(){
+  document.getElementById('s-trips').textContent=trips.length;
+  document.getElementById('s-km').textContent=trips.reduce((a,t)=>a+t.km,0).toFixed(1);
+  document.getElementById('s-total').textContent=`NT$ ${trips.reduce((a,t)=>a+t.amt,0).toLocaleString()}`;
+}
+
+function renderStats(){
+  const wrap=document.getElementById('stats-content');
+  if(!trips.length){wrap.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">尚無行程記錄</div></div>`;return;}
+  const map={};
+  trips.forEach(t=>{if(!map[t.name])map[t.name]={name:t.name,dept:t.dept,count:0,km:0,amt:0};map[t.name].count++;map[t.name].km+=t.km;map[t.name].amt+=t.amt;});
+  const people=Object.values(map);
+  const total=trips.reduce((a,t)=>a+t.amt,0);
+  wrap.innerHTML=`<div class="stats-grid">
+    <div class="stat-card"><div class="stat-num">${trips.length}</div><div class="stat-lbl">行程筆數</div></div>
+    <div class="stat-card"><div class="stat-num">${people.length}</div><div class="stat-lbl">出差人數</div></div>
+    <div class="stat-card"><div class="stat-num">NT$ ${total.toLocaleString()}</div><div class="stat-lbl">總補助</div></div>
+  </div>
+  <table><thead><tr><th>姓名</th><th>部門</th><th>筆數</th><th>公里</th><th style="text-align:right">補助</th></tr></thead><tbody>
+  ${people.map(p=>`<tr><td>${p.name}</td><td style="color:var(--text3)">${p.dept}</td><td>${p.count}</td><td>${p.km.toFixed(1)}</td><td style="text-align:right;color:var(--accent);font-family:'JetBrains Mono',monospace">NT$ ${p.amt.toLocaleString()}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function switchFormTab(t){
+  document.querySelectorAll('.panel-tab').forEach((b,i)=>b.classList.toggle('active',['form','stats'][i]===t));
+  document.getElementById('form-tab').classList.toggle('active',t==='form');
+  document.getElementById('stats-tab').classList.toggle('active',t==='stats');
+  if(t==='stats')renderStats();
+}
+
+function exportCSV(){
+  if(!trips.length){showToast('尚無資料');return;}
+  const lines=['日期,姓名,部門,車型,客戶,目的,路線,公里數,補助金額'];
+  trips.forEach(t=>lines.push(`${t.date},${t.name},${t.dept},${rules[t.cartype].label},"${t.customer||''}","${t.purpose||''}","${t.route}",${t.km},${t.amt}`));
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='出差油錢明細.csv';a.click();
+}
+
+function copyText(){
+  if(!trips.length){showToast('尚無資料');return;}
+  let lines=['=== 出差油錢補助明細 ===',''];
+  trips.forEach((t,i)=>{
+    lines.push(`${i+1}. ${t.date}　${t.name}（${t.dept}）`);
+    if(t.customer)lines.push(`   客戶：${t.customer}　${t.purpose||''}`);
+    lines.push(`   車型：${rules[t.cartype].label}　路線：${t.route}`);
+    lines.push(`   ${t.km} km　NT$ ${t.amt.toLocaleString()}`);
+    lines.push('');
+  });
+  lines.push(`合計：NT$ ${trips.reduce((a,t)=>a+t.amt,0).toLocaleString()}`);
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>showToast('已複製到剪貼簿'));
+}
+
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
