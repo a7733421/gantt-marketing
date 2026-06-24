@@ -116,7 +116,7 @@ footer{border-top:1px solid var(--border);text-align:center;padding:1.25rem;font
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
@@ -148,17 +148,6 @@ function showApp(user){
   if(user.photoURL)document.getElementById('user-avatar').src=user.photoURL;
 }
 
-// 處理重新導向結果
-getRedirectResult(auth).then(result=>{
-  if(result?.user){
-    if(!ALLOWED_EMAILS.includes(result.user.email)){
-      signOut(auth);
-      showLogin();
-      document.getElementById('login-error').style.display='block';
-    }
-  }
-}).catch(err=>console.error(err));
-
 onAuthStateChanged(auth,user=>{
   if(user&&ALLOWED_EMAILS.includes(user.email)){
     showApp(user);
@@ -171,14 +160,23 @@ onAuthStateChanged(auth,user=>{
   }
 });
 
-window.signIn=()=>{
-  const btn=document.getElementById('login-btn');
-  btn.disabled=true;
-  btn.innerHTML='<div style="width:16px;height:16px;border:2px solid #ccc;border-top-color:#4f6ef7;border-radius:50%;animation:spin .6s linear infinite;margin-right:8px"></div> 登入中...';
-  signInWithRedirect(auth,provider);
+window.signIn = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    if(!ALLOWED_EMAILS.includes(result.user.email)){
+      await signOut(auth);
+      document.getElementById('login-error').style.display='block';
+    }
+  } catch(e) {
+    console.error('Login error:', e.code, e.message);
+    if(e.code === 'auth/popup-blocked'){
+      document.getElementById('login-error').textContent='請允許彈出視窗，或檢查瀏覽器設定';
+      document.getElementById('login-error').style.display='block';
+    }
+  }
 };
 
-window.doSignOut=()=>signOut(auth);
+window.doSignOut = () => signOut(auth);
 </script>
 </body>
 </html>
