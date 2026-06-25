@@ -31,7 +31,7 @@
   --radius-sm:8px;
   --shadow:0 1px 3px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.05);
 }
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:15px}
 
 nav{
   background:var(--surface);border-bottom:1px solid var(--border);
@@ -68,16 +68,16 @@ nav{
 /* LEFT FORM */
 .form-panel{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:1.25rem}
 .panel-tabs{display:flex;gap:4px;margin-bottom:1.25rem;background:var(--surface2);border-radius:var(--radius-sm);padding:3px}
-.panel-tab{flex:1;padding:7px;font-size:12px;font-weight:500;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;border-radius:6px}
+.panel-tab{flex:1;padding:8px;font-size:13px;font-weight:500;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;border-radius:6px}
 .panel-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
 
 .form-section{display:none}.form-section.active{display:block}
 .field-group{margin-bottom:.875rem}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.875rem}
-label{display:block;font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:500;letter-spacing:.03em}
+label{display:block;font-size:13px;color:var(--text3);margin-bottom:5px;font-weight:500;letter-spacing:.03em}
 input,select{
   width:100%;background:var(--surface2);border:1.5px solid var(--border);
-  border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;color:var(--text);
+  border-radius:var(--radius-sm);padding:9px 11px;font-size:14px;color:var(--text);
   font-family:'Inter',sans-serif;transition:border-color .15s;outline:none;
 }
 input:focus,select:focus{border-color:var(--accent);background:var(--surface)}
@@ -87,7 +87,7 @@ select option{background:var(--surface)}
 .car-type-btn{
   padding:10px 6px;border-radius:var(--radius-sm);
   border:1.5px solid var(--border);background:var(--surface2);
-  color:var(--text3);cursor:pointer;font-size:11px;font-weight:600;
+  color:var(--text3);cursor:pointer;font-size:13px;font-weight:600;
   text-align:center;transition:all .15s;line-height:1.4;
 }
 .car-type-btn .icon{font-size:20px;display:block;margin-bottom:4px}
@@ -97,14 +97,14 @@ select option{background:var(--surface)}
 
 .rule-hint{
   border-radius:var(--radius-sm);padding:8px 12px;
-  font-size:12px;color:var(--text2);margin-bottom:.875rem;
+  font-size:13px;color:var(--text2);margin-bottom:.875rem;
   line-height:1.6;border:1.5px solid;
 }
 .rule-hint.private{border-color:#fdd0bb;background:var(--orange-dim)}
 .rule-hint.rent{border-color:#bbdaf9;background:var(--blue-dim)}
 .rule-hint.company{border-color:#b2e5cf;background:var(--green-dim)}
 
-.section-title{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.04em;margin-bottom:.5rem;margin-top:.25rem}
+.section-title{font-size:13px;font-weight:600;color:var(--text3);letter-spacing:.04em;margin-bottom:.5rem;margin-top:.25rem}
 
 .addr-wrap{position:relative;margin-bottom:.5rem}
 .addr-wrap input{padding-right:36px}
@@ -115,7 +115,7 @@ select option{background:var(--surface)}
   display:flex;align-items:center;justify-content:center;gap:6px;
   width:100%;padding:8px;border-radius:var(--radius-sm);
   border:1.5px solid var(--accent);background:var(--accent-dim);
-  color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;
+  color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;
   transition:all .15s;margin-bottom:.5rem;
 }
 .ai-btn:hover{background:var(--accent);color:#fff}
@@ -125,19 +125,19 @@ select option{background:var(--surface)}
   display:flex;align-items:center;justify-content:center;gap:6px;
   width:100%;padding:7px;border-radius:var(--radius-sm);
   border:1.5px solid var(--border2);background:transparent;
-  color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;
+  color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;
   transition:all .15s;margin-bottom:.625rem;
 }
 .maps-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-dim)}
-.km-hint{font-size:11px;color:var(--text3);margin-bottom:.75rem;min-height:16px;line-height:1.5}
+.km-hint{font-size:13px;color:var(--text3);margin-bottom:.75rem;min-height:16px;line-height:1.5}
 
 .result-box{
   background:var(--surface2);border:1.5px solid var(--border);
   border-radius:var(--radius);padding:1rem;margin-bottom:.875rem;
 }
-.result-amount{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:var(--text3);margin-bottom:3px}
+.result-amount{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;color:var(--text3);margin-bottom:3px}
 .result-amount.has-value{color:var(--accent)}
-.result-formula{font-size:11px;color:var(--text3);line-height:1.6}
+.result-formula{font-size:13px;color:var(--text3);line-height:1.6}
 
 .add-btn{
   width:100%;padding:10px;border-radius:var(--radius-sm);
@@ -155,7 +155,7 @@ select option{background:var(--surface)}
 .icon-btn{
   padding:6px 12px;border-radius:20px;
   border:1px solid var(--border2);background:var(--surface);
-  color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;
+  color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;
   transition:all .15s;box-shadow:var(--shadow);
 }
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
