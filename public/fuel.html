@@ -83,7 +83,7 @@ input,select{
 input:focus,select:focus{border-color:var(--accent);background:var(--surface)}
 select option{background:var(--surface)}
 
-.car-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.875rem}
+.car-type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:.875rem}
 .car-type-btn{
   padding:10px 6px;border-radius:var(--radius-sm);
   border:1.5px solid var(--border);background:var(--surface2);
@@ -92,8 +92,7 @@ select option{background:var(--surface)}
 }
 .car-type-btn .icon{font-size:20px;display:block;margin-bottom:4px}
 .car-type-btn:hover{border-color:var(--border2);color:var(--text2);background:var(--surface)}
-.car-type-btn.active[data-type="private"]{border-color:var(--orange);background:var(--orange-dim);color:var(--orange)}
-.car-type-btn.active[data-type="rent"]{border-color:var(--blue);background:var(--blue-dim);color:var(--blue)}
+.car-type-btn.active[data-type="own"]{border-color:var(--orange);background:var(--orange-dim);color:var(--orange)}
 .car-type-btn.active[data-type="company"]{border-color:var(--green);background:var(--green-dim);color:var(--green)}
 
 .rule-hint{
@@ -257,11 +256,10 @@ tr:last-child td{border-bottom:none}
 
       <label>車輛類型</label>
       <div class="car-type-grid">
-        <button class="car-type-btn active" data-type="private" onclick="selectCar('private')"><span class="icon">🚗</span>私家車</button>
-        <button class="car-type-btn" data-type="rent" onclick="selectCar('rent')"><span class="icon">🚙</span>租車</button>
+        <button class="car-type-btn active" data-type="own" onclick="selectCar('own')"><span class="icon">🚗</span>自用車／租車</button>
         <button class="car-type-btn" data-type="company" onclick="selectCar('company')"><span class="icon">🏢</span>公司車</button>
       </div>
-      <div class="rule-hint private" id="rule-hint">固定補助 <strong>4 元/km</strong>，補貼員工使用自有車輛</div>
+      <div class="rule-hint rent" id="rule-hint"><strong>公里 ÷ 15（km/L）× 當日油價</strong>，算出應加油費</div>
 
       <div class="section-title">行程路線</div>
       <div class="addr-wrap">
@@ -273,7 +271,7 @@ tr:last-child td{border-bottom:none}
       </div>
       <button class="ai-btn" id="ai-km-btn" onclick="calcDistanceAI()">
         <span class="spinner" style="display:none" id="km-spinner"></span>
-        <span id="km-btn-text">✦ AI 自動計算公里數</span>
+        <span id="km-btn-text">✦ 自動計算來回公里數</span>
       </button>
       <button class="maps-btn" onclick="openMaps()">↗ 開啟 Google Maps 查詢距離</button>
       <div class="km-hint" id="km-hint"></div>
@@ -320,10 +318,9 @@ tr:last-child td{border-bottom:none}
 <script>
 const WORKER_URL = 'https://api-proxy.vivi7733421.workers.dev';
 const MODEL = '~google/gemini-flash-latest';
-let trips=[], currentPrice=33.9, currentCar='private';
+let trips=[], currentPrice=33.9, currentCar='own';
 const rules={
-  private:{label:'私家車',cls:'tag-private',hint:'固定補助 <strong>4 元/km</strong>，補貼員工使用自有車輛',hintCls:'private'},
-  rent:{label:'租車',cls:'tag-rent',hint:'<strong>公里 ÷ 15（km/L）× 當日油價</strong>，算出應加油費',hintCls:'rent'},
+  own:{label:'自用車／租車',cls:'tag-rent',hint:'<strong>公里 ÷ 15（km/L）× 當日油價</strong>，算出應加油費',hintCls:'rent'},
   company:{label:'公司車',cls:'tag-company',hint:'加油費<strong>全額實報實銷</strong>，輸入收據金額即可',hintCls:'company'}
 };
 document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
@@ -341,8 +338,7 @@ function selectCar(type){
 function calcResult(){
   const km=parseFloat(document.getElementById('f-km').value)||0;
   let amt=0,formula='';
-  if(currentCar==='private'){amt=4*km;formula=`固定 4 元/km × ${km} km`;}
-  else if(currentCar==='rent'){const L=km/15;amt=Math.round(L*currentPrice);formula=`${km} km ÷ 15 × ${currentPrice} 元 = ${L.toFixed(2)} 公升 → NT$ ${amt}`;}
+  if(currentCar==='own'){const L=km/15;amt=Math.round(L*currentPrice);formula=`${km} km ÷ 15 × ${currentPrice} 元 = ${L.toFixed(2)} 公升 → NT$ ${amt}`;}
   else{const fc=parseFloat(document.getElementById('f-fuelcost').value)||0;amt=fc;formula=`加油收據金額：NT$ ${fc}（全額實報）`;}
   const el=document.getElementById('result-amount');
   el.textContent=amt>0?`NT$ ${amt.toLocaleString()}`:'—';
@@ -368,20 +364,22 @@ async function calcDistanceAI(){
   const btn=document.getElementById('ai-km-btn');
   btn.classList.add('loading');
   document.getElementById('km-spinner').style.display='inline-block';
-  document.getElementById('km-btn-text').textContent='AI 計算中...';
-  document.getElementById('km-hint').textContent='正在查詢距離...';
+  document.getElementById('km-btn-text').textContent='計算中...';
+  document.getElementById('km-hint').textContent='正在查詢 Google Maps 距離...';
   try{
-    const resp=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:MODEL,max_tokens:100,messages:[{role:'user',content:`從「${from}」到「${to}」開車距離幾公里？只回答一個數字，例如：12.5`}]})});
+    const resp=await fetch(`${WORKER_URL}/distance?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
     const data=await resp.json();
-    const text=(data.choices?.[0]?.message?.content||'').trim();
-    const km=parseFloat(text.match(/[\d.]+/)?.[0]);
-    if(km&&km>0){document.getElementById('f-km').value=km.toFixed(1);document.getElementById('km-hint').textContent=`✓ 約 ${km.toFixed(1)} 公里`;calcResult();}
-    else{document.getElementById('km-hint').textContent='無法取得距離，請手動輸入';}
+    if(data.round_trip_km){
+      document.getElementById('f-km').value=data.round_trip_km.toFixed(1);
+      document.getElementById('km-hint').textContent=`✓ 單程 ${data.one_way_km} km × 來回 = ${data.round_trip_km} km（${data.duration}）`;
+      calcResult();
+    }else{
+      document.getElementById('km-hint').textContent='無法取得距離，請手動輸入';
+    }
   }catch(e){document.getElementById('km-hint').textContent='查詢失敗，請手動輸入或用 Google Maps';}
   btn.classList.remove('loading');
   document.getElementById('km-spinner').style.display='none';
-  document.getElementById('km-btn-text').textContent='✦ AI 自動計算公里數';
+  document.getElementById('km-btn-text').textContent='✦ 自動計算來回公里數';
 }
 
 async function fetchOilPrice(){
@@ -390,7 +388,6 @@ async function fetchOilPrice(){
   document.getElementById('oil-spinner').style.display='inline-block';
   document.getElementById('oil-btn-text').textContent='抓取中...';
   try{
-    // 直接爬中油官網，不走 AI
     const resp=await fetch(WORKER_URL+'/oil-price');
     const data=await resp.json();
     const price=data.price;
@@ -420,8 +417,7 @@ function addTrip(){
   if(!name){showToast('請填寫出差人員姓名');return;}
   if(km<=0&&currentCar!=='company'){showToast('請填寫行駛公里數');return;}
   let amt=0;
-  if(currentCar==='private')amt=4*km;
-  else if(currentCar==='rent')amt=Math.round((km/15)*currentPrice);
+  if(currentCar==='own')amt=Math.round((km/15)*currentPrice);
   else amt=parseFloat(document.getElementById('f-fuelcost').value)||0;
   trips.push({name,dept,date,cartype:currentCar,customer,purpose,km,route,amt,price:currentPrice});
   ['f-to','f-km','f-fuelcost','f-customer','f-purpose'].forEach(id=>document.getElementById(id).value='');
