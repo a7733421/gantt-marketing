@@ -319,7 +319,7 @@ tr:last-child td{border-bottom:none}
 
 <script>
 const WORKER_URL = 'https://api-proxy.vivi7733421.workers.dev';
-const MODEL = 'google/gemini-flash-1.5';
+const MODEL = '~google/gemini-flash-latest';
 let trips=[], currentPrice=33.9, currentCar='private';
 const rules={
   private:{label:'私家車',cls:'tag-private',hint:'固定補助 <strong>4 元/km</strong>，補貼員工使用自有車輛',hintCls:'private'},
@@ -388,19 +388,18 @@ async function fetchOilPrice(){
   const btn=document.getElementById('fetch-oil-btn');
   btn.classList.add('loading');
   document.getElementById('oil-spinner').style.display='inline-block';
-  document.getElementById('oil-btn-text').textContent='查詢中...';
+  document.getElementById('oil-btn-text').textContent='抓取中...';
   try{
-    const resp=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:MODEL,max_tokens:100,messages:[{role:'user',content:'台灣中油目前95無鉛汽油每公升牌價是多少元？只回答數字，例如：33.9'}]})});
+    // 直接爬中油官網，不走 AI
+    const resp=await fetch(WORKER_URL+'/oil-price');
     const data=await resp.json();
-    const text=(data.choices?.[0]?.message?.content||'').trim();
-    const price=parseFloat(text.match(/[\d.]+/)?.[0]);
+    const price=data.price;
     if(price&&price>20&&price<60){
       currentPrice=price;
       document.getElementById('price-val').textContent=price.toFixed(1);
       const now=new Date();
-      document.getElementById('price-updated').textContent=`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} 自動抓取`;
-      calcResult();showToast(`油價更新：${price} 元/公升`);
+      document.getElementById('price-updated').textContent=`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} 中油官網`;
+      calcResult();showToast(`油價更新：${price} 元/公升 ✓`);
     }else{showToast('無法取得油價，使用現有數值');}
   }catch(e){showToast('查詢失敗，請稍後再試');}
   btn.classList.remove('loading');
