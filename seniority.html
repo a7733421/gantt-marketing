@@ -52,7 +52,7 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .logout-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 /* Main layout */
-.main{max-width:1400px;margin:0 auto;padding:1.5rem}
+.main{width:100%;padding:1.5rem 2rem}
 
 /* Alert banner */
 .alert-bar{background:var(--red-dim);border:1.5px solid #fca5a5;border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.25rem;display:none}
@@ -90,10 +90,10 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .edit-btn{font-size:12px;padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
 .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
 
-.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;box-shadow:var(--shadow)}
-table{width:100%;border-collapse:collapse;font-size:14px;min-width:1600px}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
 th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:11px 12px;border-bottom:1.5px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
-td{padding:12px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:14px;white-space:nowrap}
+td{padding:12px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:14px}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--surface2)}
 .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.03em}
