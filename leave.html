@@ -278,6 +278,21 @@ select option{background:var(--surface)}
           <button class="filter-btn" onclick="setAllFilter('已退回',this)">已退回</button>
         </div>
       </div>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.875rem;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem 1rem">
+        <span style="font-size:13px;font-weight:600;color:var(--text2)">📅 日期範圍</span>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <input type="date" id="all-date-start" style="width:150px;padding:6px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)" onchange="renderAllList()">
+          <span style="color:var(--text3)">～</span>
+          <input type="date" id="all-date-end" style="width:150px;padding:6px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)" onchange="renderAllList()">
+        </div>
+        <button onclick="clearAllDateFilter()" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text3);font-size:12px;cursor:pointer">清除</button>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span style="font-size:13px;font-weight:600;color:var(--text2)">👤 人員</span>
+          <select id="all-member-filter" onchange="renderAllList()" style="padding:6px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+            <option value="">全部人員</option>
+          </select>
+        </div>
+      </div>
       <div id="all-list"></div>
     </div>
   </div>
@@ -626,10 +641,16 @@ function renderApproveList() {
 
 // ── 渲染：全員假單 ──
 function renderAllList() {
-  const filtered = allFilter === '全部' ? leaves : leaves.filter(l => {
-    if (allFilter === '待審核') return l.status === 'pending';
-    if (allFilter === '已核准') return l.status === 'approved';
-    if (allFilter === '已退回') return l.status === 'rejected';
+  const dateStart = document.getElementById('all-date-start')?.value;
+  const dateEnd = document.getElementById('all-date-end')?.value;
+  const memberFilter = document.getElementById('all-member-filter')?.value;
+  const filtered = leaves.filter(l => {
+    if (allFilter === '待審核' && l.status !== 'pending') return false;
+    if (allFilter === '已核准' && l.status !== 'approved') return false;
+    if (allFilter === '已退回' && l.status !== 'rejected') return false;
+    if (dateStart && l.start < dateStart) return false;
+    if (dateEnd && l.start > dateEnd + 'T23:59') return false;
+    if (memberFilter && l.applicantEmail !== memberFilter) return false;
     return true;
   });
   const wrap = document.getElementById('all-list');
@@ -804,6 +825,20 @@ window.setMyFilter = (f, btn) => {
   btn.classList.add('active');
   renderMyList();
 };
+window.clearAllDateFilter = () => {
+  document.getElementById('all-date-start').value = '';
+  document.getElementById('all-date-end').value = '';
+  renderAllList();
+};
+
+function initAllMemberFilter() {
+  const sel = document.getElementById('all-member-filter');
+  if (!sel) return;
+  employees.filter(e => e.startDate).forEach(e => {
+    sel.innerHTML += `<option value="${e.email}">${e.name}</option>`;
+  });
+}
+
 window.setAllFilter = (f, btn) => {
   allFilter = f;
   btn.closest('.filter-row').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -929,6 +964,7 @@ onAuthStateChanged(auth, async user => {
     await loadLeaves();
     setupTabs();
     initAgentSelect();
+    initAllMemberFilter();
     updatePendingCount();
     updateAgentCount();
     // 預設時間：今天08:00~17:00

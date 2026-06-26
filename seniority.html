@@ -542,17 +542,18 @@ function renderAdminTable() {
       </td>
       <td>
         ${(()=>{
-          const tv = calcTravel(e.startDate, years);
+          const tv = calcTravel(e.startDate, calcAnnualLeave(e.startDate).years);
           if (!tv.eligible) return '<span style="color:var(--text3);font-size:12px">未達資格</span>';
-          const periodKey = periodStart.getFullYear()+'-'+periodStart.getMonth();
+          const periodKey = tv.periodStart.getFullYear()+'-'+tv.periodStart.getMonth();
           const claimed = (e.travelClaimed||[]).includes(periodKey);
-          const pe = tv.periodEnd; const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
-          if (claimed) return `<span class="tag-full">已請領 ✓</span>`;
-          return `<div style="font-size:12px;line-height:1.8">
-            <div>🏠 NT$ ${tv.domestic.toLocaleString()} / ✈️ NT$ ${tv.overseas.toLocaleString()}</div>
-            <div style="color:var(--text3)">效期至 ${peStr}</div>
-            <button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel('${e.id}','${periodKey}')">標記已請領</button>
-          </div>`;
+          const pe = tv.periodEnd;
+          const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
+          if (claimed) return '<span class="tag-full">已請領 ✓</span>';
+          return '<div style="font-size:12px;line-height:1.8">' +
+            '<div>🏠 NT$ '+tv.domestic.toLocaleString()+' / ✈️ NT$ '+tv.overseas.toLocaleString()+'</div>' +
+            '<div style="color:var(--text3)">效期至 '+peStr+'</div>' +
+            '<button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel(''+e.id+'',''+periodKey+'')">標記已請領</button>' +
+            '</div>';
         })()}
       </td>
       <td>
@@ -670,6 +671,17 @@ window.signIn = async () => {
     }
   }
 };
+window.markTravel = async (id, periodKey) => {
+  const idx = employees.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  const claimed = employees[idx].travelClaimed || [];
+  if (!claimed.includes(periodKey)) claimed.push(periodKey);
+  employees[idx].travelClaimed = claimed;
+  await saveEmployees();
+  render();
+  showToast('已標記旅遊津貼請領 ✓');
+};
+
 window.claimTravel = async (id) => {
   const idx = employees.findIndex(e => e.id === id);
   if (idx < 0) return;
