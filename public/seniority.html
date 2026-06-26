@@ -299,15 +299,16 @@ function calcAnnualLeave(startDate) {
   const nextAnniv = new Date(periodStart);
   nextAnniv.setFullYear(nextAnniv.getFullYear() + 1);
 
-  // 可休天數（勞基法新制，週年制）
+  // 可休天數（勞基法第38條，週年制）
+  // 滿6個月:3天, 1年:7天, 2年:10天, 3~4年:14天, 5~9年:15天, 10年起每年+1天上限30天
   let quota = 0;
   if (months < 6) quota = 0;
-  else if (months < 12) quota = 3;  // 6個月~未滿1年：3天
+  else if (months < 12) quota = 3;
   else if (years < 2) quota = 7;
   else if (years < 3) quota = 10;
   else if (years < 5) quota = 14;
   else if (years < 10) quota = 15;
-  else quota = Math.min(15 + (years - 10), 30);
+  else quota = Math.min(15 + (years - 9), 30);
 
   // 年資文字
   const yText = years > 0 ? `${years}年${remMonths}個月` : `${remMonths}個月`;
