@@ -822,22 +822,6 @@ function renderAllLeaves() {
   }).join('');
 }
 
-window.approveFromAll = async (id) => {
-  await approveLeave(id);
-  renderAllLeaves();
-};
-
-function initAllPersonFilter() {
-  const sel = document.getElementById('all-person-filter');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">所有人員</option>' +
-    employees.filter(e => e.startDate).map(e => `<option value="${e.email}">${e.name}</option>`).join('');
-}
-
-function setupManagerTabs() {
-  // 副理/經理 tab 現在全員可見，紅點只對有權限的人顯示
-}
-
 window.switchTab = (tab) => {
   ['apply','my','agent','m1','m2','cal'].forEach(t=>{
     const sec=document.getElementById('section-'+t);
@@ -863,12 +847,10 @@ onAuthStateChanged(auth, async user => {
     await loadEmployees();
     await loadLeaves();
     initAgentSelect();
-    initAllPersonFilter();
     setDefaultTimes();
     const t=new Date(); calYear=t.getFullYear(); calMonth=t.getMonth();
     initCalPersonFilter();
     updateAgentCount();
-    setupManagerTabs();
     updateManagerCounts();
   } else if (user) {
     signOut(auth);
