@@ -5,6 +5,9 @@
   "routes": [
     { "src": "/fuel.html", "dest": "/fuel.html" },
     { "src": "/home.html", "dest": "/home.html" },
+    { "src": "/seniority.html", "dest": "/seniority.html" },
+    { "src": "/leave.html", "dest": "/leave.html" },
+    { "src": "/import_leaves.html", "dest": "/import_leaves.html" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
