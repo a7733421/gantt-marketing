@@ -669,23 +669,6 @@ window.signIn = async () => {
     }
   }
 
-window.claimTravel = async (id) => {
-  const idx = employees.findIndex(e => e.id === id);
-  if (idx < 0) return;
-  employees[idx].travelClaimed = true;
-  await saveEmployees();
-  render();
-  showToast('已標記旅遊津貼請領 ✓');
-};
-
-window.unclaimTravel = async (id) => {
-  const idx = employees.findIndex(e => e.id === id);
-  if (idx < 0) return;
-  employees[idx].travelClaimed = false;
-  await saveEmployees();
-  render();
-  showToast('已取消請領標記');
-};
 
 window.doSignOut = () => signOut(auth);
 </script>
