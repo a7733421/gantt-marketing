@@ -604,7 +604,7 @@ function renderAdminTable(isAdmin) {
       : '—';
 
     // 出遊欄
-    let tripCell, tripDateCell, paidCell;
+    let tripDateCell, paidCell;
     if (lastTrip) {
       tripDateCell = '<span style="font-size:12px">'+lastTrip.tripStart+'～'+lastTrip.tripEnd+'</span>';
       paidCell = lastTrip.paidMonth
