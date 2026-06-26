@@ -17,7 +17,7 @@ h2{margin-bottom:1rem;font-size:18px}
 <div class="card">
   <h2>🔧 假單狀態修正工具</h2>
   <p style="font-size:13px;color:#666;margin-bottom:1.5rem">
-    將所有 <code>status: pending</code> 的假單改為 <code>pending_m1</code>（待副理簽核）。<br>
+    將所有 <code>status: pending</code> 的假單改為 <code>pending_m2</code>（待經理簽核）。<br>
     ⚠️ 只需執行一次！
   </p>
   <button class="btn" id="btn" onclick="runFix()">開始修正</button>
@@ -67,8 +67,8 @@ window.runFix = async () => {
   let ok = 0;
   for (const id of toFix) {
     try {
-      await updateDoc(doc(db, 'leaves', id), { status: 'pending_m1' });
-      log(`✓ ${id} → pending_m1`, 'ok');
+      await updateDoc(doc(db, 'leaves', id), { status: 'pending_m2' });
+      log(`✓ ${id} → pending_m2`, 'ok');
       ok++;
     } catch(e) {
       log(`❌ ${id} 失敗：${e.message}`, 'err');
