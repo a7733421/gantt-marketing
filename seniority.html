@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>員工年資查詢 — Team Gantt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f6f8;--surface:#fff;--surface2:#f0f1f4;--border:#e4e6eb;--border2:#d0d3db;
+  --text:#1a1d23;--text2:#5a5f6e;--text3:#9099aa;
+  --accent:#4f6ef7;--accent-dim:#eef1fe;
+  --green:#2e9e6b;--green-dim:#ebf7f2;
+  --orange:#e8622a;--orange-dim:#fdf0eb;
+  --red:#e53935;--red-dim:#fef2f2;
+  --purple:#7c3aed;--purple-dim:#f5f3ff;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.05);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:15px}
+
+/* Loading / Login */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;z-index:999;font-size:14px;color:var(--text3)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px}
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f5f6f8 0%,#eef1fe 100%)}
+.login-card{background:var(--surface);border-radius:20px;padding:2.5rem;box-shadow:0 8px 40px rgba(0,0,0,.12);text-align:center;width:100%;max-width:380px}
+.login-logo{font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--text2);margin-bottom:1.5rem}
+.login-logo span{color:var(--accent)}
+.login-icon{font-size:3rem;margin-bottom:1rem}
+.login-title{font-size:20px;font-weight:700;margin-bottom:.5rem}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:2rem;line-height:1.6}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--surface);font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.google-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(79,110,247,.2)}
+.google-btn img{width:20px;height:20px}
+.login-error{font-size:12px;color:var(--red);margin-top:1rem;display:none;padding:8px;background:var(--red-dim);border-radius:6px}
+.app{display:none}
+
+/* Nav */
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-left{display:flex;align-items:center;gap:.875rem}
+.nav-logo{font-size:13px;font-weight:700;color:var(--text2);text-decoration:none;letter-spacing:.04em}
+.nav-logo span{color:var(--accent)}
+.nav-divider{width:1px;height:16px;background:var(--border2)}
+.nav-title{font-size:13px;font-weight:600;color:var(--text)}
+.nav-right{display:flex;align-items:center;gap:.75rem}
+.user-info{display:flex;align-items:center;gap:.5rem;font-size:13px;color:var(--text2)}
+.user-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--border)}
+.logout-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .15s}
+.logout-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Main layout */
+.main{max-width:1400px;margin:0 auto;padding:1.5rem}
+
+/* Alert banner */
+.alert-bar{background:var(--red-dim);border:1.5px solid #fca5a5;border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.25rem;display:none}
+.alert-bar.show{display:block}
+.alert-title{font-size:13px;font-weight:700;color:var(--red);margin-bottom:.5rem}
+.alert-item{font-size:13px;color:#7f1d1d;padding:4px 0;border-bottom:1px solid #fecaca;display:flex;align-items:center;gap:.5rem}
+.alert-item:last-child{border-bottom:none}
+
+/* Birthday banner */
+.bday-bar{background:var(--purple-dim);border:1.5px solid #c4b5fd;border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.25rem;display:none}
+.bday-bar.show{display:block}
+.bday-title{font-size:13px;font-weight:700;color:var(--purple);margin-bottom:.5rem}
+.bday-item{font-size:13px;color:#4c1d95;padding:4px 0}
+
+/* My card (employee view) */
+.my-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
+.my-card-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem}
+.my-avatar{width:52px;height:52px;border-radius:50%;border:2px solid var(--border)}
+.my-name{font-size:20px;font-weight:700}
+.my-dept{font-size:13px;color:var(--text3);margin-top:2px}
+.my-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem}
+.stat-box{background:var(--surface2);border-radius:var(--radius-sm);padding:.875rem 1rem;border:1px solid var(--border)}
+.stat-label{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.stat-value{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--text)}
+.stat-value.green{color:var(--green)}
+.stat-value.orange{color:var(--orange)}
+.stat-value.red{color:var(--red)}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.bday-notice{background:var(--purple-dim);border:1.5px solid #c4b5fd;border-radius:var(--radius-sm);padding:.75rem 1rem;margin-top:.875rem;font-size:13px;color:var(--purple);font-weight:600;display:none}
+.bday-notice.show{display:flex;align-items:center;gap:.5rem}
+
+/* Admin table */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem}
+.section-title{font-size:15px;font-weight:700;color:var(--text)}
+.edit-btn{font-size:12px;padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
+.edit-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:11px 14px;border-bottom:1.5px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.03em}
+.badge-admin{background:var(--accent-dim);color:var(--accent)}
+.badge-hr{background:var(--green-dim);color:var(--green)}
+.badge-staff{background:var(--surface2);color:var(--text3)}
+.leave-bar-wrap{display:flex;align-items:center;gap:8px;min-width:120px}
+.leave-bar{height:6px;background:var(--surface2);border-radius:99px;flex:1;overflow:hidden}
+.leave-bar-fill{height:100%;border-radius:99px;transition:width .3s}
+.tag-warn{background:var(--orange-dim);color:var(--orange);font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap}
+.tag-ok{background:var(--green-dim);color:var(--green);font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap}
+.tag-full{background:var(--red-dim);color:var(--red);font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap}
+
+/* Edit modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,18,8,.55);z-index:50;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:16px;padding:1.5rem;width:400px;max-width:92vw;box-shadow:0 24px 60px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)}
+.modal label{display:block;font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px;margin-top:.875rem;letter-spacing:.03em}
+.modal input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:14px;color:var(--text);font-family:'Inter',sans-serif;outline:none;transition:border-color .15s}
+.modal input:focus{border-color:var(--accent);background:var(--surface)}
+.modal-actions{display:flex;gap:8px;margin-top:1.25rem}
+.btn-save{flex:1;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:10px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-cancel{background:var(--surface2);color:var(--text2);border:none;border-radius:var(--radius-sm);padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(10px);background:var(--text);border-radius:var(--radius);padding:10px 18px;font-size:13px;color:#fff;opacity:0;transition:all .25s;z-index:999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading"><div class="spinner"></div> 載入中...</div>
+
+<div class="login-page" id="login-page" style="display:none">
+  <div class="login-card">
+    <div class="login-logo"><span>TEAM</span> GANTT</div>
+    <div class="login-icon">🔐</div>
+    <div class="login-title">內部工具平台</div>
+    <div class="login-sub">請使用公司 Google 帳號登入以繼續</div>
+    <button class="google-btn" onclick="signIn()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      使用 Google 帳號登入
+    </button>
+    <div class="login-error" id="login-error">此帳號無使用權限，請聯絡管理員</div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <nav>
+    <div class="nav-left">
+      <a class="nav-logo" href="home.html">← <span>TEAM</span> GANTT</a>
+      <div class="nav-divider"></div>
+      <span class="nav-title">員工年資查詢</span>
+    </div>
+    <div class="nav-right">
+      <div class="user-info">
+        <img class="user-avatar" id="user-avatar" src="" alt="">
+        <span id="user-name"></span>
+      </div>
+      <button class="logout-btn" onclick="doSignOut()">登出</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <!-- 提醒：特休快到期但未休完 (管理員看) -->
+    <div class="alert-bar" id="alert-bar">
+      <div class="alert-title">⚠️ 特休提醒 — 以下同仁特休即將到期，尚有假未休完</div>
+      <div id="alert-list"></div>
+    </div>
+
+    <!-- 生日提醒 (管理員看) -->
+    <div class="bday-bar" id="bday-bar">
+      <div class="bday-title">🌟 本月壽星</div>
+      <div id="bday-list"></div>
+    </div>
+
+    <!-- 員工個人卡片 -->
+    <div id="my-section"></div>
+
+    <!-- 管理員全員總覽 -->
+    <div id="admin-section" style="display:none">
+      <div class="section-header">
+        <span class="section-title">全員年資總覽</span>
+        <button class="edit-btn" onclick="openAddModal()">＋ 新增員工</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>姓名</th>
+              <th>部門</th>
+              <th>到職日</th>
+              <th>年資</th>
+              <th>本期特休起算</th>
+              <th>可休天數</th>
+              <th>已休天數</th>
+              <th>剩餘天數</th>
+              <th>特休使用率</th>
+              <th>週年提醒</th>
+              <th>旅遊津貼（本期）</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="admin-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modal-title-text">編輯員工資料</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <label>姓名</label>
+    <input id="m-name" type="text" placeholder="王小明">
+    <label>部門</label>
+    <input id="m-dept" type="text" placeholder="行政部">
+    <label>職稱</label>
+    <input id="m-title" type="text" placeholder="業務助理">
+    <label>到職日</label>
+    <input id="m-start" type="date">
+    <label>生日（西元）</label>
+    <input id="m-bday" type="date">
+    <label>Email（Google 帳號）</label>
+    <input id="m-email" type="email" placeholder="xxx@gmail.com">
+    <label>已休天數（本期）</label>
+    <input id="m-used" type="number" step="0.125" min="0" placeholder="0">
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveEmployee()">儲存</button>
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+  storageBucket: "gantt-marketing.firebasestorage.app",
+  messagingSenderId: "966398251503",
+  appId: "1:966398251503:web:d6a2173863f9ca1cfd261a"
+};
+
+const ALLOWED_EMAILS = [
+  "webview168@gmail.com","mimo.jsm@gmail.com","am578222@gmail.com",
+  "amy.ete@gmail.com","annie907120@gmail.com","bellsugar@gmail.com",
+  "maggie80405@gmail.com","miemie686@gmail.com","s0912656315@gmail.com",
+  "teresaho0901@gmail.com","a7733421@gmail.com","vivi7733421@gmail.com"
+];
+
+// 管理員：純管理員（無到職日）+ HR管理員（有到職日）
+const ADMIN_EMAILS = ["mimo.jsm@gmail.com","amy.ete@gmail.com","vivi7733421@gmail.com","a7733421@gmail.com","webview168@gmail.com"];
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// ── 初始員工資料 ──
+const DEFAULT_EMPLOYEES = [
+  { id:'e1', name:'劉舜薇', dept:'行政部', title:'會計',    email:'vivi7733421@gmail.com', startDate:'2015-06-08', birthday:'1985-03-02', usedDays:1 },
+  { id:'e2', name:'李靜憶', dept:'行政部', title:'副理',    email:'am578222@gmail.com',    startDate:'2013-08-03', birthday:'1990-05-25', usedDays:18 },
+  { id:'e3', name:'黃如杏', dept:'設計部', title:'設計師',  email:'bellsugar@gmail.com',   startDate:'2014-02-05', birthday:'1988-07-26', usedDays:4.625 },
+  { id:'e4', name:'何玉如', dept:'行政部', title:'業務助理',email:'teresaho0901@gmail.com', startDate:'2019-11-01', birthday:'1981-09-01', usedDays:6.875 },
+  { id:'e5', name:'許綾讌', dept:'設計部', title:'設計師',  email:'maggie80405@gmail.com', startDate:'2013-07-16', birthday:'1991-04-05', usedDays:10.375 },
+  { id:'e6', name:'楊蜜恬', dept:'設計部', title:'專案工程師',email:'miemie686@gmail.com', startDate:'2019-10-14', birthday:'1984-06-19', usedDays:13 },
+  { id:'e7', name:'吳彥琳', dept:'行政部', title:'業務助理',email:'annie907120@gmail.com', startDate:'2023-10-16', birthday:'2001-02-17', usedDays:9 },
+  { id:'e8', name:'林宜慧', dept:'行政部', title:'業務助理',email:'s0912656315@gmail.com', startDate:'2024-07-11', birthday:'1991-04-26', usedDays:7 },
+];
+
+let employees = [];
+let currentUser = null;
+let editingId = null;
+
+// ── 旅遊津貼計算 ──
+function calcTravel(startDate, years) {
+  // 週年制：滿1年後才有，每期1年
+  const start = new Date(startDate);
+  const today = new Date();
+  // 當期起算日（最近一次週年）
+  const periodStart = new Date(start);
+  periodStart.setFullYear(today.getFullYear());
+  if (periodStart > today) periodStart.setFullYear(today.getFullYear() - 1);
+  const periodEnd = new Date(periodStart);
+  periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+
+  // 未滿1年無津貼
+  if (years < 1) return { domestic: 0, overseas: 0, periodStart, periodEnd, eligible: false };
+
+  let domestic, overseas;
+  if (years < 2)       { domestic = 1500;  overseas = 3000; }
+  else if (years < 3)  { domestic = 3000;  overseas = 6000; }
+  else                 { domestic = 12000; overseas = 24000; }
+
+  return { domestic, overseas, periodStart, periodEnd, eligible: true };
+}
+
+// ── 天數格式化（小數 → X天X小時）──
+function formatDays(d) {
+  if (d === 0) return '0 天';
+  const days = Math.floor(d);
+  const hours = Math.round((d - days) * 8);
+  if (hours === 0) return `${days} 天`;
+  if (days === 0) return `${hours} 小時`;
+  return `${days} 天 ${hours} 小時`;
+}
+
+// ── 特休計算（週年制，勞基法新制）──
+function calcAnnualLeave(startDate) {
+  const start = new Date(startDate);
+  const today = new Date();
+  
+  // 計算總月數
+  let months = (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth());
+  if (today.getDate() < start.getDate()) months--;
+  const years = Math.floor(months / 12);
+  const remMonths = months % 12;
+
+  // 本期週年起算日
+  const periodStart = new Date(start);
+  periodStart.setFullYear(today.getFullYear());
+  if (periodStart > today) periodStart.setFullYear(today.getFullYear() - 1);
+  
+  // 下次週年日
+  const nextAnniv = new Date(periodStart);
+  nextAnniv.setFullYear(nextAnniv.getFullYear() + 1);
+
+  // 可休天數（勞基法第38條，週年制）
+  // 滿6個月:3天, 1年:7天, 2年:10天, 3~4年:14天, 5~9年:15天, 10年起每年+1天上限30天
+  let quota = 0;
+  if (months < 6) quota = 0;
+  else if (months < 12) quota = 3;
+  else if (years < 2) quota = 7;
+  else if (years < 3) quota = 10;
+  else if (years < 5) quota = 14;
+  else if (years < 10) quota = 15;
+  else quota = Math.min(15 + (years - 9), 30);
+
+  // 年資文字
+  const yText = years > 0 ? `${years}年${remMonths}個月` : `${remMonths}個月`;
+  
+  // 距離週年日天數
+  const daysToAnniv = Math.ceil((nextAnniv - today) / 86400000);
+
+  // 旅遊津貼（週年制，每年一次）
+  let travelDomestic = 0, travelOverseas = 0;
+  if (years >= 1 && years < 2)      { travelDomestic = 1500;  travelOverseas = 3000; }
+  else if (years >= 2 && years < 3) { travelDomestic = 3000;  travelOverseas = 6000; }
+  else if (years >= 3)              { travelDomestic = 12000; travelOverseas = 24000; }
+
+  return { years, months, quota, yText, periodStart, nextAnniv, daysToAnniv, travelDomestic, travelOverseas };
+}
+
+// ── 生日判斷（本月）──
+function isBirthdayMonth(birthday) {
+  if (!birthday) return false;
+  const bday = new Date(birthday);
+  const today = new Date();
+  return bday.getMonth() === today.getMonth();
+}
+
+// ── Firebase 讀寫 ──
+async function loadEmployees() {
+  try {
+    const snap = await getDoc(doc(db, 'seniority', 'employees'));
+    if (snap.exists() && snap.data().list) {
+      employees = JSON.parse(snap.data().list);
+    } else {
+      employees = DEFAULT_EMPLOYEES;
+      await saveEmployees();
+    }
+  } catch(e) {
+    employees = DEFAULT_EMPLOYEES;
+  }
+}
+
+async function saveEmployees() {
+  try {
+    await setDoc(doc(db, 'seniority', 'employees'), {
+      list: JSON.stringify(employees),
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) { console.error(e); }
+}
+
+// ── 渲染 ──
+function render() {
+  const isAdmin = ADMIN_EMAILS.includes(currentUser.email);
+  const myEmployee = employees.find(e => e.email === currentUser.email);
+
+  // 生日提醒（管理員看全員，員工看自己）
+  renderBirthdayBar(isAdmin ? employees : (myEmployee ? [myEmployee] : []), isAdmin);
+
+  // 特休警示（管理員才看）
+  if (isAdmin) renderAlertBar();
+
+  // 個人卡片
+  if (myEmployee) renderMyCard(myEmployee);
+  else if (!isAdmin) {
+    document.getElementById('my-section').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text3)">查無您的員工資料，請聯絡 HR</div>`;
+  }
+
+  // 管理員總覽
+  if (isAdmin) {
+    document.getElementById('admin-section').style.display = 'block';
+    renderAdminTable();
+  }
+}
+
+function renderBirthdayBar(list, isAdmin) {
+  const bdayEls = list.filter(e => isBirthdayMonth(e.birthday));
+  const bar = document.getElementById('bday-bar');
+  const bdayList = document.getElementById('bday-list');
+  if (!bdayEls.length) return;
+  bar.classList.add('show');
+  bdayList.innerHTML = bdayEls.map(e => {
+    const bday = new Date(e.birthday);
+    const month = bday.getMonth()+1, day = bday.getDate();
+    return `<div class="bday-item">🌟 ${e.name} ${month}月${day}日生日 — 記得提醒填寫申請單！</div>`;
+  }).join('');
+}
+
+function renderAlertBar() {
+  const today = new Date();
+  const warns = employees.filter(e => {
+    if (!e.startDate) return false;
+    const { quota, daysToAnniv } = calcAnnualLeave(e.startDate);
+    const remaining = quota - (e.usedDays || 0);
+    return daysToAnniv <= 60 && remaining > 0;
+  });
+  if (!warns.length) return;
+  document.getElementById('alert-bar').classList.add('show');
+  document.getElementById('alert-list').innerHTML = warns.map(e => {
+    const { quota, daysToAnniv } = calcAnnualLeave(e.startDate);
+    const remaining = quota - (e.usedDays || 0);
+    return `<div class="alert-item">⚠️ <strong>${e.name}</strong> — 剩餘 <strong>${formatDays(remaining)}</strong>特休，週年日還有 ${daysToAnniv} 天</div>`;
+  }).join('');
+}
+
+function renderMyCard(emp) {
+  const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas } = calcAnnualLeave(emp.startDate);
+  const used = emp.usedDays || 0;
+  const remaining = Math.max(0, quota - used);
+  const pct = quota > 0 ? Math.round((used/quota)*100) : 0;
+  const remainColor = remaining === 0 ? 'red' : remaining <= 3 ? 'orange' : 'green';
+  const isBday = isBirthdayMonth(emp.birthday);
+  const bday = emp.birthday ? new Date(emp.birthday) : null;
+
+  document.getElementById('my-section').innerHTML = `
+    <div class="my-card">
+      <div class="my-card-header">
+        <img class="my-avatar" src="${currentUser.photoURL||''}" alt="">
+        <div>
+          <div class="my-name">${emp.name}</div>
+          <div class="my-dept">${emp.dept} · ${emp.title||''}</div>
+        </div>
+      </div>
+      <div class="my-stats">
+        <div class="stat-box">
+          <div class="stat-label">到職日</div>
+          <div class="stat-value" style="font-size:16px">${emp.startDate?.replace(/-/g,'/')}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">年資</div>
+          <div class="stat-value" style="font-size:16px">${yText}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">本期可休</div>
+          <div class="stat-value">${quota} <span style="font-size:14px;color:var(--text3)">天</span></div>
+          <div class="stat-sub">週年起算制</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">已休天數</div>
+          <div class="stat-value orange" style="font-size:18px">${formatDays(used)}</div>
+          <div class="stat-sub">已使用 ${pct}%</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">剩餘天數</div>
+          <div class="stat-value ${remainColor}" style="font-size:18px">${formatDays(remaining)}</div>
+          <div class="stat-sub">週年日 ${nextAnniv.getMonth()+1}/${nextAnniv.getDate()} 還有 ${daysToAnniv} 天</div>
+        </div>
+      </div>
+      <div style="margin-top:.875rem;padding-top:.875rem;border-top:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.5rem">旅遊津貼（本期）</div>
+        ${(()=>{
+          const tv = calcTravel(emp.startDate, seniority.years);
+          if (!tv.eligible) return '<div style="color:var(--text3);font-size:13px">服務未滿1年，尚無旅遊津貼資格</div>';
+          const periodKey = tv.periodStart.getFullYear()+'-'+tv.periodStart.getMonth();
+          const claimed = (emp.travelClaimed||[]).includes(periodKey);
+          const peStr = tv.periodEnd.getFullYear()+'/'+(tv.periodEnd.getMonth()+1)+'/'+tv.periodEnd.getDate();
+          if (claimed) return '<div style="color:var(--green);font-weight:700;font-size:14px">✓ 本期旅遊津貼已請領</div>';
+          return '<div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:14px">' +
+            '<span>🏠 國內 <strong>NT$ '+tv.domestic.toLocaleString()+'</strong></span>' +
+            '<span>✈️ 國外 <strong>NT$ '+tv.overseas.toLocaleString()+'</strong></span>' +
+            '<span style="color:var(--text3)">效期至 '+peStr+'</span></div>';
+        })()}
+      </div>
+            ${travelDomestic > 0 ? `
+      <div style="background:var(--accent-dim);border:1.5px solid #c7d2fe;border-radius:var(--radius-sm);padding:.75rem 1rem;margin-top:.875rem;font-size:14px">
+        ✈️ <strong>本期旅遊津貼</strong>　國內 <strong style="color:var(--accent)">NT$ ${travelDomestic.toLocaleString()}</strong>　／　國外 <strong style="color:var(--purple)">NT$ ${travelOverseas.toLocaleString()}</strong>
+      </div>` : ''}
+      <div class="bday-notice ${isBday?'show':''}">
+        🌟 本月是您的生日月份（${bday?`${bday.getMonth()+1}月${bday.getDate()}日`:''}）！記得填寫生日假申請單。
+      </div>
+    </div>`;
+}
+
+function renderAdminTable() {
+  const tbody = document.getElementById('admin-tbody');
+  tbody.innerHTML = employees.map(e => {
+    if (!e.startDate) {
+      return `<tr>
+        <td><strong>${e.name}</strong> <span class="badge badge-admin">管理員</span></td>
+        <td colspan="10" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
+        <td></td>
+      </tr>`;
+    }
+    const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas } = calcAnnualLeave(e.startDate);
+    const used = e.usedDays || 0;
+    const remaining = Math.max(0, quota - used);
+    const pct = quota > 0 ? Math.round((used/quota)*100) : 0;
+    const fillColor = pct >= 100 ? 'var(--red)' : pct >= 60 ? 'var(--orange)' : 'var(--green)';
+    const warn = daysToAnniv <= 60 && remaining > 0;
+    const isBday = isBirthdayMonth(e.birthday);
+
+    return `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <strong>${e.name}</strong>
+          ${isBday ? '<span style="font-size:14px" title="本月生日">🌟</span>' : ''}
+        </div>
+        <div style="font-size:11px;color:var(--text3)">${e.title||''}</div>
+      </td>
+      <td style="color:var(--text2)">${e.dept}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${e.startDate?.replace(/-/g,'/')}</td>
+      <td>${yText}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2)">${nextAnniv.getFullYear()}/${nextAnniv.getMonth()+1}/${nextAnniv.getDate()}</td>
+      <td style="font-weight:700">${quota} 天</td>
+      <td>${formatDays(used)}</td>
+      <td style="font-weight:700;color:${remaining===0?'var(--red)':remaining<=3?'var(--orange)':'var(--green)'}">${formatDays(remaining)}</td>
+      <td>
+        <div class="leave-bar-wrap">
+          <div class="leave-bar"><div class="leave-bar-fill" style="width:${Math.min(pct,100)}%;background:${fillColor}"></div></div>
+          <span style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${pct}%</span>
+        </div>
+      </td>
+      <td>
+        ${warn ? `<span class="tag-warn">⚠️ 剩${formatDays(remaining)} / ${daysToAnniv}天後到期</span>` : remaining===0 ? `<span class="tag-full">已休完</span>` : `<span class="tag-ok">正常</span>`}
+      </td>
+      <td>
+        ${(()=>{
+          const tv = calcTravel(e.startDate, years);
+          if (!tv.eligible) return '<span style="color:var(--text3);font-size:12px">未達資格</span>';
+          const periodKey = periodStart.getFullYear()+'-'+periodStart.getMonth();
+          const claimed = (e.travelClaimed||[]).includes(periodKey);
+          const pe = tv.periodEnd; const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
+          if (claimed) return `<span class="tag-full">已請領 ✓</span>`;
+          return `<div style="font-size:12px;line-height:1.8">
+            <div>🏠 NT$ ${tv.domestic.toLocaleString()} / ✈️ NT$ ${tv.overseas.toLocaleString()}</div>
+            <div style="color:var(--text3)">效期至 ${peStr}</div>
+            <button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel('${e.id}','${periodKey}')">標記已請領</button>
+          </div>`;
+        })()}
+      </td>
+      <td>
+        <button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── 旅遊津貼標記 ──
+window.markTravel = async (id, periodKey) => {
+  const idx = employees.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  const claimed = employees[idx].travelClaimed || [];
+  if (!claimed.includes(periodKey)) {
+    employees[idx].travelClaimed = [...claimed, periodKey];
+    await saveEmployees();
+    render();
+    showToast('已標記旅遊津貼請領 ✓');
+  }
+};
+
+// ── Modal ──
+window.openEditModal = (id) => {
+  editingId = id;
+  const e = employees.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('modal-title-text').textContent = '編輯員工資料';
+  document.getElementById('m-name').value = e.name || '';
+  document.getElementById('m-dept').value = e.dept || '';
+  document.getElementById('m-title').value = e.title || '';
+  document.getElementById('m-start').value = e.startDate || '';
+  document.getElementById('m-bday').value = e.birthday || '';
+  document.getElementById('m-email').value = e.email || '';
+  document.getElementById('m-used').value = e.usedDays || 0;
+  document.getElementById('modal').classList.add('show');
+};
+
+window.openAddModal = () => {
+  editingId = null;
+  document.getElementById('modal-title-text').textContent = '新增員工';
+  ['m-name','m-dept','m-title','m-start','m-bday','m-email'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('m-used').value = 0;
+  document.getElementById('modal').classList.add('show');
+};
+
+window.closeModal = () => document.getElementById('modal').classList.remove('show');
+
+window.saveEmployee = async () => {
+  const name = document.getElementById('m-name').value.trim();
+  if (!name) { showToast('請填寫姓名'); return; }
+  const data = {
+    name,
+    dept: document.getElementById('m-dept').value.trim(),
+    title: document.getElementById('m-title').value.trim(),
+    startDate: document.getElementById('m-start').value,
+    birthday: document.getElementById('m-bday').value,
+    email: document.getElementById('m-email').value.trim(),
+    usedDays: parseFloat(document.getElementById('m-used').value) || 0,
+  };
+  if (editingId) {
+    const idx = employees.findIndex(e => e.id === editingId);
+    if (idx >= 0) employees[idx] = { ...employees[idx], ...data };
+  } else {
+    employees.push({ ...data, id: 'e' + Date.now() });
+  }
+  await saveEmployees();
+  closeModal();
+  render();
+  showToast('已儲存 ✓');
+};
+
+// ── Auth ──
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function showLoading(v) { document.getElementById('loading').style.display = v ? 'flex' : 'none'; }
+function showLoginPage() { showLoading(false); document.getElementById('login-page').style.display='flex'; document.getElementById('app').style.display='none'; }
+function showApp(user) {
+  showLoading(false);
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('user-name').textContent = user.displayName || user.email;
+  if (user.photoURL) document.getElementById('user-avatar').src = user.photoURL;
+}
+
+onAuthStateChanged(auth, async user => {
+  if (user && ALLOWED_EMAILS.includes(user.email)) {
+    currentUser = user;
+    showApp(user);
+    await loadEmployees();
+    render();
+  } else if (user) {
+    signOut(auth); showLoginPage();
+    document.getElementById('login-error').style.display='block';
+  } else {
+    showLoginPage();
+  }
+});
+
+window.signIn = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    if (!ALLOWED_EMAILS.includes(result.user.email)) {
+      await signOut(auth);
+      document.getElementById('login-error').style.display='block';
+    }
+  } catch(e) {
+    if (e.code === 'auth/popup-blocked') {
+      document.getElementById('login-error').textContent='請允許彈出視窗';
+      document.getElementById('login-error').style.display='block';
+    }
+  }
+};
+window.claimTravel = async (id) => {
+  const idx = employees.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  employees[idx].travelClaimed = true;
+  await saveEmployees();
+  render();
+  showToast('已標記旅遊津貼請領 ✓');
+};
+
+window.unclaimTravel = async (id) => {
+  const idx = employees.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  employees[idx].travelClaimed = false;
+  await saveEmployees();
+  render();
+  showToast('已取消請領標記');
+};
+
+window.doSignOut = () => signOut(auth);
+</script>
+</body>
+</html>

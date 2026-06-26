@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>請假簽核 — Team Gantt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f6f8;--surface:#fff;--surface2:#f0f1f4;--border:#e4e6eb;--border2:#d0d3db;
+  --text:#1a1d23;--text2:#5a5f6e;--text3:#9099aa;
+  --accent:#4f6ef7;--accent-dim:#eef1fe;
+  --green:#2e9e6b;--green-dim:#ebf7f2;
+  --orange:#e8622a;--orange-dim:#fdf0eb;
+  --red:#e53935;--red-dim:#fef2f2;
+  --purple:#7c3aed;--purple-dim:#f5f3ff;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.05);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:15px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;z-index:999;font-size:14px;color:var(--text3)}
+.spinner{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px}
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f5f6f8 0%,#eef1fe 100%)}
+.login-card{background:var(--surface);border-radius:20px;padding:2.5rem;box-shadow:0 8px 40px rgba(0,0,0,.12);text-align:center;width:100%;max-width:380px}
+.login-logo{font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--text2);margin-bottom:1.5rem}
+.login-logo span{color:var(--accent)}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--surface);font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all .15s}
+.google-btn:hover{border-color:var(--accent)}
+.google-btn img{width:20px;height:20px}
+.login-error{font-size:12px;color:var(--red);margin-top:1rem;display:none;padding:8px;background:var(--red-dim);border-radius:6px}
+.app{display:none}
+
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-left{display:flex;align-items:center;gap:.875rem}
+.nav-logo{font-size:13px;font-weight:700;color:var(--text2);text-decoration:none;letter-spacing:.04em}
+.nav-logo span{color:var(--accent)}
+.nav-divider{width:1px;height:16px;background:var(--border2)}
+.nav-title{font-size:13px;font-weight:600}
+.nav-right{display:flex;align-items:center;gap:.75rem}
+.user-info{display:flex;align-items:center;gap:.5rem;font-size:13px;color:var(--text2)}
+.user-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--border)}
+.logout-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer}
+.logout-btn:hover{border-color:var(--accent);color:var(--accent)}
+.badge-dot{background:var(--red);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;margin-left:4px}
+
+.main{max-width:1440px;margin:0 auto;padding:1.5rem}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:var(--surface2);border-radius:var(--radius-sm);padding:3px;margin-bottom:1.25rem;width:fit-content}
+.tab{padding:8px 20px;font-size:14px;font-weight:500;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;border-radius:6px}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow);font-weight:600}
+
+/* Apply form */
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);max-width:680px}
+.form-title{font-size:16px;font-weight:700;margin-bottom:1.25rem}
+.field{margin-bottom:1rem}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+label{display:block;font-size:12px;color:var(--text3);font-weight:600;margin-bottom:5px;letter-spacing:.03em}
+input,select,textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;font-size:14px;color:var(--text);font-family:'Inter',sans-serif;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);background:var(--surface)}
+textarea{resize:vertical;min-height:80px}
+select option{background:var(--surface)}
+.duration-hint{font-size:12px;color:var(--accent);margin-top:4px;font-weight:600;min-height:18px}
+.submit-btn{width:100%;padding:11px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s;margin-top:.5rem}
+.submit-btn:hover{opacity:.88}
+.remaining-hint{background:var(--surface2);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:var(--text2);display:none}
+.remaining-hint.show{display:block}
+
+/* Leave list */
+.list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem;flex-wrap:wrap;gap:.5rem}
+.list-title{font-size:15px;font-weight:700}
+.filter-row{display:flex;gap:.5rem;flex-wrap:wrap}
+.filter-btn{padding:5px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.leave-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.125rem 1.25rem;margin-bottom:.625rem;box-shadow:var(--shadow);transition:box-shadow .15s}
+.leave-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.leave-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.625rem;gap:.5rem}
+.leave-meta{display:flex;align-items:center;gap:.625rem;flex-wrap:wrap}
+.leave-type{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:700}
+.type-特休{background:var(--accent-dim);color:var(--accent)}
+.type-事假{background:var(--orange-dim);color:var(--orange)}
+.type-病假{background:var(--red-dim);color:var(--red)}
+.type-補休{background:var(--green-dim);color:var(--green)}
+.type-婚假{background:var(--purple-dim);color:var(--purple)}
+.type-喪假{background:#f1f5f9;color:#475569}
+.type-其他{background:var(--surface2);color:var(--text3)}
+.status-badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:700}
+.status-pending{background:#fef3c7;color:#92400e}
+.status-approved{background:var(--green-dim);color:var(--green)}
+.status-rejected{background:var(--red-dim);color:var(--red)}
+.leave-duration{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap}
+.leave-name{font-size:15px;font-weight:700;margin-bottom:2px}
+.leave-date{font-size:13px;color:var(--text2);margin-bottom:4px}
+.leave-reason{font-size:13px;color:var(--text2);margin-bottom:.625rem}
+.leave-footer{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+.leave-agent{font-size:12px;color:var(--text3)}
+.action-row{display:flex;gap:.5rem}
+.approve-btn{padding:6px 16px;border-radius:20px;border:none;background:var(--green);color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.approve-btn:hover{opacity:.85}
+.reject-btn{padding:6px 16px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--red);font-size:12px;font-weight:700;cursor:pointer}
+.reject-btn:hover{border-color:var(--red);background:var(--red-dim)}
+.cancel-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text3);font-size:12px;cursor:pointer}
+.cancel-btn:hover{border-color:var(--red);color:var(--red)}
+.review-note{font-size:12px;color:var(--text3);font-style:italic;margin-top:4px}
+
+.empty{text-align:center;padding:3rem 1rem;color:var(--text3)}
+.empty-icon{font-size:2rem;margin-bottom:.75rem;opacity:.5}
+.empty-text{font-size:14px;line-height:1.7}
+
+/* Batch */
+.batch-bar{background:var(--accent);color:#fff;border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:.875rem;display:none;align-items:center;justify-content:space-between;gap:.5rem}
+.batch-bar.show{display:flex}
+.batch-approve-btn{padding:7px 18px;border-radius:20px;border:2px solid #fff;background:transparent;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.batch-approve-btn:hover{background:#fff;color:var(--accent)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,18,8,.55);z-index:50;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:16px;padding:1.5rem;width:420px;max-width:92vw;box-shadow:0 24px 60px rgba(0,0,0,.2)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)}
+.modal-actions{display:flex;gap:8px;margin-top:1.25rem}
+.btn-primary{flex:1;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:10px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-danger{flex:1;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);padding:10px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-cancel{background:var(--surface2);color:var(--text2);border:none;border-radius:var(--radius-sm);padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(10px);background:var(--text);border-radius:var(--radius);padding:10px 18px;font-size:13px;color:#fff;opacity:0;transition:all .25s;z-index:999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading"><div class="spinner"></div> 載入中...</div>
+
+<div class="login-page" id="login-page" style="display:none">
+  <div class="login-card">
+    <div class="login-logo"><span>TEAM</span> GANTT</div>
+    <div style="font-size:3rem;margin-bottom:1rem">🗓️</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:.5rem">請假簽核系統</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:2rem;line-height:1.6">請使用公司 Google 帳號登入</div>
+    <button class="google-btn" onclick="signIn()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      使用 Google 帳號登入
+    </button>
+    <div class="login-error" id="login-error">此帳號無使用權限，請聯絡管理員</div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <nav>
+    <div class="nav-left">
+      <a class="nav-logo" href="home.html">← <span>TEAM</span> GANTT</a>
+      <div class="nav-divider"></div>
+      <span class="nav-title">請假簽核</span>
+    </div>
+    <div class="nav-right">
+      <div class="user-info">
+        <img class="user-avatar" id="user-avatar" src="" alt="">
+        <span id="user-name"></span>
+      </div>
+      <button class="logout-btn" onclick="doSignOut()">登出</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="tabs">
+      <button class="tab active" id="tab-apply" onclick="switchTab('apply')">📝 申請假單</button>
+      <button class="tab" id="tab-my" onclick="switchTab('my')">📋 我的假單</button>
+      <button class="tab" id="tab-approve" onclick="switchTab('approve')">
+        ✅ 待簽核 <span class="badge-dot" id="pending-count" style="display:none">0</span>
+      </button>
+      <button class="tab" id="tab-all" onclick="switchTab('all')">📊 全員假單</button>
+    </div>
+
+    <!-- 申請假單 -->
+    <div id="section-apply">
+      <div class="form-card">
+        <div class="form-title">📝 填寫請假申請</div>
+        <div class="remaining-hint" id="remaining-hint"></div>
+        <div class="field-row">
+          <div>
+            <label>假別</label>
+            <select id="f-type" onchange="onTypeChange()">
+              <option>特休</option>
+              <option>事假</option>
+              <option>病假</option>
+              <option>補休</option>
+              <option>婚假</option>
+              <option>喪假</option>
+              <option>其他</option>
+            </select>
+          </div>
+          <div>
+            <label>代理人</label>
+            <select id="f-agent"></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label>開始日期時間</label>
+            <input type="datetime-local" id="f-start" oninput="calcDuration()">
+          </div>
+          <div>
+            <label>結束日期時間</label>
+            <input type="datetime-local" id="f-end" oninput="calcDuration()">
+          </div>
+        </div>
+        <div class="duration-hint" id="duration-hint"></div>
+        <div class="field" style="margin-top:.75rem">
+          <label>請假事由</label>
+          <textarea id="f-reason" placeholder="請說明請假原因..."></textarea>
+        </div>
+        <div class="field">
+          <label>附件說明（選填，如診斷證明、喜帖等）</label>
+          <input type="text" id="f-attachment" placeholder="例：附診斷證明書">
+        </div>
+        <button class="submit-btn" onclick="submitLeave()">送出申請</button>
+      </div>
+    </div>
+
+    <!-- 我的假單 -->
+    <div id="section-my" style="display:none">
+      <div class="list-header">
+        <span class="list-title">我的假單</span>
+        <div class="filter-row" id="my-filters">
+          <button class="filter-btn active" onclick="setMyFilter('全部',this)">全部</button>
+          <button class="filter-btn" onclick="setMyFilter('待審核',this)">待審核</button>
+          <button class="filter-btn" onclick="setMyFilter('已核准',this)">已核准</button>
+          <button class="filter-btn" onclick="setMyFilter('已退回',this)">已退回</button>
+        </div>
+      </div>
+      <div id="my-list"></div>
+    </div>
+
+    <!-- 待簽核（管理員） -->
+    <div id="section-approve" style="display:none">
+      <div class="list-header">
+        <span class="list-title">待簽核假單</span>
+        <div id="batch-select-wrap" style="display:flex;align-items:center;gap:.5rem">
+          <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+          <label for="select-all" style="font-size:13px;color:var(--text2);cursor:pointer;margin:0">全選</label>
+        </div>
+      </div>
+      <div class="batch-bar" id="batch-bar">
+        <span id="batch-count-text">已選 0 筆</span>
+        <button class="batch-approve-btn" onclick="batchApprove()">✓ 批次核准</button>
+      </div>
+      <div id="approve-list"></div>
+    </div>
+
+    <!-- 全員假單（管理員） -->
+    <div id="section-all" style="display:none">
+      <div class="list-header">
+        <span class="list-title">全員假單總覽</span>
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="setAllFilter('全部',this)">全部</button>
+          <button class="filter-btn" onclick="setAllFilter('待審核',this)">待審核</button>
+          <button class="filter-btn" onclick="setAllFilter('已核准',this)">已核准</button>
+          <button class="filter-btn" onclick="setAllFilter('已退回',this)">已退回</button>
+        </div>
+      </div>
+      <div id="all-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-overlay" id="reject-modal">
+  <div class="modal">
+    <div class="modal-title">
+      退回假單
+      <button class="modal-close" onclick="closeRejectModal()">✕</button>
+    </div>
+    <label>退回原因（選填）</label>
+    <textarea id="reject-reason" placeholder="請說明退回原因..." rows="3" style="margin-top:6px"></textarea>
+    <div class="modal-actions">
+      <button class="btn-danger" onclick="confirmReject()">確認退回</button>
+      <button class="btn-cancel" onclick="closeRejectModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, updateDoc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+  storageBucket: "gantt-marketing.firebasestorage.app",
+  messagingSenderId: "966398251503",
+  appId: "1:966398251503:web:d6a2173863f9ca1cfd261a"
+};
+
+const ALLOWED_EMAILS = [
+  "webview168@gmail.com","mimo.jsm@gmail.com","am578222@gmail.com",
+  "amy.ete@gmail.com","annie907120@gmail.com","bellsugar@gmail.com",
+  "maggie80405@gmail.com","miemie686@gmail.com","s0912656315@gmail.com",
+  "teresaho0901@gmail.com","a7733421@gmail.com","vivi7733421@gmail.com"
+];
+const ADMIN_EMAILS = ["mimo.jsm@gmail.com","amy.ete@gmail.com","vivi7733421@gmail.com","a7733421@gmail.com","webview168@gmail.com"];
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let currentUser = null;
+let employees = [];
+let leaves = [];
+let myFilter = '全部';
+let allFilter = '全部';
+let rejectingId = null;
+let selectedIds = new Set();
+
+// ── 工具函數 ──
+function isAdmin() { return ADMIN_EMAILS.includes(currentUser?.email); }
+
+function getMyEmployee() { return employees.find(e => e.email === currentUser?.email); }
+
+function formatDays(d) {
+  if (d === 0) return '0 天';
+  const days = Math.floor(d);
+  const hours = Math.round((d - days) * 8);
+  if (hours === 0) return `${days} 天`;
+  if (days === 0) return `${hours} 小時`;
+  return `${days} 天 ${hours} 小時`;
+}
+
+function calcLeaveDays(start, end) {
+  if (!start || !end) return 0;
+  const s = new Date(start), e = new Date(end);
+  const diffMs = e - s;
+  if (diffMs <= 0) return 0;
+  const diffHours = diffMs / 3600000;
+  return Math.round((diffHours / 8) * 8) / 8; // 以小時為單位，換算天數
+}
+
+function statusLabel(s) {
+  if (s === 'pending') return '<span class="status-badge status-pending">待審核</span>';
+  if (s === 'approved') return '<span class="status-badge status-approved">已核准</span>';
+  if (s === 'rejected') return '<span class="status-badge status-rejected">已退回</span>';
+  return '';
+}
+
+function fmtDT(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ── 載入資料 ──
+async function loadEmployees() {
+  try {
+    const snap = await getDoc(doc(db, 'seniority', 'employees'));
+    if (snap.exists() && snap.data().list) employees = JSON.parse(snap.data().list);
+  } catch(e) { console.error(e); }
+}
+
+async function loadLeaves() {
+  try {
+    const snap = await getDocs(collection(db, 'leaves'));
+    leaves = [];
+    snap.forEach(d => leaves.push({ id: d.id, ...d.data() }));
+    leaves.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  } catch(e) { console.error(e); }
+}
+
+// ── 初始化代理人選單 ──
+function initAgentSelect() {
+  const sel = document.getElementById('f-agent');
+  sel.innerHTML = '<option value="">-- 選擇代理人 --</option>';
+  employees.filter(e => e.email !== currentUser.email && e.startDate).forEach(e => {
+    sel.innerHTML += `<option value="${e.email}">${e.name}</option>`;
+  });
+}
+
+// ── 假別切換：顯示剩餘特休 ──
+window.onTypeChange = () => {
+  const type = document.getElementById('f-type').value;
+  const hint = document.getElementById('remaining-hint');
+  if (type === '特休') {
+    const emp = getMyEmployee();
+    if (emp) {
+      const used = emp.usedDays || 0;
+      const quota = calcQuota(emp.startDate);
+      const remaining = Math.max(0, quota - used);
+      hint.innerHTML = `🏖️ 本期特休剩餘：<strong>${formatDays(remaining)}</strong>（可休 ${quota} 天，已休 ${formatDays(used)}）`;
+      hint.classList.add('show');
+    }
+  } else { hint.classList.remove('show'); }
+};
+
+function calcQuota(startDate) {
+  if (!startDate) return 0;
+  const start = new Date(startDate), today = new Date();
+  let months = (today.getFullYear()-start.getFullYear())*12+(today.getMonth()-start.getMonth());
+  if (today.getDate() < start.getDate()) months--;
+  const years = Math.floor(months/12);
+  if (months < 6) return 0;
+  if (months < 12) return 3;
+  if (years < 2) return 7;
+  if (years < 3) return 10;
+  if (years < 5) return 14;
+  if (years < 10) return 15;
+  return Math.min(15+(years-9), 30);
+}
+
+// ── 計算時數 ──
+window.calcDuration = () => {
+  const s = document.getElementById('f-start').value;
+  const e = document.getElementById('f-end').value;
+  const days = calcLeaveDays(s, e);
+  const hint = document.getElementById('duration-hint');
+  if (days > 0) {
+    hint.textContent = `請假時數：${formatDays(days)}`;
+  } else {
+    hint.textContent = '';
+  }
+};
+
+// ── 送出申請 ──
+window.submitLeave = async () => {
+  const type = document.getElementById('f-type').value;
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end').value;
+  const reason = document.getElementById('f-reason').value.trim();
+  const agent = document.getElementById('f-agent').value;
+  const attachment = document.getElementById('f-attachment').value.trim();
+
+  if (!start || !end) { showToast('請填寫請假時間'); return; }
+  const days = calcLeaveDays(start, end);
+  if (days <= 0) { showToast('結束時間必須晚於開始時間'); return; }
+  if (!agent) { showToast('請選擇代理人'); return; }
+
+  // 特休額度檢查
+  if (type === '特休') {
+    const emp = getMyEmployee();
+    if (emp) {
+      const remaining = Math.max(0, calcQuota(emp.startDate) - (emp.usedDays||0));
+      if (days > remaining) {
+        showToast(`特休不足！剩餘 ${formatDays(remaining)}，申請 ${formatDays(days)}`);
+        return;
+      }
+    }
+  }
+
+  const agentEmp = employees.find(e => e.email === agent);
+  const myEmp = getMyEmployee();
+
+  try {
+    await addDoc(collection(db, 'leaves'), {
+      applicantEmail: currentUser.email,
+      applicantName: myEmp?.name || currentUser.displayName,
+      applicantDept: myEmp?.dept || '',
+      type, start, end,
+      days,
+      reason,
+      agent,
+      agentName: agentEmp?.name || agent,
+      attachment,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      reviewNote: '',
+      reviewedBy: '',
+      reviewedAt: ''
+    });
+    showToast('假單已送出 ✓');
+    // 清空表單
+    ['f-start','f-end','f-reason','f-attachment'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('duration-hint').textContent='';
+    document.getElementById('remaining-hint').classList.remove('show');
+    await loadLeaves();
+    updatePendingCount();
+  } catch(e) {
+    console.error(e);
+    showToast('送出失敗，請稍後再試');
+  }
+};
+
+// ── 渲染：我的假單 ──
+function renderMyList() {
+  const myLeaves = leaves.filter(l => l.applicantEmail === currentUser.email);
+  const filtered = myFilter === '全部' ? myLeaves : myLeaves.filter(l => {
+    if (myFilter === '待審核') return l.status === 'pending';
+    if (myFilter === '已核准') return l.status === 'approved';
+    if (myFilter === '已退回') return l.status === 'rejected';
+    return true;
+  });
+  const wrap = document.getElementById('my-list');
+  if (!filtered.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">沒有符合條件的假單</div></div>`;
+    return;
+  }
+  wrap.innerHTML = filtered.map(l => `
+    <div class="leave-card">
+      <div class="leave-card-top">
+        <div class="leave-meta">
+          <span class="leave-type type-${l.type}">${l.type}</span>
+          ${statusLabel(l.status)}
+          <span class="leave-duration">${formatDays(l.days)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">${fmtDT(l.createdAt).split(' ')[0]} 申請</div>
+      </div>
+      <div class="leave-date">📅 ${fmtDT(l.start)} ～ ${fmtDT(l.end)}</div>
+      ${l.reason ? `<div class="leave-reason">💬 ${l.reason}</div>` : ''}
+      ${l.attachment ? `<div class="leave-reason">📎 ${l.attachment}</div>` : ''}
+      <div class="leave-footer">
+        <span class="leave-agent">代理人：${l.agentName}</span>
+        <div class="action-row">
+          ${l.status === 'pending' ? `<button class="cancel-btn" onclick="cancelLeave('${l.id}')">撤回</button>` : ''}
+          ${l.status === 'rejected' && l.reviewNote ? `<span class="review-note">退回原因：${l.reviewNote}</span>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── 渲染：待簽核 ──
+function renderApproveList() {
+  const pending = leaves.filter(l => l.status === 'pending');
+  const wrap = document.getElementById('approve-list');
+  if (!pending.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">目前沒有待簽核的假單</div></div>`;
+    document.getElementById('batch-bar').classList.remove('show');
+    return;
+  }
+  wrap.innerHTML = pending.map(l => `
+    <div class="leave-card" id="card-${l.id}">
+      <div class="leave-card-top">
+        <div class="leave-meta">
+          <input type="checkbox" class="approve-check" data-id="${l.id}" onchange="onCheckChange()">
+          <span class="leave-type type-${l.type}">${l.type}</span>
+          <span class="status-badge status-pending">待審核</span>
+          <span class="leave-duration">${formatDays(l.days)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">${fmtDT(l.createdAt).split(' ')[0]} 申請</div>
+      </div>
+      <div class="leave-name">${l.applicantName} <span style="font-size:12px;color:var(--text3);font-weight:400">${l.applicantDept}</span></div>
+      <div class="leave-date">📅 ${fmtDT(l.start)} ～ ${fmtDT(l.end)}</div>
+      ${l.reason ? `<div class="leave-reason">💬 ${l.reason}</div>` : ''}
+      ${l.attachment ? `<div class="leave-reason">📎 ${l.attachment}</div>` : ''}
+      <div class="leave-footer">
+        <span class="leave-agent">代理人：${l.agentName}</span>
+        <div class="action-row">
+          <button class="approve-btn" onclick="approveLeave('${l.id}')">✓ 核准</button>
+          <button class="reject-btn" onclick="openRejectModal('${l.id}')">✕ 退回</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── 渲染：全員假單 ──
+function renderAllList() {
+  const filtered = allFilter === '全部' ? leaves : leaves.filter(l => {
+    if (allFilter === '待審核') return l.status === 'pending';
+    if (allFilter === '已核准') return l.status === 'approved';
+    if (allFilter === '已退回') return l.status === 'rejected';
+    return true;
+  });
+  const wrap = document.getElementById('all-list');
+  if (!filtered.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">沒有假單記錄</div></div>`;
+    return;
+  }
+  wrap.innerHTML = filtered.map(l => `
+    <div class="leave-card">
+      <div class="leave-card-top">
+        <div class="leave-meta">
+          <span class="leave-type type-${l.type}">${l.type}</span>
+          ${statusLabel(l.status)}
+          <span class="leave-duration">${formatDays(l.days)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">${fmtDT(l.createdAt).split(' ')[0]}</div>
+      </div>
+      <div class="leave-name">${l.applicantName} <span style="font-size:12px;color:var(--text3);font-weight:400">${l.applicantDept}</span></div>
+      <div class="leave-date">📅 ${fmtDT(l.start)} ～ ${fmtDT(l.end)}</div>
+      ${l.reason ? `<div class="leave-reason">💬 ${l.reason}</div>` : ''}
+      ${l.status==='rejected'&&l.reviewNote ? `<div class="review-note">退回原因：${l.reviewNote}</div>` : ''}
+      <div class="leave-footer">
+        <span class="leave-agent">代理人：${l.agentName}</span>
+        ${l.reviewedBy ? `<span style="font-size:11px;color:var(--text3)">${l.status==='approved'?'核准':'退回'}：${l.reviewedBy}</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// ── 核准 ──
+window.approveLeave = async (id) => {
+  const leave = leaves.find(l => l.id === id);
+  if (!leave) return;
+  try {
+    await updateDoc(doc(db, 'leaves', id), {
+      status: 'approved',
+      reviewedBy: currentUser.displayName || currentUser.email,
+      reviewedAt: new Date().toISOString()
+    });
+    // 如果是特休，自動更新已休天數
+    if (leave.type === '特休') {
+      await updateUsedDays(leave.applicantEmail, leave.days);
+    }
+    showToast('已核准 ✓');
+    await loadLeaves();
+    renderApproveList();
+    renderAllList();
+    updatePendingCount();
+  } catch(e) { showToast('操作失敗'); console.error(e); }
+};
+
+// ── 退回 ──
+window.openRejectModal = (id) => { rejectingId = id; document.getElementById('reject-modal').classList.add('show'); };
+window.closeRejectModal = () => { document.getElementById('reject-modal').classList.remove('show'); rejectingId = null; };
+window.confirmReject = async () => {
+  if (!rejectingId) return;
+  const note = document.getElementById('reject-reason').value.trim();
+  try {
+    await updateDoc(doc(db, 'leaves', rejectingId), {
+      status: 'rejected',
+      reviewNote: note,
+      reviewedBy: currentUser.displayName || currentUser.email,
+      reviewedAt: new Date().toISOString()
+    });
+    showToast('已退回');
+    closeRejectModal();
+    document.getElementById('reject-reason').value = '';
+    await loadLeaves();
+    renderApproveList();
+    renderAllList();
+    updatePendingCount();
+  } catch(e) { showToast('操作失敗'); }
+};
+
+// ── 撤回 ──
+window.cancelLeave = async (id) => {
+  if (!confirm('確定撤回這張假單？')) return;
+  try {
+    await updateDoc(doc(db, 'leaves', id), { status: 'cancelled' });
+    showToast('已撤回');
+    await loadLeaves();
+    renderMyList();
+    updatePendingCount();
+  } catch(e) { showToast('操作失敗'); }
+};
+
+// ── 批次核准 ──
+window.toggleSelectAll = (cb) => {
+  document.querySelectorAll('.approve-check').forEach(c => {
+    c.checked = cb.checked;
+    if (cb.checked) selectedIds.add(c.dataset.id);
+    else selectedIds.delete(c.dataset.id);
+  });
+  updateBatchBar();
+};
+window.onCheckChange = () => {
+  selectedIds.clear();
+  document.querySelectorAll('.approve-check:checked').forEach(c => selectedIds.add(c.dataset.id));
+  updateBatchBar();
+};
+function updateBatchBar() {
+  const bar = document.getElementById('batch-bar');
+  if (selectedIds.size > 0) {
+    bar.classList.add('show');
+    document.getElementById('batch-count-text').textContent = `已選 ${selectedIds.size} 筆`;
+  } else {
+    bar.classList.remove('show');
+  }
+}
+window.batchApprove = async () => {
+  if (!selectedIds.size) return;
+  if (!confirm(`確定批次核准 ${selectedIds.size} 筆假單？`)) return;
+  for (const id of selectedIds) {
+    const leave = leaves.find(l => l.id === id);
+    if (!leave) continue;
+    await updateDoc(doc(db, 'leaves', id), {
+      status: 'approved',
+      reviewedBy: currentUser.displayName || currentUser.email,
+      reviewedAt: new Date().toISOString()
+    });
+    if (leave.type === '特休') await updateUsedDays(leave.applicantEmail, leave.days);
+  }
+  showToast(`已批次核准 ${selectedIds.size} 筆 ✓`);
+  selectedIds.clear();
+  await loadLeaves();
+  renderApproveList();
+  renderAllList();
+  updatePendingCount();
+};
+
+// ── 更新已休天數（連動 seniority）──
+async function updateUsedDays(email, days) {
+  try {
+    const snap = await getDoc(doc(db, 'seniority', 'employees'));
+    if (!snap.exists()) return;
+    const emps = JSON.parse(snap.data().list);
+    const idx = emps.findIndex(e => e.email === email);
+    if (idx < 0) return;
+    emps[idx].usedDays = Math.round(((emps[idx].usedDays || 0) + days) * 1000) / 1000;
+    await setDoc(doc(db, 'seniority', 'employees'), {
+      list: JSON.stringify(emps),
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) { console.error('更新已休天數失敗', e); }
+}
+
+// ── 更新待簽核數量 ──
+function updatePendingCount() {
+  const count = leaves.filter(l => l.status === 'pending').length;
+  const el = document.getElementById('pending-count');
+  if (count > 0 && isAdmin()) { el.textContent = count; el.style.display='inline-flex'; }
+  else { el.style.display='none'; }
+}
+
+// ── Tab 切換 ──
+window.switchTab = (tab) => {
+  ['apply','my','approve','all'].forEach(t => {
+    document.getElementById(`section-${t}`).style.display = t===tab?'block':'none';
+    document.getElementById(`tab-${t}`).classList.toggle('active', t===tab);
+  });
+  if (tab==='my') renderMyList();
+  if (tab==='approve') renderApproveList();
+  if (tab==='all') renderAllList();
+};
+
+window.setMyFilter = (f, btn) => {
+  myFilter = f;
+  document.querySelectorAll('#my-filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMyList();
+};
+window.setAllFilter = (f, btn) => {
+  allFilter = f;
+  btn.closest('.filter-row').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAllList();
+};
+
+// ── 隱藏管理員 tabs ──
+function setupTabs() {
+  if (!isAdmin()) {
+    document.getElementById('tab-approve').style.display = 'none';
+    document.getElementById('tab-all').style.display = 'none';
+  }
+}
+
+// ── Auth ──
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+function showLoading(v) { document.getElementById('loading').style.display = v?'flex':'none'; }
+function showLoginPage() { showLoading(false); document.getElementById('login-page').style.display='flex'; document.getElementById('app').style.display='none'; }
+function showApp(user) {
+  showLoading(false);
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('user-name').textContent = user.displayName || user.email;
+  if (user.photoURL) document.getElementById('user-avatar').src = user.photoURL;
+}
+
+onAuthStateChanged(auth, async user => {
+  if (user && ALLOWED_EMAILS.includes(user.email)) {
+    currentUser = user;
+    showApp(user);
+    await loadEmployees();
+    await loadLeaves();
+    setupTabs();
+    initAgentSelect();
+    updatePendingCount();
+    // 預設時間：今天08:00~17:00
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('f-start').value = `${today}T08:00`;
+    document.getElementById('f-end').value = `${today}T17:00`;
+    calcDuration();
+  } else if (user) {
+    signOut(auth); showLoginPage();
+    document.getElementById('login-error').style.display='block';
+  } else { showLoginPage(); }
+});
+
+window.signIn = async () => {
+  try {
+    const r = await signInWithPopup(auth, provider);
+    if (!ALLOWED_EMAILS.includes(r.user.email)) {
+      await signOut(auth);
+      document.getElementById('login-error').style.display='block';
+    }
+  } catch(e) {
+    if (e.code==='auth/popup-blocked') {
+      document.getElementById('login-error').textContent='請允許彈出視窗';
+      document.getElementById('login-error').style.display='block';
+    }
+  }
+};
+window.doSignOut = () => signOut(auth);
+</script>
+</body>
+</html>
