@@ -17,7 +17,7 @@ h2{margin-bottom:1rem;font-size:18px}
 <div class="card">
   <h2>🔧 假單狀態修正工具</h2>
   <p style="font-size:13px;color:#666;margin-bottom:1.5rem">
-    將所有 <code>status: pending</code> 的假單改為 <code>pending_m2</code>（待經理簽核）。<br>
+    將所有 <code>status: pending_m1</code> 的假單改為 <code>pending_m2</code>（待經理簽核）。<br>
     ⚠️ 只需執行一次！
   </p>
   <button class="btn" id="btn" onclick="runFix()">開始修正</button>
@@ -61,7 +61,7 @@ window.runFix = async () => {
   const snap = await getDocs(collection(db, 'leaves'));
   const toFix = [];
   snap.forEach(d => {
-    if (d.data().status === 'pending') toFix.push(d.id);
+    if (d.data().status === 'pending_m1') toFix.push(d.id);
   });
   log(`找到 ${toFix.length} 筆需要修正\n`, 'info');
   let ok = 0;
