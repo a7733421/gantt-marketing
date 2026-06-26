@@ -353,10 +353,48 @@ function formatDays(d) {
 function calcLeaveDays(start, end) {
   if (!start || !end) return 0;
   const s = new Date(start), e = new Date(end);
-  const diffMs = e - s;
-  if (diffMs <= 0) return 0;
-  const diffHours = diffMs / 3600000;
-  return Math.round((diffHours / 8) * 8) / 8; // 以小時為單位，換算天數
+  if (e <= s) return 0;
+
+  // 逐日計算，扣除中午 12:00-13:00 休息時間
+  // 工作時間：09:00-12:00（3小時）+ 13:00-18:00（5小時）= 8小時/天
+  let totalHours = 0;
+  let cur = new Date(s);
+
+  while (cur < e) {
+    const dayStart = new Date(cur);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(cur);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    // 當天的計算範圍
+    const rangeStart = cur > dayStart ? cur : dayStart;
+    const rangeEnd = e < dayEnd ? e : dayEnd;
+
+    // 上午段 09:00-12:00
+    const amStart = new Date(dayStart); amStart.setHours(9, 0, 0, 0);
+    const amEnd   = new Date(dayStart); amEnd.setHours(12, 0, 0, 0);
+    // 下午段 13:00-18:00
+    const pmStart = new Date(dayStart); pmStart.setHours(13, 0, 0, 0);
+    const pmEnd   = new Date(dayStart); pmEnd.setHours(18, 0, 0, 0);
+
+    // 上午交集
+    const amS = Math.max(rangeStart, amStart);
+    const amE = Math.min(rangeEnd, amEnd);
+    if (amE > amS) totalHours += (amE - amS) / 3600000;
+
+    // 下午交集
+    const pmS = Math.max(rangeStart, pmStart);
+    const pmE = Math.min(rangeEnd, pmEnd);
+    if (pmE > pmS) totalHours += (pmE - pmS) / 3600000;
+
+    // 跳到下一天
+    cur = new Date(dayStart);
+    cur.setDate(cur.getDate() + 1);
+    cur.setHours(0, 0, 0, 0);
+  }
+
+  // 換算天數（8小時=1天），四捨五入到0.125（1小時）
+  return Math.round(totalHours / 8 * 8) / 8;
 }
 
 function statusLabel(s) {
