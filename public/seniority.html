@@ -19,7 +19,7 @@
   --radius:12px;--radius-sm:8px;
   --shadow:0 1px 3px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.05);
 }
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:15px}
 
 /* Loading / Login */
 .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;z-index:999;font-size:14px;color:var(--text3)}
@@ -52,7 +52,7 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .logout-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 /* Main layout */
-.main{max-width:1100px;margin:0 auto;padding:1.5rem}
+.main{max-width:1400px;margin:0 auto;padding:1.5rem}
 
 /* Alert banner */
 .alert-bar{background:var(--red-dim);border:1.5px solid #fca5a5;border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.25rem;display:none}
@@ -91,9 +91,9 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:10px 12px;border-bottom:1.5px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
-td{padding:12px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:11px 14px;border-bottom:1.5px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--surface2)}
 .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.03em}
@@ -167,7 +167,7 @@ tr:hover td{background:var(--surface2)}
 
     <!-- 生日提醒 (管理員看) -->
     <div class="bday-bar" id="bday-bar">
-      <div class="bday-title">🎂 本月壽星</div>
+      <div class="bday-title">🌟 本月壽星</div>
       <div id="bday-list"></div>
     </div>
 
@@ -194,6 +194,7 @@ tr:hover td{background:var(--surface2)}
               <th>剩餘天數</th>
               <th>特休使用率</th>
               <th>週年提醒</th>
+              <th>旅遊津貼（本期）</th>
               <th></th>
             </tr>
           </thead>
@@ -279,6 +280,29 @@ let employees = [];
 let currentUser = null;
 let editingId = null;
 
+// ── 旅遊津貼計算 ──
+function calcTravel(startDate, years) {
+  // 週年制：滿1年後才有，每期1年
+  const start = new Date(startDate);
+  const today = new Date();
+  // 當期起算日（最近一次週年）
+  const periodStart = new Date(start);
+  periodStart.setFullYear(today.getFullYear());
+  if (periodStart > today) periodStart.setFullYear(today.getFullYear() - 1);
+  const periodEnd = new Date(periodStart);
+  periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+
+  // 未滿1年無津貼
+  if (years < 1) return { domestic: 0, overseas: 0, periodStart, periodEnd, eligible: false };
+
+  let domestic, overseas;
+  if (years < 2)       { domestic = 1500;  overseas = 3000; }
+  else if (years < 3)  { domestic = 3000;  overseas = 6000; }
+  else                 { domestic = 12000; overseas = 24000; }
+
+  return { domestic, overseas, periodStart, periodEnd, eligible: true };
+}
+
 // ── 天數格式化（小數 → X天X小時）──
 function formatDays(d) {
   if (d === 0) return '0 天';
@@ -326,7 +350,13 @@ function calcAnnualLeave(startDate) {
   // 距離週年日天數
   const daysToAnniv = Math.ceil((nextAnniv - today) / 86400000);
 
-  return { years, months, quota, yText, periodStart, nextAnniv, daysToAnniv };
+  // 旅遊津貼（週年制，每年一次）
+  let travelDomestic = 0, travelOverseas = 0;
+  if (years >= 1 && years < 2)      { travelDomestic = 1500;  travelOverseas = 3000; }
+  else if (years >= 2 && years < 3) { travelDomestic = 3000;  travelOverseas = 6000; }
+  else if (years >= 3)              { travelDomestic = 12000; travelOverseas = 24000; }
+
+  return { years, months, quota, yText, periodStart, nextAnniv, daysToAnniv, travelDomestic, travelOverseas };
 }
 
 // ── 生日判斷（本月）──
@@ -394,7 +424,7 @@ function renderBirthdayBar(list, isAdmin) {
   bdayList.innerHTML = bdayEls.map(e => {
     const bday = new Date(e.birthday);
     const month = bday.getMonth()+1, day = bday.getDate();
-    return `<div class="bday-item">🎂 ${e.name} ${month}月${day}日生日 — 記得提醒填寫申請單！</div>`;
+    return `<div class="bday-item">🌟 ${e.name} ${month}月${day}日生日 — 記得提醒填寫申請單！</div>`;
   }).join('');
 }
 
@@ -416,7 +446,7 @@ function renderAlertBar() {
 }
 
 function renderMyCard(emp) {
-  const { quota, yText, daysToAnniv, nextAnniv } = calcAnnualLeave(emp.startDate);
+  const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas } = calcAnnualLeave(emp.startDate);
   const used = emp.usedDays || 0;
   const remaining = Math.max(0, quota - used);
   const pct = quota > 0 ? Math.round((used/quota)*100) : 0;
@@ -458,8 +488,27 @@ function renderMyCard(emp) {
           <div class="stat-sub">週年日 ${nextAnniv.getMonth()+1}/${nextAnniv.getDate()} 還有 ${daysToAnniv} 天</div>
         </div>
       </div>
+      <div style="margin-top:.875rem;padding-top:.875rem;border-top:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.5rem">旅遊津貼（本期）</div>
+        ${(()=>{
+          const tv = calcTravel(emp.startDate, seniority.years);
+          if (!tv.eligible) return '<div style="color:var(--text3);font-size:13px">服務未滿1年，尚無旅遊津貼資格</div>';
+          const periodKey = tv.periodStart.getFullYear()+'-'+tv.periodStart.getMonth();
+          const claimed = (emp.travelClaimed||[]).includes(periodKey);
+          const peStr = tv.periodEnd.getFullYear()+'/'+(tv.periodEnd.getMonth()+1)+'/'+tv.periodEnd.getDate();
+          if (claimed) return '<div style="color:var(--green);font-weight:700;font-size:14px">✓ 本期旅遊津貼已請領</div>';
+          return '<div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:14px">' +
+            '<span>🏠 國內 <strong>NT$ '+tv.domestic.toLocaleString()+'</strong></span>' +
+            '<span>✈️ 國外 <strong>NT$ '+tv.overseas.toLocaleString()+'</strong></span>' +
+            '<span style="color:var(--text3)">效期至 '+peStr+'</span></div>';
+        })()}
+      </div>
+            ${travelDomestic > 0 ? `
+      <div style="background:var(--accent-dim);border:1.5px solid #c7d2fe;border-radius:var(--radius-sm);padding:.75rem 1rem;margin-top:.875rem;font-size:14px">
+        ✈️ <strong>本期旅遊津貼</strong>　國內 <strong style="color:var(--accent)">NT$ ${travelDomestic.toLocaleString()}</strong>　／　國外 <strong style="color:var(--purple)">NT$ ${travelOverseas.toLocaleString()}</strong>
+      </div>` : ''}
       <div class="bday-notice ${isBday?'show':''}">
-        🎂 本月是您的生日月份（${bday?`${bday.getMonth()+1}月${bday.getDate()}日`:''}）！記得填寫生日假申請單。
+        🌟 本月是您的生日月份（${bday?`${bday.getMonth()+1}月${bday.getDate()}日`:''}）！記得填寫生日假申請單。
       </div>
     </div>`;
 }
@@ -470,25 +519,23 @@ function renderAdminTable() {
     if (!e.startDate) {
       return `<tr>
         <td><strong>${e.name}</strong> <span class="badge badge-admin">管理員</span></td>
-        <td colspan="9" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
+        <td colspan="10" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
         <td></td>
       </tr>`;
     }
-    const { quota, yText, daysToAnniv, nextAnniv } = calcAnnualLeave(e.startDate);
+    const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas } = calcAnnualLeave(e.startDate);
     const used = e.usedDays || 0;
     const remaining = Math.max(0, quota - used);
     const pct = quota > 0 ? Math.round((used/quota)*100) : 0;
     const fillColor = pct >= 100 ? 'var(--red)' : pct >= 60 ? 'var(--orange)' : 'var(--green)';
     const warn = daysToAnniv <= 60 && remaining > 0;
     const isBday = isBirthdayMonth(e.birthday);
-    const isHR = e.email === 'vivi7733421@gmail.com';
 
     return `<tr>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <strong>${e.name}</strong>
-          ${isHR ? '<span class="badge badge-hr">HR</span>' : ''}
-          ${isBday ? '<span style="font-size:14px" title="本月生日">🎂</span>' : ''}
+          ${isBday ? '<span style="font-size:14px" title="本月生日">🌟</span>' : ''}
         </div>
         <div style="font-size:11px;color:var(--text3)">${e.title||''}</div>
       </td>
@@ -509,11 +556,39 @@ function renderAdminTable() {
         ${warn ? `<span class="tag-warn">⚠️ 剩${formatDays(remaining)} / ${daysToAnniv}天後到期</span>` : remaining===0 ? `<span class="tag-full">已休完</span>` : `<span class="tag-ok">正常</span>`}
       </td>
       <td>
+        ${(()=>{
+          const tv = calcTravel(e.startDate, years);
+          if (!tv.eligible) return '<span style="color:var(--text3);font-size:12px">未達資格</span>';
+          const periodKey = periodStart.getFullYear()+'-'+periodStart.getMonth();
+          const claimed = (e.travelClaimed||[]).includes(periodKey);
+          const pe = tv.periodEnd; const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
+          if (claimed) return `<span class="tag-full">已請領 ✓</span>`;
+          return `<div style="font-size:12px;line-height:1.8">
+            <div>🏠 NT$ ${tv.domestic.toLocaleString()} / ✈️ NT$ ${tv.overseas.toLocaleString()}</div>
+            <div style="color:var(--text3)">效期至 ${peStr}</div>
+            <button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel('${e.id}','${periodKey}')">標記已請領</button>
+          </div>`;
+        })()}
+      </td>
+      <td>
         <button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button>
       </td>
     </tr>`;
   }).join('');
 }
+
+// ── 旅遊津貼標記 ──
+window.markTravel = async (id, periodKey) => {
+  const idx = employees.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  const claimed = employees[idx].travelClaimed || [];
+  if (!claimed.includes(periodKey)) {
+    employees[idx].travelClaimed = [...claimed, periodKey];
+    await saveEmployees();
+    render();
+    showToast('已標記旅遊津貼請領 ✓');
+  }
+};
 
 // ── Modal ──
 window.openEditModal = (id) => {
@@ -610,6 +685,24 @@ window.signIn = async () => {
     }
   }
 };
+window.claimTravel = async (id) => {
+  const idx = employees.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  employees[idx].travelClaimed = true;
+  await saveEmployees();
+  render();
+  showToast('已標記旅遊津貼請領 ✓');
+};
+
+window.unclaimTravel = async (id) => {
+  const idx = employees.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  employees[idx].travelClaimed = false;
+  await saveEmployees();
+  render();
+  showToast('已取消請領標記');
+};
+
 window.doSignOut = () => signOut(auth);
 </script>
 </body>
