@@ -170,6 +170,9 @@ select option{background:var(--surface)}
     <div class="tabs">
       <button class="tab active" id="tab-apply" onclick="switchTab('apply')">📝 申請假單</button>
       <button class="tab" id="tab-my" onclick="switchTab('my')">📋 我的假單</button>
+      <button class="tab" id="tab-agent" onclick="switchTab('agent')">
+        🤝 代理確認 <span class="badge-dot" id="agent-count" style="display:none">0</span>
+      </button>
       <button class="tab" id="tab-approve" onclick="switchTab('approve')">
         ✅ 待簽核 <span class="badge-dot" id="pending-count" style="display:none">0</span>
       </button>
@@ -195,8 +198,12 @@ select option{background:var(--surface)}
             </select>
           </div>
           <div>
-            <label>代理人</label>
+            <label>代理人一</label>
             <select id="f-agent"></select>
+          </div>
+          <div>
+            <label>代理人二（選填）</label>
+            <select id="f-agent2"></select>
           </div>
         </div>
         <div class="field-row">
@@ -220,6 +227,14 @@ select option{background:var(--surface)}
         </div>
         <button class="submit-btn" onclick="submitLeave()">送出申請</button>
       </div>
+    </div>
+
+    <!-- 代理確認 -->
+    <div id="section-agent" style="display:none">
+      <div class="list-header">
+        <span class="list-title">🤝 待我確認的代理假單</span>
+      </div>
+      <div id="agent-list"></div>
     </div>
 
     <!-- 我的假單 -->
@@ -345,9 +360,12 @@ function calcLeaveDays(start, end) {
 }
 
 function statusLabel(s) {
-  if (s === 'pending') return '<span class="status-badge status-pending">待審核</span>';
+  if (s === 'agent_pending') return '<span class="status-badge" style="background:#fde68a;color:#92400e">待代理人確認</span>';
+  if (s === 'pending') return '<span class="status-badge status-pending">待主管簽核</span>';
   if (s === 'approved') return '<span class="status-badge status-approved">已核准</span>';
   if (s === 'rejected') return '<span class="status-badge status-rejected">已退回</span>';
+  if (s === 'agent_rejected') return '<span class="status-badge status-rejected">代理人拒絕</span>';
+  if (s === 'cancelled') return '<span class="status-badge" style="background:var(--surface2);color:var(--text3)">已撤回</span>';
   return '';
 }
 
@@ -376,11 +394,13 @@ async function loadLeaves() {
 
 // ── 初始化代理人選單 ──
 function initAgentSelect() {
-  const sel = document.getElementById('f-agent');
-  sel.innerHTML = '<option value="">-- 選擇代理人 --</option>';
-  employees.filter(e => e.email !== currentUser.email && e.startDate).forEach(e => {
-    sel.innerHTML += `<option value="${e.email}">${e.name}</option>`;
-  });
+  const opts = '<option value="">-- 選擇代理人 --</option>' +
+    employees.filter(e => e.email !== currentUser.email && e.startDate)
+      .map(e => `<option value="${e.email}">${e.name}</option>`).join('');
+  document.getElementById('f-agent').innerHTML = opts;
+  document.getElementById('f-agent2').innerHTML = '<option value="">（不需要第二位）</option>' +
+    employees.filter(e => e.email !== currentUser.email && e.startDate)
+      .map(e => `<option value="${e.email}">${e.name}</option>`).join('');
 }
 
 // ── 假別切換：顯示剩餘特休 ──
@@ -439,7 +459,7 @@ window.submitLeave = async () => {
   if (!start || !end) { showToast('請填寫請假時間'); return; }
   const days = calcLeaveDays(start, end);
   if (days <= 0) { showToast('結束時間必須晚於開始時間'); return; }
-  if (!agent) { showToast('請選擇代理人'); return; }
+  if (!agent) { showToast('請選擇代理人一'); return; }
 
   // 特休額度檢查
   if (type === '特休') {
@@ -453,7 +473,9 @@ window.submitLeave = async () => {
     }
   }
 
+  const agent2 = document.getElementById('f-agent2').value;
   const agentEmp = employees.find(e => e.email === agent);
+  const agentEmp2 = agent2 ? employees.find(e => e.email === agent2) : null;
   const myEmp = getMyEmployee();
 
   try {
@@ -466,8 +488,12 @@ window.submitLeave = async () => {
       reason,
       agent,
       agentName: agentEmp?.name || agent,
+      agent2: agent2 || '',
+      agentName2: agentEmp2?.name || '',
       attachment,
-      status: 'pending',
+      status: 'agent_pending',
+      agentStatus: 'pending',
+      agent2Status: agent2 ? 'pending' : 'na',
       createdAt: new Date().toISOString(),
       reviewNote: '',
       reviewedBy: '',
@@ -476,10 +502,13 @@ window.submitLeave = async () => {
     showToast('假單已送出 ✓');
     // 清空表單
     ['f-start','f-end','f-reason','f-attachment'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('f-agent').selectedIndex=0;
+    document.getElementById('f-agent2').selectedIndex=0;
     document.getElementById('duration-hint').textContent='';
     document.getElementById('remaining-hint').classList.remove('show');
     await loadLeaves();
     updatePendingCount();
+    updateAgentCount();
   } catch(e) {
     console.error(e);
     showToast('送出失敗，請稍後再試');
@@ -514,7 +543,7 @@ function renderMyList() {
       ${l.reason ? `<div class="leave-reason">💬 ${l.reason}</div>` : ''}
       ${l.attachment ? `<div class="leave-reason">📎 ${l.attachment}</div>` : ''}
       <div class="leave-footer">
-        <span class="leave-agent">代理人：${l.agentName}</span>
+        <span class="leave-agent">代理人：${l.agentName}${l.agentName2?' / '+l.agentName2:''}</span>
         <div class="action-row">
           ${l.status === 'pending' ? `<button class="cancel-btn" onclick="cancelLeave('${l.id}')">撤回</button>` : ''}
           ${l.status === 'rejected' && l.reviewNote ? `<span class="review-note">退回原因：${l.reviewNote}</span>` : ''}
@@ -548,7 +577,7 @@ function renderApproveList() {
       ${l.reason ? `<div class="leave-reason">💬 ${l.reason}</div>` : ''}
       ${l.attachment ? `<div class="leave-reason">📎 ${l.attachment}</div>` : ''}
       <div class="leave-footer">
-        <span class="leave-agent">代理人：${l.agentName}</span>
+        <span class="leave-agent">代理人：${l.agentName}${l.agentName2?' / '+l.agentName2:''}</span>
         <div class="action-row">
           <button class="approve-btn" onclick="approveLeave('${l.id}')">✓ 核准</button>
           <button class="reject-btn" onclick="openRejectModal('${l.id}')">✕ 退回</button>
@@ -585,7 +614,7 @@ function renderAllList() {
       ${l.reason ? `<div class="leave-reason">💬 ${l.reason}</div>` : ''}
       ${l.status==='rejected'&&l.reviewNote ? `<div class="review-note">退回原因：${l.reviewNote}</div>` : ''}
       <div class="leave-footer">
-        <span class="leave-agent">代理人：${l.agentName}</span>
+        <span class="leave-agent">代理人：${l.agentName}${l.agentName2?' / '+l.agentName2:''}</span>
         ${l.reviewedBy ? `<span style="font-size:11px;color:var(--text3)">${l.status==='approved'?'核准':'退回'}：${l.reviewedBy}</span>` : ''}
       </div>
     </div>`).join('');
@@ -610,6 +639,7 @@ window.approveLeave = async (id) => {
     renderApproveList();
     renderAllList();
     updatePendingCount();
+    updateAgentCount();
   } catch(e) { showToast('操作失敗'); console.error(e); }
 };
 
@@ -633,6 +663,7 @@ window.confirmReject = async () => {
     renderApproveList();
     renderAllList();
     updatePendingCount();
+    updateAgentCount();
   } catch(e) { showToast('操作失敗'); }
 };
 
@@ -645,6 +676,7 @@ window.cancelLeave = async (id) => {
     await loadLeaves();
     renderMyList();
     updatePendingCount();
+    updateAgentCount();
   } catch(e) { showToast('操作失敗'); }
 };
 
@@ -718,11 +750,12 @@ function updatePendingCount() {
 
 // ── Tab 切換 ──
 window.switchTab = (tab) => {
-  ['apply','my','approve','all'].forEach(t => {
+  ['apply','my','agent','approve','all'].forEach(t => {
     document.getElementById(`section-${t}`).style.display = t===tab?'block':'none';
     document.getElementById(`tab-${t}`).classList.toggle('active', t===tab);
   });
   if (tab==='my') renderMyList();
+  if (tab==='agent') renderAgentList();
   if (tab==='approve') renderApproveList();
   if (tab==='all') renderAllList();
 };
@@ -746,6 +779,92 @@ function setupTabs() {
     document.getElementById('tab-approve').style.display = 'none';
     document.getElementById('tab-all').style.display = 'none';
   }
+}
+
+// ── 代理確認清單 ──
+function renderAgentList() {
+  const myEmail = currentUser.email;
+  const myLeaves = leaves.filter(l =>
+    (l.agent === myEmail || l.agent2 === myEmail) && l.status === 'agent_pending'
+  );
+  const wrap = document.getElementById('agent-list');
+  if (!myLeaves.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">🤝</div><div class="empty-text">目前沒有待確認的代理假單</div></div>`;
+    return;
+  }
+  wrap.innerHTML = myLeaves.map(l => {
+    const isAgent1 = l.agent === myEmail;
+    const myAgentStatus = isAgent1 ? l.agentStatus : l.agent2Status;
+    const alreadyActed = myAgentStatus !== 'pending';
+    return `
+    <div class="leave-card">
+      <div class="leave-card-top">
+        <div class="leave-meta">
+          <span class="leave-type type-${l.type}">${l.type}</span>
+          <span class="status-badge" style="background:#fde68a;color:#92400e">待確認代理</span>
+          <span class="leave-duration">${formatDays(l.days)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">${fmtDT(l.createdAt).split(' ')[0]}</div>
+      </div>
+      <div class="leave-name">${l.applicantName} <span style="font-size:12px;color:var(--text3);font-weight:400">${l.applicantDept}</span></div>
+      <div class="leave-date">📅 ${fmtDT(l.start)} ～ ${fmtDT(l.end)}</div>
+      ${l.reason ? `<div class="leave-reason">💬 ${l.reason}</div>` : ''}
+      <div class="leave-footer">
+        <span class="leave-agent">代理人${isAgent1?'一':'二'}：${isAgent1?l.agentName:l.agentName2}</span>
+        ${alreadyActed
+          ? `<span style="font-size:13px;color:var(--text3)">您已${myAgentStatus==='agreed'?'同意':'拒絕'}代理</span>`
+          : `<div class="action-row">
+              <button class="approve-btn" onclick="agentAgree('${l.id}','${isAgent1?'1':'2'}')">✓ 同意代理</button>
+              <button class="reject-btn" onclick="agentReject('${l.id}','${isAgent1?'1':'2'}')">✕ 無法代理</button>
+            </div>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.agentAgree = async (id, which) => {
+  const leave = leaves.find(l => l.id === id);
+  if (!leave) return;
+  const updates = which === '1' ? { agentStatus: 'agreed' } : { agent2Status: 'agreed' };
+  // 判斷是否兩位都同意了，才送主管
+  const agentStatus = which === '1' ? 'agreed' : leave.agentStatus;
+  const agent2Status = which === '2' ? 'agreed' : (leave.agent2Status || 'na');
+  const allAgreed = agentStatus === 'agreed' && (agent2Status === 'agreed' || agent2Status === 'na');
+  if (allAgreed) updates.status = 'pending'; // 送主管簽核
+  try {
+    await updateDoc(doc(db, 'leaves', id), updates);
+    showToast(allAgreed ? '已同意代理，假單已送主管簽核 ✓' : '已同意代理，等待另一位代理人確認');
+    await loadLeaves();
+    renderAgentList();
+    updateAgentCount();
+    updatePendingCount();
+    updateAgentCount();
+  } catch(e) { showToast('操作失敗'); }
+};
+
+window.agentReject = async (id, which) => {
+  const updates = which === '1' ? { agentStatus: 'rejected', status: 'agent_rejected' } : { agent2Status: 'rejected', status: 'agent_rejected' };
+  try {
+    await updateDoc(doc(db, 'leaves', id), updates);
+    showToast('已拒絕代理，申請人將收到通知');
+    await loadLeaves();
+    renderAgentList();
+    updateAgentCount();
+  } catch(e) { showToast('操作失敗'); }
+};
+
+function updateAgentCount() {
+  const myEmail = currentUser.email;
+  const count = leaves.filter(l =>
+    (l.agent === myEmail || l.agent2 === myEmail) &&
+    l.status === 'agent_pending' &&
+    ((l.agent === myEmail && l.agentStatus === 'pending') ||
+     (l.agent2 === myEmail && l.agent2Status === 'pending'))
+  ).length;
+  const el = document.getElementById('agent-count');
+  if (count > 0) { el.textContent = count; el.style.display='inline-flex'; }
+  else { el.style.display='none'; }
 }
 
 // ── Auth ──
@@ -773,10 +892,11 @@ onAuthStateChanged(auth, async user => {
     setupTabs();
     initAgentSelect();
     updatePendingCount();
+    updateAgentCount();
     // 預設時間：今天08:00~17:00
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('f-start').value = `${today}T08:00`;
-    document.getElementById('f-end').value = `${today}T17:00`;
+    document.getElementById('f-start').value = `${today}T09:00`;
+    document.getElementById('f-end').value = `${today}T18:00`;
     calcDuration();
   } else if (user) {
     signOut(auth); showLoginPage();
