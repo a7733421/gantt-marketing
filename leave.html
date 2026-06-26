@@ -181,9 +181,8 @@ textarea{resize:vertical;min-height:80px}
       <button class="tab active" id="tab-apply" onclick="switchTab('apply')">📝 申請假單</button>
       <button class="tab" id="tab-my" onclick="switchTab('my')">📋 我的假單</button>
       <button class="tab" id="tab-agent" onclick="switchTab('agent')">🤝 代理確認 <span class="badge-dot" id="agent-count" style="display:none"></span></button>
-      <button class="tab" id="tab-m1" onclick="switchTab('m1')" style="display:none">✅ 待副理簽核 <span class="badge-dot" id="m1-count" style="display:none"></span></button>
-      <button class="tab" id="tab-m2" onclick="switchTab('m2')" style="display:none">✅ 待經理簽核 <span class="badge-dot" id="m2-count" style="display:none"></span></button>
-      <button class="tab" id="tab-all" onclick="switchTab('all')">📋 全部假單</button>
+      <button class="tab" id="tab-m1" onclick="switchTab('m1')">📌 副理簽核 <span class="badge-dot" id="m1-count" style="display:none"></span></button>
+      <button class="tab" id="tab-m2" onclick="switchTab('m2')">📌 經理簽核 <span class="badge-dot" id="m2-count" style="display:none"></span></button>
       <button class="tab" id="tab-cal" onclick="switchTab('cal')">📅 月曆總覽</button>
     </div>
 
@@ -233,25 +232,6 @@ textarea{resize:vertical;min-height:80px}
     <!-- 待經理簽核 -->
     <div id="section-m2" style="display:none">
       <div id="m2-list"></div>
-    </div>
-
-    <!-- 全部假單 -->
-    <div id="section-all" style="display:none">
-      <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
-        <select id="all-person-filter" onchange="renderAllLeaves()" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);font-size:13px;outline:none">
-          <option value="">所有人員</option>
-        </select>
-        <select id="all-status-filter" onchange="renderAllLeaves()" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);font-size:13px;outline:none">
-          <option value="">所有狀態</option>
-          <option value="agent_pending">待代理確認</option>
-          <option value="pending_m1">待副理簽核</option>
-          <option value="pending_m2">待經理簽核</option>
-          <option value="approved">已核准</option>
-          <option value="rejected">已退回</option>
-          <option value="cancelled">已撤回</option>
-        </select>
-      </div>
-      <div id="all-list"></div>
     </div>
 
     <!-- 月曆總覽 -->
@@ -860,8 +840,12 @@ function initAllPersonFilter() {
     employees.filter(e => e.startDate).map(e => `<option value="${e.email}">${e.name}</option>`).join('');
 }
 
+function setupManagerTabs() {
+  // 副理/經理 tab 現在全員可見，紅點只對有權限的人顯示
+}
+
 window.switchTab = (tab) => {
-  ['apply','my','agent','m1','m2','all','cal'].forEach(t=>{
+  ['apply','my','agent','m1','m2','cal'].forEach(t=>{
     const sec=document.getElementById('section-'+t);
     const tb=document.getElementById('tab-'+t);
     if (sec) sec.style.display=t===tab?'block':'none';
@@ -871,7 +855,6 @@ window.switchTab = (tab) => {
   if (tab==='agent') renderAgentList();
   if (tab==='m1') renderSignList('pending_m1','m1-list');
   if (tab==='m2') renderSignList('pending_m2','m2-list');
-  if (tab==='all') renderAllLeaves();
   if (tab==='cal') renderCalendar();
 };
 
