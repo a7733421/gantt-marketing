@@ -181,6 +181,8 @@ textarea{resize:vertical;min-height:80px}
       <button class="tab active" id="tab-apply" onclick="switchTab('apply')">📝 申請假單</button>
       <button class="tab" id="tab-my" onclick="switchTab('my')">📋 我的假單</button>
       <button class="tab" id="tab-agent" onclick="switchTab('agent')">🤝 代理確認 <span class="badge-dot" id="agent-count" style="display:none"></span></button>
+      <button class="tab" id="tab-m1" onclick="switchTab('m1')" style="display:none">✅ 待副理簽核 <span class="badge-dot" id="m1-count" style="display:none"></span></button>
+      <button class="tab" id="tab-m2" onclick="switchTab('m2')" style="display:none">✅ 待經理簽核 <span class="badge-dot" id="m2-count" style="display:none"></span></button>
       <button class="tab" id="tab-cal" onclick="switchTab('cal')">📅 月曆總覽</button>
     </div>
 
@@ -220,6 +222,16 @@ textarea{resize:vertical;min-height:80px}
     <!-- 代理確認 -->
     <div id="section-agent" style="display:none">
       <div id="agent-list"></div>
+    </div>
+
+    <!-- 待副理簽核 -->
+    <div id="section-m1" style="display:none">
+      <div id="m1-list"></div>
+    </div>
+
+    <!-- 待經理簽核 -->
+    <div id="section-m2" style="display:none">
+      <div id="m2-list"></div>
     </div>
 
     <!-- 月曆總覽 -->
@@ -689,6 +701,7 @@ window.approveLeave = async (id) => {
   if (newStatus==='approved' && leave.type==='特休') await updateUsedDays(leave.applicantEmail,leave.days);
   showToast(newStatus==='approved'?'已核准 ✓':'已送交經理簽核 ✓');
   await loadLeaves();
+  updateManagerCounts();
   renderCalendar();
   closeDayModal();
 };
@@ -727,13 +740,66 @@ function updateAgentCount() {
   if (count>0){el.textContent=count;el.style.display='inline-flex';}else{el.style.display='none';}
 }
 
+function updateManagerCounts() {
+  // 副理紅點
+  const m1=document.getElementById('m1-count');
+  const m1count=leaves.filter(l=>l.status==='pending_m1').length;
+  if (m1count>0){m1.textContent=m1count;m1.style.display='inline-flex';}else{m1.style.display='none';}
+  // 經理紅點
+  const m2=document.getElementById('m2-count');
+  const m2count=leaves.filter(l=>l.status==='pending_m2').length;
+  if (m2count>0){m2.textContent=m2count;m2.style.display='inline-flex';}else{m2.style.display='none';}
+}
+
+function setupManagerTabs() {
+  if (isManager1()) document.getElementById('tab-m1').style.display='';
+  if (isManager2()) document.getElementById('tab-m2').style.display='';
+  // 協理/HR 也看得到月曆，但不顯示簽核 tab
+}
+
+function renderSignList(status, containerId) {
+  const list=leaves.filter(l=>l.status===status);
+  const wrap=document.getElementById(containerId);
+  if (!list.length) {
+    wrap.innerHTML='<div class="empty"><div class="empty-icon">✅</div><div>目前沒有待簽核的假單</div></div>';
+    return;
+  }
+  const label=status==='pending_m1'?'副理':'經理';
+  wrap.innerHTML=list.map(l=>{
+    const sDate=fmtDate(l.start), eDate=fmtDate(l.end);
+    const sTime=fmtTime(l.start), eTime=fmtTime(l.end);
+    const dateStr=sDate===eDate?sDate+' '+sTime+'～'+eTime:sDate+' '+sTime+' ～ '+eDate+' '+eTime;
+    return `<div class="leave-card" style="border-left:4px solid ${status==='pending_m1'?'var(--orange)':'#eab308'}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.5rem">
+        <div>
+          <span style="font-size:15px;font-weight:700">${l.applicantName||''}</span>
+          <span style="font-size:12px;color:var(--text2);margin-left:.5rem">${l.applicantDept||''}</span>
+        </div>
+        <span class="status-badge status-pending">待${label}簽核</span>
+      </div>
+      <div style="font-size:13px;margin-bottom:4px"><strong>${l.type}</strong> · ${formatDays(l.days)}</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:4px">📅 ${dateStr}</div>
+      ${l.reason?'<div style="font-size:12px;color:var(--text3);margin-bottom:.625rem">💬 '+l.reason+'</div>':''}
+      <div style="font-size:11px;color:var(--text3);margin-bottom:.625rem">代理：${l.agentName||'—'}${l.agentName2?' / '+l.agentName2:''}</div>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn-approve" onclick="approveLeave('${l.id}')">核准</button>
+        <button class="btn-reject" onclick="openRejectModal('${l.id}')">退回</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 window.switchTab = (tab) => {
-  ['apply','my','agent','cal'].forEach(t=>{
-    document.getElementById('section-'+t).style.display=t===tab?'block':'none';
-    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  ['apply','my','agent','m1','m2','cal'].forEach(t=>{
+    const sec=document.getElementById('section-'+t);
+    const tb=document.getElementById('tab-'+t);
+    if (sec) sec.style.display=t===tab?'block':'none';
+    if (tb) tb.classList.toggle('active',t===tab);
   });
   if (tab==='my') renderMyList();
   if (tab==='agent') renderAgentList();
+  if (tab==='m1') renderSignList('pending_m1','m1-list');
+  if (tab==='m2') renderSignList('pending_m2','m2-list');
   if (tab==='cal') renderCalendar();
 };
 
@@ -752,6 +818,8 @@ onAuthStateChanged(auth, async user => {
     const t=new Date(); calYear=t.getFullYear(); calMonth=t.getMonth();
     initCalPersonFilter();
     updateAgentCount();
+    setupManagerTabs();
+    updateManagerCounts();
   } else if (user) {
     signOut(auth);
     showLoading(false);
