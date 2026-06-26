@@ -490,7 +490,7 @@ function renderMyCard(emp) {
       </div>
       ${travelDomestic > 0 ? `
       <div style="background:var(--accent-dim);border:1.5px solid #c7d2fe;border-radius:var(--radius-sm);padding:.75rem 1rem;margin-top:.875rem;font-size:14px">
-        ✈️ <strong>本期旅遊津貼</strong>　國內 <strong style="color:var(--accent)">NT$ \${travelDomestic.toLocaleString()}</strong>　／　國外 <strong style="color:var(--purple)">NT$ \${travelOverseas.toLocaleString()}</strong>
+        ✈️ <strong>本期旅遊津貼</strong>　國內 <strong style="color:var(--accent)">NT$ ${travelDomestic.toLocaleString()}</strong>　／　國外 <strong style="color:var(--purple)">NT$ ${travelOverseas.toLocaleString()}</strong>
       </div>` : ''}
       <div class="bday-notice ${isBday?'show':''}">
         🌟 本月是您的生日月份（${bday?`${bday.getMonth()+1}月${bday.getDate()}日`:''}）！記得填寫生日假申請單。
@@ -552,7 +552,7 @@ function renderAdminTable() {
           return '<div style="font-size:12px;line-height:1.8">' +
             '<div>🏠 NT$ '+tv.domestic.toLocaleString()+' / ✈️ NT$ '+tv.overseas.toLocaleString()+'</div>' +
             '<div style="color:var(--text3)">效期至 '+peStr+'</div>' +
-            '<button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel(''+e.id+'',''+periodKey+'')">標記已請領</button>' +
+            '<button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel(\'' + e.id + '\',\'' + periodKey + '\')">標記已請領</button>' +
             '</div>';
         })()}
       </td>
