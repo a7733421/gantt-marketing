@@ -91,9 +91,9 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;box-shadow:var(--shadow)}
-table{width:100%;border-collapse:collapse;font-size:14px;min-width:1100px}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:1600px}
 th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:11px 12px;border-bottom:1.5px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
-td{padding:12px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:14px}
+td{padding:12px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:14px;white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--surface2)}
 .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.03em}
@@ -246,7 +246,7 @@ tr:hover td{background:var(--surface2)}
     </div>
     <div id="travel-history-list" style="margin-bottom:1rem"></div>
     <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.75rem">＋ 新增一筆出遊紀錄</div>
+      <div id="travel-form-title" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.75rem">＋ 新增一筆出遊紀錄</div>
       <label>出遊日期起</label>
       <input id="tv-start" type="date">
       <label>出遊日期訖</label>
@@ -260,7 +260,7 @@ tr:hover td{background:var(--surface2)}
       <input id="tv-paid" type="text" placeholder="115/6/5">
     </div>
     <div class="modal-actions">
-      <button class="btn-save" onclick="saveTravelRecord()">新增紀錄</button>
+      <button id="travel-save-btn" class="btn-save" onclick="saveTravelRecord()">新增紀錄</button>
       <button class="btn-cancel" onclick="closeTravelModal()">關閉</button>
     </div>
   </div>
@@ -421,6 +421,25 @@ async function loadEmployees() {
     const snap = await getDoc(doc(db, 'seniority', 'employees'));
     if (snap.exists() && snap.data().list) {
       employees = JSON.parse(snap.data().list);
+      // 自動轉換舊資料：travelTripStart → travelHistory
+      let migrated = false;
+      employees = employees.map(e => {
+        if (e.travelTripStart && (!e.travelHistory || e.travelHistory.length === 0)) {
+          migrated = true;
+          return {
+            ...e,
+            travelHistory: [{
+              tripStart: e.travelTripStart,
+              tripEnd:   e.travelTripEnd || '',
+              type:      e.travelTripType || '國外',
+              paidMonth: e.travelPaidMonth || '',
+              addedAt:   new Date().toISOString()
+            }]
+          };
+        }
+        return e;
+      });
+      if (migrated) await saveEmployees();
     } else {
       employees = DEFAULT_EMPLOYEES;
       await saveEmployees();
@@ -428,6 +447,12 @@ async function loadEmployees() {
   } catch(e) {
     employees = DEFAULT_EMPLOYEES;
   }
+  // 按年資長到短排序（有到職日的排前面）
+  employees.sort((a, b) => {
+    if (!a.startDate) return 1;
+    if (!b.startDate) return -1;
+    return new Date(a.startDate) - new Date(b.startDate);
+  });
 }
 
 async function saveEmployees() {
@@ -641,22 +666,32 @@ function renderAdminTable() {
 
 // ── 旅遊紀錄 Modal ──
 let travelEditingId = null;
+let travelEditingIdx = null; // 正在編輯的紀錄 index，null = 新增模式
 
 window.openTravelModal = (id) => {
   travelEditingId = id;
+  travelEditingIdx = null;
   const e = employees.find(x => x.id === id);
   if (!e) return;
   document.getElementById('travel-modal-title').textContent = e.name + ' 出遊紀錄';
   renderTravelHistory(e);
-  ['tv-start','tv-end','tv-paid'].forEach(i => document.getElementById(i).value = '');
-  document.getElementById('tv-type').value = '國外';
+  resetTravelForm();
   document.getElementById('travel-modal').classList.add('show');
 };
 
 window.closeTravelModal = () => {
   document.getElementById('travel-modal').classList.remove('show');
   travelEditingId = null;
+  travelEditingIdx = null;
 };
+
+function resetTravelForm() {
+  ['tv-start','tv-end','tv-paid'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('tv-type').value = '國外';
+  document.getElementById('travel-save-btn').textContent = '新增紀錄';
+  document.getElementById('travel-form-title').textContent = '＋ 新增一筆出遊紀錄';
+  travelEditingIdx = null;
+}
 
 function renderTravelHistory(e) {
   const history = e.travelHistory || [];
@@ -668,15 +703,33 @@ function renderTravelHistory(e) {
   el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem">歷史紀錄</div>'
     + [...history].reverse().map((r, ri) => {
       const realIdx = history.length - 1 - ri;
-      return '<div style="background:var(--surface2);border-radius:8px;padding:.625rem .875rem;margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem">'
+      return '<div style="background:var(--surface2);border-radius:8px;padding:.625rem .875rem;margin-bottom:.5rem">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">'
         + '<div>'
         + '<div style="font-size:13px;font-weight:600">'+r.tripStart+' ～ '+r.tripEnd+'</div>'
         + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+r.type+' ／ 發放：'+(r.paidMonth||'—')+'</div>'
         + '</div>'
+        + '<div style="display:flex;gap:6px">'
+        + '<button onclick="editTravelRecord('+realIdx+')" style="background:var(--accent-dim);color:var(--accent);border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:700">修改</button>'
         + '<button onclick="deleteTravelRecord(\''+e.id+'\','+realIdx+')" style="background:var(--red-dim);color:var(--red);border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:700">刪除</button>'
+        + '</div>'
+        + '</div>'
         + '</div>';
     }).join('');
 }
+
+window.editTravelRecord = (idx) => {
+  const e = employees.find(x => x.id === travelEditingId);
+  if (!e) return;
+  const r = e.travelHistory[idx];
+  travelEditingIdx = idx;
+  document.getElementById('tv-start').value = r.tripStart || '';
+  document.getElementById('tv-end').value   = r.tripEnd   || '';
+  document.getElementById('tv-type').value  = r.type      || '國外';
+  document.getElementById('tv-paid').value  = r.paidMonth || '';
+  document.getElementById('travel-save-btn').textContent = '儲存修改';
+  document.getElementById('travel-form-title').textContent = '✏️ 修改紀錄';
+};
 
 window.saveTravelRecord = async () => {
   const start = document.getElementById('tv-start').value;
@@ -687,13 +740,20 @@ window.saveTravelRecord = async () => {
   const idx = employees.findIndex(e => e.id === travelEditingId);
   if (idx < 0) return;
   const history = employees[idx].travelHistory || [];
-  history.push({ tripStart: start, tripEnd: end, type, paidMonth: paid, addedAt: new Date().toISOString() });
+  if (travelEditingIdx !== null) {
+    // 修改模式
+    history[travelEditingIdx] = { ...history[travelEditingIdx], tripStart: start, tripEnd: end, type, paidMonth: paid };
+    showToast('已更新 ✓');
+  } else {
+    // 新增模式
+    history.push({ tripStart: start, tripEnd: end, type, paidMonth: paid, addedAt: new Date().toISOString() });
+    showToast('出遊紀錄已新增 ✓');
+  }
   employees[idx].travelHistory = history;
   await saveEmployees();
   renderTravelHistory(employees[idx]);
-  ['tv-start','tv-end','tv-paid'].forEach(i => document.getElementById(i).value = '');
+  resetTravelForm();
   render();
-  showToast('出遊紀錄已新增 ✓');
 };
 
 window.deleteTravelRecord = async (id, idx) => {
