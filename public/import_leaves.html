@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>假單批次匯入</title>
+<style>
+body{font-family:sans-serif;max-width:600px;margin:3rem auto;padding:1rem;background:#f5f6f8}
+.card{background:#fff;border-radius:12px;padding:2rem;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+h2{margin-bottom:1rem;font-size:18px}
+.btn{background:#4f6ef7;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.log{margin-top:1rem;background:#f0f1f4;border-radius:8px;padding:1rem;font-size:12px;font-family:monospace;height:300px;overflow-y:auto;white-space:pre-wrap}
+.ok{color:#2e9e6b}.err{color:#e53935}.info{color:#4f6ef7}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>📋 假單批次匯入工具</h2>
+  <p style="font-size:13px;color:#666;margin-bottom:1.5rem">共 43 筆假單（6月～12月），點下方按鈕一次寫入 Firebase。<br>⚠️ 只需執行一次！</p>
+  <button class="btn" id="btn" onclick="runImport()">開始匯入</button>
+  <div class="log" id="log">等待執行...</div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+const LEAVES = [
+  {"date": "2026-06-01", "name": "黃如杏", "email": "bellsugar@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "出國"},
+  {"date": "2026-06-02", "name": "黃如杏", "email": "bellsugar@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "出國"},
+  {"date": "2026-06-03", "name": "黃如杏", "email": "bellsugar@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "出國"},
+  {"date": "2026-06-18", "name": "林宜慧", "email": "s0912656315@gmail.com", "type": "特休", "days": 0.625, "status": "approved", "reason": "特休"},
+  {"date": "2026-06-05", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "特休", "days": 0.375, "status": "approved", "reason": "特休"},
+  {"date": "2026-06-15", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "特休", "days": 0.625, "status": "approved", "reason": "特休"},
+  {"date": "2026-06-01", "name": "劉舜薇", "email": "vivi7733421@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "特休"},
+  {"date": "2026-06-29", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "特休"},
+  {"date": "2026-06-15", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 0.625, "status": "approved", "reason": "特休"},
+  {"date": "2026-06-03", "name": "李靜憶", "email": "am578222@gmail.com", "type": "家庭照顧假", "days": 0.375, "status": "approved", "reason": "陪媽媽看診"},
+  {"date": "2026-06-10", "name": "李靜憶", "email": "am578222@gmail.com", "type": "家庭照顧假", "days": 0.375, "status": "approved", "reason": "陪媽媽看診"},
+  {"date": "2026-06-17", "name": "丁郁澐", "email": "", "type": "事假", "days": 0.0625, "status": "approved", "reason": "家裡有事"},
+  {"date": "2026-07-20", "name": "劉舜薇", "email": "vivi7733421@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "回診檢查"},
+  {"date": "2026-07-27", "name": "吳彥琳", "email": "annie907120@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "特休"},
+  {"date": "2026-07-31", "name": "吳彥琳", "email": "annie907120@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "特休"},
+  {"date": "2026-07-21", "name": "楊蜜恬", "email": "miemie686@gmail.com", "type": "特休", "days": 0.625, "status": "approved", "reason": "特休"},
+  {"date": "2026-07-03", "name": "黃如杏", "email": "bellsugar@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "特休"},
+  {"date": "2026-07-10", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "特休", "days": 0.375, "status": "approved", "reason": "特休"},
+  {"date": "2026-07-27", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "事假", "days": 1, "status": "approved", "reason": "帶小孩出國比賽"},
+  {"date": "2026-07-28", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "事假", "days": 1, "status": "approved", "reason": "帶小孩出國比賽"},
+  {"date": "2026-07-29", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "事假", "days": 1, "status": "approved", "reason": "帶小孩出國比賽"},
+  {"date": "2026-07-30", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "事假", "days": 1, "status": "approved", "reason": "帶小孩出國比賽"},
+  {"date": "2026-07-31", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "事假", "days": 1, "status": "approved", "reason": "帶小孩出國比賽"},
+  {"date": "2026-08-03", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "事假", "days": 1, "status": "approved", "reason": "帶小孩出國比賽"},
+  {"date": "2026-08-04", "name": "何玉如", "email": "teresaho0901@gmail.com", "type": "事假", "days": 1, "status": "approved", "reason": "帶小孩出國比賽"},
+  {"date": "2026-08-14", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 1, "status": "pending", "reason": "特休"},
+  {"date": "2026-08-21", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 1, "status": "cancelled", "reason": "銷假"},
+  {"date": "2026-08-17", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 0.375, "status": "approved", "reason": "特休"},
+  {"date": "2026-08-06", "name": "丁郁澐", "email": "", "type": "特休", "days": 1, "status": "approved", "reason": "特休"},
+  {"date": "2026-08-26", "name": "林宜慧", "email": "s0912656315@gmail.com", "type": "特休", "days": 0.625, "status": "pending", "reason": "特休"},
+  {"date": "2026-10-23", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 1, "status": "pending", "reason": "出國"},
+  {"date": "2026-10-27", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 1, "status": "pending", "reason": "出國"},
+  {"date": "2026-10-28", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 1, "status": "pending", "reason": "出國"},
+  {"date": "2026-10-29", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 1, "status": "pending", "reason": "出國"},
+  {"date": "2026-10-30", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 1, "status": "pending", "reason": "出國"},
+  {"date": "2026-11-02", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 1, "status": "pending", "reason": "出國"},
+  {"date": "2026-12-31", "name": "李靜憶", "email": "am578222@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "特休"},
+  {"date": "2026-12-07", "name": "楊蜜恬", "email": "miemie686@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "出國"},
+  {"date": "2026-12-08", "name": "楊蜜恬", "email": "miemie686@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "出國"},
+  {"date": "2026-12-09", "name": "楊蜜恬", "email": "miemie686@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "出國"},
+  {"date": "2026-12-10", "name": "楊蜜恬", "email": "miemie686@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "出國"},
+  {"date": "2026-12-11", "name": "楊蜜恬", "email": "miemie686@gmail.com", "type": "特休", "days": 1, "status": "approved", "reason": "出國"},
+  {"date": "2026-12-16", "name": "林宜慧", "email": "s0912656315@gmail.com", "type": "特休", "days": 0.375, "status": "pending", "reason": "特休"}
+];
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+window.runImport = async () => {
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  document.getElementById('log').innerHTML = '';
+  log('🔐 檢查登入狀態...', 'info');
+
+  let user = auth.currentUser;
+  if (!user) {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      user = result.user;
+    } catch(e) {
+      log('❌ 登入失敗：' + e.message, 'err');
+      btn.disabled = false;
+      return;
+    }
+  }
+  log('✓ 已登入：' + user.email, 'ok');
+  log(`\n開始匯入 ${LEAVES.length} 筆假單...\n`, 'info');
+
+  let success = 0, fail = 0;
+  for (const r of LEAVES) {
+    try {
+      await addDoc(collection(db, 'leaves'), {
+        applicantName: r.name,
+        applicantEmail: r.email || '',
+        applicantDept: '',
+        type: r.type,
+        days: r.days,
+        start: r.date + 'T09:00',
+        end: r.date + 'T18:00',
+        reason: r.reason,
+        status: r.status,
+        agentName: '（歷史資料）',
+        agentName2: '',
+        agentEmail: '',
+        agentEmail2: '',
+        reviewedBy: r.status === 'approved' ? '管理員' : '',
+        reviewedAt: r.status === 'approved' ? new Date().toISOString() : '',
+        createdAt: r.date + 'T09:00:00.000Z',
+        isImported: true,
+      });
+      log(`✓ ${r.date} ${r.name} ${r.type} ${r.days}天 [${r.status}]`, 'ok');
+      success++;
+    } catch(e) {
+      log(`❌ ${r.date} ${r.name} 失敗：${e.message}`, 'err');
+      fail++;
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  log(`\n✅ 完成！成功 ${success} 筆，失敗 ${fail} 筆`, 'ok');
+  if (fail === 0) {
+    log('可以關閉此頁面了。', 'info');
+    btn.textContent = '✅ 已完成';
+  } else {
+    btn.disabled = false;
+    btn.textContent = '重試';
+  }
+};
+
+onAuthStateChanged(auth, user => {
+  if (user) log('✓ 已登入：' + user.email + '\n按下按鈕開始匯入', 'ok');
+});
+</script>
+</body>
+</html>
