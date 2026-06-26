@@ -90,10 +90,10 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .edit-btn{font-size:12px;padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
 .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
 
-.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-table{width:100%;border-collapse:collapse;font-size:15px}
-th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:11px 14px;border-bottom:1.5px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
-td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:1100px}
+th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:11px 12px;border-bottom:1.5px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:12px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:14px}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--surface2)}
 .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.03em}
@@ -194,7 +194,10 @@ tr:hover td{background:var(--surface2)}
               <th>剩餘天數</th>
               <th>特休使用率</th>
               <th>週年提醒</th>
-              <th>旅遊津貼（本期）</th>
+              <th>可旅遊期間</th>
+              <th>旅遊津貼</th>
+              <th>出遊期間</th>
+              <th>發放月份</th>
               <th></th>
             </tr>
           </thead>
@@ -226,6 +229,14 @@ tr:hover td{background:var(--surface2)}
     <input id="m-email" type="email" placeholder="xxx@gmail.com">
     <label>已休天數（本期）</label>
     <input id="m-used" type="number" step="0.125" min="0" placeholder="0">
+    <label>出遊日期起（旅遊津貼）</label>
+    <input id="m-travel-start" type="date">
+    <label>出遊日期訖</label>
+    <input id="m-travel-end" type="date">
+    <label>國內／國外</label>
+    <input id="m-travel-type" type="text" placeholder="國內 or 國外">
+    <label>發放月份（例：115/6/5）</label>
+    <input id="m-travel-paid" type="text" placeholder="115/6/5">
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEmployee()">儲存</button>
       <button class="btn-cancel" onclick="closeModal()">取消</button>
@@ -281,11 +292,12 @@ let currentUser = null;
 let editingId = null;
 
 // ── 旅遊津貼計算 ──
-function calcTravel(startDate, years) {
+function calcTravel(startDate, years, lastTripEnd) {
   // 週年制：滿1年後才有，每期1年
   const start = new Date(startDate);
   const today = new Date();
-  // 當期起算日（最近一次週年）
+
+  // 當期週年起算日
   const periodStart = new Date(start);
   periodStart.setFullYear(today.getFullYear());
   if (periodStart > today) periodStart.setFullYear(today.getFullYear() - 1);
@@ -293,14 +305,28 @@ function calcTravel(startDate, years) {
   periodEnd.setFullYear(periodEnd.getFullYear() + 1);
 
   // 未滿1年無津貼
-  if (years < 1) return { domestic: 0, overseas: 0, periodStart, periodEnd, eligible: false };
+  if (years < 1) return { domestic: 0, overseas: 0, periodStart, periodEnd, eligible: false, nextEligible: null };
 
   let domestic, overseas;
   if (years < 2)       { domestic = 1500;  overseas = 3000; }
   else if (years < 3)  { domestic = 3000;  overseas = 6000; }
   else                 { domestic = 12000; overseas = 24000; }
 
-  return { domestic, overseas, periodStart, periodEnd, eligible: true };
+  // 下次可申請日：max(下次週年日, 上次出遊結束+1年)
+  let nextEligible = null;
+  if (lastTripEnd) {
+    const tripEndDate = new Date(lastTripEnd);
+    const oneYearAfterTrip = new Date(tripEndDate);
+    oneYearAfterTrip.setFullYear(oneYearAfterTrip.getFullYear() + 1);
+    // 下次週年日
+    const nextPeriodStart = new Date(periodEnd); // periodEnd = 下次週年日
+    nextEligible = oneYearAfterTrip > nextPeriodStart ? oneYearAfterTrip : nextPeriodStart;
+  }
+
+  // 已請領且在鎖定期內（有lastTripEnd且今天 < nextEligible）則本期不可再申請
+  const locked = nextEligible && today < nextEligible;
+
+  return { domestic, overseas, periodStart, periodEnd, eligible: true, locked, nextEligible };
 }
 
 // ── 天數格式化（小數 → X天X小時）──
@@ -501,11 +527,11 @@ function renderAdminTable() {
     if (!e.startDate) {
       return `<tr>
         <td><strong>${e.name}</strong> <span class="badge badge-admin">管理員</span></td>
-        <td colspan="10" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
+        <td colspan="13" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
         <td></td>
       </tr>`;
     }
-    const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas } = calcAnnualLeave(e.startDate);
+    const { quota, yText, daysToAnniv, nextAnniv, years: eYears } = calcAnnualLeave(e.startDate);
     const used = e.usedDays || 0;
     const remaining = Math.max(0, quota - used);
     const pct = quota > 0 ? Math.round((used/quota)*100) : 0;
@@ -513,50 +539,75 @@ function renderAdminTable() {
     const warn = daysToAnniv <= 60 && remaining > 0;
     const isBday = isBirthdayMonth(e.birthday);
 
+    // 旅遊津貼
+    const tripEnd   = e.travelTripEnd   || '';
+    const tv = calcTravel(e.startDate, eYears, tripEnd);
+    const ps = tv.periodStart;
+    const pe = tv.periodEnd;
+    const psStr = ps.getFullYear()+'/'+(ps.getMonth()+1)+'/'+ps.getDate();
+    const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
+    const travelPeriodCell = tv.eligible
+      ? '<span style="font-size:12px">'+psStr+'～'+peStr+'</span>'
+      : '<span style="color:var(--text3);font-size:12px">未達資格</span>';
+
+    const travelAmtCell = tv.eligible
+      ? '<div style="font-size:12px;line-height:1.7">🏠 NT$ '+tv.domestic.toLocaleString()+'<br>✈️ NT$ '+tv.overseas.toLocaleString()+'</div>'
+      : '—';
+
+    const tripStart = e.travelTripStart || '';
+    const tripType  = e.travelTripType  || '';
+    const tripPaid  = e.travelPaidMonth || '';
+    const claimed   = e.travelClaimed   || false;
+
+    // 出遊欄：已請領且鎖定中 → 顯示下次可申請日
+    let tripCell;
+    if (claimed && tv.locked && tv.nextEligible) {
+      const nd = tv.nextEligible;
+      const ndStr = nd.getFullYear()+'/'+(nd.getMonth()+1)+'/'+nd.getDate();
+      tripCell = '<span class="tag-ok" style="white-space:nowrap">✓ 已請領</span><br><span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>';
+    } else if (claimed) {
+      tripCell = '<span class="tag-ok">✓ 已請領</span>';
+    } else if (tv.eligible) {
+      tripCell = '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openEditModal(\''+e.id+'\')">記錄出遊</button>';
+    } else {
+      tripCell = '—';
+    }
+
+    const tripDateCell = tripStart
+      ? '<span style="font-size:12px">'+tripStart+'～'+tripEnd+'</span>'
+      : '<span style="color:var(--text3);font-size:12px">—</span>';
+
+    const paidCell = tripPaid
+      ? '<span style="font-size:13px">'+tripPaid+'</span>'
+      : '<span style="color:var(--text3)">—</span>';
+
     return `<tr>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
-          <strong>${e.name}</strong>
-          ${isBday ? '<span style="font-size:14px" title="本月生日">🌟</span>' : ''}
+          <strong style="font-size:14px">${e.name}</strong>
+          ${isBday ? '<span title="本月生日">🌟</span>' : ''}
         </div>
         <div style="font-size:11px;color:var(--text3)">${e.title||''}</div>
       </td>
       <td style="color:var(--text2)">${e.dept}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${e.startDate?.replace(/-/g,'/')}</td>
-      <td>${yText}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2)">${nextAnniv.getFullYear()}/${nextAnniv.getMonth()+1}/${nextAnniv.getDate()}</td>
+      <td style="font-size:13px">${e.startDate?.replace(/-/g,'/')}</td>
+      <td style="font-size:13px">${yText}</td>
+      <td style="font-size:13px;color:var(--text2)">${nextAnniv.getFullYear()}/${nextAnniv.getMonth()+1}/${nextAnniv.getDate()}</td>
       <td style="font-weight:700">${quota} 天</td>
       <td>${formatDays(used)}</td>
       <td style="font-weight:700;color:${remaining===0?'var(--red)':remaining<=3?'var(--orange)':'var(--green)'}">${formatDays(remaining)}</td>
       <td>
         <div class="leave-bar-wrap">
           <div class="leave-bar"><div class="leave-bar-fill" style="width:${Math.min(pct,100)}%;background:${fillColor}"></div></div>
-          <span style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${pct}%</span>
+          <span style="font-size:11px;color:var(--text3)">${pct}%</span>
         </div>
       </td>
-      <td>
-        ${warn ? `<span class="tag-warn">⚠️ 剩${formatDays(remaining)} / ${daysToAnniv}天後到期</span>` : remaining===0 ? `<span class="tag-full">已休完</span>` : `<span class="tag-ok">正常</span>`}
-      </td>
-      <td>
-        ${(()=>{
-          const {years: eYears} = calcAnnualLeave(e.startDate);
-          const tv = calcTravel(e.startDate, eYears);
-          if (!tv.eligible) return '<span style="color:var(--text3);font-size:12px">未達資格</span>';
-          const periodKey = tv.periodStart.getFullYear()+'-'+tv.periodStart.getMonth();
-          const claimed = (e.travelClaimed||[]).includes(periodKey);
-          const pe = tv.periodEnd;
-          const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
-          if (claimed) return '<span class="tag-full">已請領 ✓</span>';
-          return '<div style="font-size:12px;line-height:1.8">' +
-            '<div>🏠 NT$ '+tv.domestic.toLocaleString()+' / ✈️ NT$ '+tv.overseas.toLocaleString()+'</div>' +
-            '<div style="color:var(--text3)">效期至 '+peStr+'</div>' +
-            '<button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel(\'' + e.id + '\',\'' + periodKey + '\')">標記已請領</button>' +
-            '</div>';
-        })()}
-      </td>
-      <td>
-        <button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button>
-      </td>
+      <td>${warn ? '<span class="tag-warn">⚠️ '+daysToAnniv+'天後到期</span>' : remaining===0 ? '<span class="tag-full">已休完</span>' : '<span class="tag-ok">正常</span>'}</td>
+      <td>${travelPeriodCell}</td>
+      <td>${travelAmtCell}</td>
+      <td>${tripDateCell}</td>
+      <td>${paidCell}</td>
+      <td><button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button></td>
     </tr>`;
   }).join('');
 }
@@ -587,13 +638,17 @@ window.openEditModal = (id) => {
   document.getElementById('m-bday').value = e.birthday || '';
   document.getElementById('m-email').value = e.email || '';
   document.getElementById('m-used').value = e.usedDays || 0;
+  document.getElementById('m-travel-start').value = e.travelTripStart || '';
+  document.getElementById('m-travel-end').value = e.travelTripEnd || '';
+  document.getElementById('m-travel-type').value = e.travelTripType || '';
+  document.getElementById('m-travel-paid').value = e.travelPaidMonth || '';
   document.getElementById('modal').classList.add('show');
 };
 
 window.openAddModal = () => {
   editingId = null;
   document.getElementById('modal-title-text').textContent = '新增員工';
-  ['m-name','m-dept','m-title','m-start','m-bday','m-email'].forEach(id => document.getElementById(id).value='');
+  ['m-name','m-dept','m-title','m-start','m-bday','m-email','m-travel-start','m-travel-end','m-travel-type','m-travel-paid'].forEach(id => document.getElementById(id).value='');
   document.getElementById('m-used').value = 0;
   document.getElementById('modal').classList.add('show');
 };
@@ -611,6 +666,11 @@ window.saveEmployee = async () => {
     birthday: document.getElementById('m-bday').value,
     email: document.getElementById('m-email').value.trim(),
     usedDays: parseFloat(document.getElementById('m-used').value) || 0,
+    travelTripStart: document.getElementById('m-travel-start').value,
+    travelTripEnd: document.getElementById('m-travel-end').value,
+    travelTripType: document.getElementById('m-travel-type').value.trim(),
+    travelPaidMonth: document.getElementById('m-travel-paid').value.trim(),
+    travelClaimed: !!(document.getElementById('m-travel-start').value),
   };
   if (editingId) {
     const idx = employees.findIndex(e => e.id === editingId);
@@ -668,6 +728,23 @@ window.signIn = async () => {
       document.getElementById('login-error').style.display='block';
     }
   }
+
+window.claimTravel = async (id) => {
+  const idx = employees.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  employees[idx].travelClaimed = true;
+  await saveEmployees();
+  render();
+  showToast('已標記旅遊津貼請領 ✓');
+};
+
+window.unclaimTravel = async (id) => {
+  const idx = employees.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  employees[idx].travelClaimed = false;
+  await saveEmployees();
+  render();
+  showToast('已取消請領標記');
 };
 
 window.doSignOut = () => signOut(auth);
