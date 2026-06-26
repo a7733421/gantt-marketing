@@ -229,17 +229,38 @@ tr:hover td{background:var(--surface2)}
     <input id="m-email" type="email" placeholder="xxx@gmail.com">
     <label>已休天數（本期）</label>
     <input id="m-used" type="number" step="0.125" min="0" placeholder="0">
-    <label>出遊日期起（旅遊津貼）</label>
-    <input id="m-travel-start" type="date">
-    <label>出遊日期訖</label>
-    <input id="m-travel-end" type="date">
-    <label>國內／國外</label>
-    <input id="m-travel-type" type="text" placeholder="國內 or 國外">
-    <label>發放月份（例：115/6/5）</label>
-    <input id="m-travel-paid" type="text" placeholder="115/6/5">
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEmployee()">儲存</button>
       <button class="btn-cancel" onclick="closeModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Travel Modal 旅遊紀錄 -->
+<div class="modal-overlay" id="travel-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="travel-modal-title">新增出遊紀錄</span>
+      <button class="modal-close" onclick="closeTravelModal()">✕</button>
+    </div>
+    <div id="travel-history-list" style="margin-bottom:1rem"></div>
+    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.75rem">＋ 新增一筆出遊紀錄</div>
+      <label>出遊日期起</label>
+      <input id="tv-start" type="date">
+      <label>出遊日期訖</label>
+      <input id="tv-end" type="date">
+      <label>國內／國外</label>
+      <select id="tv-type" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:14px;color:var(--text);outline:none">
+        <option value="國外">國外</option>
+        <option value="國內">國內</option>
+      </select>
+      <label>發放月份（例：115/6/5）</label>
+      <input id="tv-paid" type="text" placeholder="115/6/5">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveTravelRecord()">新增紀錄</button>
+      <button class="btn-cancel" onclick="closeTravelModal()">關閉</button>
     </div>
   </div>
 </div>
@@ -539,13 +560,17 @@ function renderAdminTable() {
     const warn = daysToAnniv <= 60 && remaining > 0;
     const isBday = isBirthdayMonth(e.birthday);
 
-    // 旅遊津貼
-    const tripEnd   = e.travelTripEnd   || '';
-    const tv = calcTravel(e.startDate, eYears, tripEnd);
+    // 旅遊津貼 — 用 travelHistory 陣列
+    const history = e.travelHistory || [];
+    // 最近一筆
+    const lastTrip = history.length > 0 ? history[history.length - 1] : null;
+    const lastTripEndStr = lastTrip ? lastTrip.tripEnd : '';
+    const tv = calcTravel(e.startDate, eYears, lastTripEndStr);
     const ps = tv.periodStart;
     const pe = tv.periodEnd;
     const psStr = ps.getFullYear()+'/'+(ps.getMonth()+1)+'/'+ps.getDate();
     const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
+
     const travelPeriodCell = tv.eligible
       ? '<span style="font-size:12px">'+psStr+'～'+peStr+'</span>'
       : '<span style="color:var(--text3);font-size:12px">未達資格</span>';
@@ -554,32 +579,32 @@ function renderAdminTable() {
       ? '<div style="font-size:12px;line-height:1.7">🏠 NT$ '+tv.domestic.toLocaleString()+'<br>✈️ NT$ '+tv.overseas.toLocaleString()+'</div>'
       : '—';
 
-    const tripStart = e.travelTripStart || '';
-    const tripType  = e.travelTripType  || '';
-    const tripPaid  = e.travelPaidMonth || '';
-    const claimed   = e.travelClaimed   || false;
+    // 出遊欄
+    let tripCell, tripDateCell, paidCell;
+    if (lastTrip) {
+      tripDateCell = '<span style="font-size:12px">'+lastTrip.tripStart+'～'+lastTrip.tripEnd+'</span>';
+      paidCell = lastTrip.paidMonth
+        ? '<span style="font-size:13px">'+lastTrip.paidMonth+'</span>'
+        : '<span style="color:var(--text3)">—</span>';
+    } else {
+      tripDateCell = '<span style="color:var(--text3);font-size:12px">—</span>';
+      paidCell = '<span style="color:var(--text3)">—</span>';
+    }
 
-    // 出遊欄：已請領且鎖定中 → 顯示下次可申請日
-    let tripCell;
-    if (claimed && tv.locked && tv.nextEligible) {
+    if (tv.locked && tv.nextEligible) {
       const nd = tv.nextEligible;
       const ndStr = nd.getFullYear()+'/'+(nd.getMonth()+1)+'/'+nd.getDate();
-      tripCell = '<span class="tag-ok" style="white-space:nowrap">✓ 已請領</span><br><span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>';
-    } else if (claimed) {
-      tripCell = '<span class="tag-ok">✓ 已請領</span>';
+      tripCell = '<span class="tag-ok" style="display:block;margin-bottom:3px">✓ 已請領</span>'
+               + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>';
     } else if (tv.eligible) {
-      tripCell = '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openEditModal(\''+e.id+'\')">記錄出遊</button>';
+      tripCell = '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openTravelModal(\''+e.id+'\')">＋ 出遊紀錄</button>';
+      if (history.length > 0) {
+        tripCell = '<span class="tag-ok" style="display:block;margin-bottom:3px">✓ 已請領</span>'
+                 + '<button class="edit-btn" style="font-size:11px;padding:3px 10px;margin-top:3px" onclick="openTravelModal(\''+e.id+'\')">紀錄管理</button>';
+      }
     } else {
       tripCell = '—';
     }
-
-    const tripDateCell = tripStart
-      ? '<span style="font-size:12px">'+tripStart+'～'+tripEnd+'</span>'
-      : '<span style="color:var(--text3);font-size:12px">—</span>';
-
-    const paidCell = tripPaid
-      ? '<span style="font-size:13px">'+tripPaid+'</span>'
-      : '<span style="color:var(--text3)">—</span>';
 
     return `<tr>
       <td>
@@ -612,17 +637,72 @@ function renderAdminTable() {
   }).join('');
 }
 
-// ── 旅遊津貼標記 ──
-window.markTravel = async (id, periodKey) => {
-  const idx = employees.findIndex(e => e.id === id);
-  if (idx < 0) return;
-  const claimed = employees[idx].travelClaimed || [];
-  if (!claimed.includes(periodKey)) {
-    employees[idx].travelClaimed = [...claimed, periodKey];
-    await saveEmployees();
-    render();
-    showToast('已標記旅遊津貼請領 ✓');
+// ── 旅遊紀錄 Modal ──
+let travelEditingId = null;
+
+window.openTravelModal = (id) => {
+  travelEditingId = id;
+  const e = employees.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('travel-modal-title').textContent = e.name + ' 出遊紀錄';
+  renderTravelHistory(e);
+  ['tv-start','tv-end','tv-paid'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('tv-type').value = '國外';
+  document.getElementById('travel-modal').classList.add('show');
+};
+
+window.closeTravelModal = () => {
+  document.getElementById('travel-modal').classList.remove('show');
+  travelEditingId = null;
+};
+
+function renderTravelHistory(e) {
+  const history = e.travelHistory || [];
+  const el = document.getElementById('travel-history-list');
+  if (!history.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:.5rem 0">尚無出遊紀錄</div>';
+    return;
   }
+  el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem">歷史紀錄</div>'
+    + [...history].reverse().map((r, ri) => {
+      const realIdx = history.length - 1 - ri;
+      return '<div style="background:var(--surface2);border-radius:8px;padding:.625rem .875rem;margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem">'
+        + '<div>'
+        + '<div style="font-size:13px;font-weight:600">'+r.tripStart+' ～ '+r.tripEnd+'</div>'
+        + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+r.type+' ／ 發放：'+(r.paidMonth||'—')+'</div>'
+        + '</div>'
+        + '<button onclick="deleteTravelRecord(\''+e.id+'\','+realIdx+')" style="background:var(--red-dim);color:var(--red);border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:700">刪除</button>'
+        + '</div>';
+    }).join('');
+}
+
+window.saveTravelRecord = async () => {
+  const start = document.getElementById('tv-start').value;
+  const end   = document.getElementById('tv-end').value;
+  const type  = document.getElementById('tv-type').value;
+  const paid  = document.getElementById('tv-paid').value.trim();
+  if (!start || !end) { showToast('請填寫出遊日期'); return; }
+  const idx = employees.findIndex(e => e.id === travelEditingId);
+  if (idx < 0) return;
+  const history = employees[idx].travelHistory || [];
+  history.push({ tripStart: start, tripEnd: end, type, paidMonth: paid, addedAt: new Date().toISOString() });
+  employees[idx].travelHistory = history;
+  await saveEmployees();
+  renderTravelHistory(employees[idx]);
+  ['tv-start','tv-end','tv-paid'].forEach(i => document.getElementById(i).value = '');
+  render();
+  showToast('出遊紀錄已新增 ✓');
+};
+
+window.deleteTravelRecord = async (id, idx) => {
+  if (!confirm('確定刪除這筆出遊紀錄？')) return;
+  const empIdx = employees.findIndex(e => e.id === id);
+  if (empIdx < 0) return;
+  employees[empIdx].travelHistory.splice(idx, 1);
+  await saveEmployees();
+  renderTravelHistory(employees[empIdx]);
+  render();
+  showToast('已刪除');
 };
 
 // ── Modal ──
@@ -638,17 +718,13 @@ window.openEditModal = (id) => {
   document.getElementById('m-bday').value = e.birthday || '';
   document.getElementById('m-email').value = e.email || '';
   document.getElementById('m-used').value = e.usedDays || 0;
-  document.getElementById('m-travel-start').value = e.travelTripStart || '';
-  document.getElementById('m-travel-end').value = e.travelTripEnd || '';
-  document.getElementById('m-travel-type').value = e.travelTripType || '';
-  document.getElementById('m-travel-paid').value = e.travelPaidMonth || '';
   document.getElementById('modal').classList.add('show');
 };
 
 window.openAddModal = () => {
   editingId = null;
   document.getElementById('modal-title-text').textContent = '新增員工';
-  ['m-name','m-dept','m-title','m-start','m-bday','m-email','m-travel-start','m-travel-end','m-travel-type','m-travel-paid'].forEach(id => document.getElementById(id).value='');
+  ['m-name','m-dept','m-title','m-start','m-bday','m-email'].forEach(id => document.getElementById(id).value='');
   document.getElementById('m-used').value = 0;
   document.getElementById('modal').classList.add('show');
 };
@@ -666,11 +742,6 @@ window.saveEmployee = async () => {
     birthday: document.getElementById('m-bday').value,
     email: document.getElementById('m-email').value.trim(),
     usedDays: parseFloat(document.getElementById('m-used').value) || 0,
-    travelTripStart: document.getElementById('m-travel-start').value,
-    travelTripEnd: document.getElementById('m-travel-end').value,
-    travelTripType: document.getElementById('m-travel-type').value.trim(),
-    travelPaidMonth: document.getElementById('m-travel-paid').value.trim(),
-    travelClaimed: !!(document.getElementById('m-travel-start').value),
   };
   if (editingId) {
     const idx = employees.findIndex(e => e.id === editingId);
