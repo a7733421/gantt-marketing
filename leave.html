@@ -751,12 +751,6 @@ function updateManagerCounts() {
   if (m2count>0){m2.textContent=m2count;m2.style.display='inline-flex';}else{m2.style.display='none';}
 }
 
-function setupManagerTabs() {
-  if (isManager1()) document.getElementById('tab-m1').style.display='';
-  if (isManager2()) document.getElementById('tab-m2').style.display='';
-  // 協理/HR 也看得到月曆，但不顯示簽核 tab
-}
-
 function renderSignList(status, containerId) {
   const list=leaves.filter(l=>l.status===status);
   const wrap=document.getElementById(containerId);
