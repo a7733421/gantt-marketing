@@ -488,7 +488,7 @@ function renderMyCard(emp) {
           <div class="stat-sub">週年日 ${nextAnniv.getMonth()+1}/${nextAnniv.getDate()} 還有 ${daysToAnniv} 天</div>
         </div>
       </div>
-      ${ travelDomestic > 0 ? ('<div style="background:var(--accent-dim);border:1.5px solid #c7d2fe;border-radius:var(--radius-sm);padding:.75rem 1rem;margin-top:.875rem;font-size:14px">✈️ <strong>本期旅遊津貼</strong> 國內 <strong>NT$ ' + travelDomestic.toLocaleString() + '</strong> / 國外 <strong>NT$ ' + travelOverseas.toLocaleString() + '</strong></div>') : ''}
+      ${ travelDomestic > 0 ? ('<div style="background:var(--accent-dim);border:1.5px solid #c7d2fe;border-radius:8px;padding:.75rem 1rem;margin-top:.875rem;font-size:14px">✈️ <strong>本期旅遊津貼</strong> 國內 NT$ ' + travelDomestic.toLocaleString() + ' ／ 國外 NT$ ' + travelOverseas.toLocaleString() + '</div>') : ''}
       <div class="bday-notice ${isBday?'show':''}">
         🌟 本月是您的生日月份（${bday?`${bday.getMonth()+1}月${bday.getDate()}日`:''}）！記得填寫生日假申請單。
       </div>
@@ -539,7 +539,8 @@ function renderAdminTable() {
       </td>
       <td>
         ${(()=>{
-          const tv = calcTravel(e.startDate, calcAnnualLeave(e.startDate).years);
+          const {years: eYears} = calcAnnualLeave(e.startDate);
+          const tv = calcTravel(e.startDate, eYears);
           if (!tv.eligible) return '<span style="color:var(--text3);font-size:12px">未達資格</span>';
           const periodKey = tv.periodStart.getFullYear()+'-'+tv.periodStart.getMonth();
           const claimed = (e.travelClaimed||[]).includes(periodKey);
