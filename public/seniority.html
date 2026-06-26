@@ -488,10 +488,7 @@ function renderMyCard(emp) {
           <div class="stat-sub">週年日 ${nextAnniv.getMonth()+1}/${nextAnniv.getDate()} 還有 ${daysToAnniv} 天</div>
         </div>
       </div>
-      ${travelDomestic > 0 ? `
-      <div style="background:var(--accent-dim);border:1.5px solid #c7d2fe;border-radius:var(--radius-sm);padding:.75rem 1rem;margin-top:.875rem;font-size:14px">
-        ✈️ <strong>本期旅遊津貼</strong>　國內 <strong style="color:var(--accent)">NT$ \${travelDomestic.toLocaleString()}</strong>　／　國外 <strong style="color:var(--purple)">NT$ \${travelOverseas.toLocaleString()}</strong>
-      </div>` : ''}
+      ${ travelDomestic > 0 ? ('<div style="background:var(--accent-dim);border:1.5px solid #c7d2fe;border-radius:8px;padding:.75rem 1rem;margin-top:.875rem;font-size:14px">✈️ <strong>本期旅遊津貼</strong> 國內 NT$ ' + travelDomestic.toLocaleString() + ' ／ 國外 NT$ ' + travelOverseas.toLocaleString() + '</div>') : ''}
       <div class="bday-notice ${isBday?'show':''}">
         🌟 本月是您的生日月份（${bday?`${bday.getMonth()+1}月${bday.getDate()}日`:''}）！記得填寫生日假申請單。
       </div>
@@ -542,17 +539,19 @@ function renderAdminTable() {
       </td>
       <td>
         ${(()=>{
-          const tv = calcTravel(e.startDate, years);
+          const {years: eYears} = calcAnnualLeave(e.startDate);
+          const tv = calcTravel(e.startDate, eYears);
           if (!tv.eligible) return '<span style="color:var(--text3);font-size:12px">未達資格</span>';
-          const periodKey = periodStart.getFullYear()+'-'+periodStart.getMonth();
+          const periodKey = tv.periodStart.getFullYear()+'-'+tv.periodStart.getMonth();
           const claimed = (e.travelClaimed||[]).includes(periodKey);
-          const pe = tv.periodEnd; const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
-          if (claimed) return `<span class="tag-full">已請領 ✓</span>`;
-          return `<div style="font-size:12px;line-height:1.8">
-            <div>🏠 NT$ ${tv.domestic.toLocaleString()} / ✈️ NT$ ${tv.overseas.toLocaleString()}</div>
-            <div style="color:var(--text3)">效期至 ${peStr}</div>
-            <button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel('${e.id}','${periodKey}')">標記已請領</button>
-          </div>`;
+          const pe = tv.periodEnd;
+          const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
+          if (claimed) return '<span class="tag-full">已請領 ✓</span>';
+          return '<div style="font-size:12px;line-height:1.8">' +
+            '<div>🏠 NT$ '+tv.domestic.toLocaleString()+' / ✈️ NT$ '+tv.overseas.toLocaleString()+'</div>' +
+            '<div style="color:var(--text3)">效期至 '+peStr+'</div>' +
+            '<button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel(\'' + e.id + '\',\'' + periodKey + '\')">標記已請領</button>' +
+            '</div>';
         })()}
       </td>
       <td>
@@ -669,7 +668,7 @@ window.signIn = async () => {
       document.getElementById('login-error').style.display='block';
     }
   }
-};
+
 window.claimTravel = async (id) => {
   const idx = employees.findIndex(e => e.id === id);
   if (idx < 0) return;
