@@ -279,6 +279,16 @@ let employees = [];
 let currentUser = null;
 let editingId = null;
 
+// ── 天數格式化（小數 → X天X小時）──
+function formatDays(d) {
+  if (d === 0) return '0 天';
+  const days = Math.floor(d);
+  const hours = Math.round((d - days) * 8);
+  if (hours === 0) return `${days} 天`;
+  if (days === 0) return `${hours} 小時`;
+  return `${days} 天 ${hours} 小時`;
+}
+
 // ── 特休計算（週年制，勞基法新制）──
 function calcAnnualLeave(startDate) {
   const start = new Date(startDate);
@@ -401,7 +411,7 @@ function renderAlertBar() {
   document.getElementById('alert-list').innerHTML = warns.map(e => {
     const { quota, daysToAnniv } = calcAnnualLeave(e.startDate);
     const remaining = quota - (e.usedDays || 0);
-    return `<div class="alert-item">⚠️ <strong>${e.name}</strong> — 剩餘 <strong>${remaining} 天</strong>特休，週年日還有 ${daysToAnniv} 天</div>`;
+    return `<div class="alert-item">⚠️ <strong>${e.name}</strong> — 剩餘 <strong>${formatDays(remaining)}</strong>特休，週年日還有 ${daysToAnniv} 天</div>`;
   }).join('');
 }
 
@@ -439,12 +449,12 @@ function renderMyCard(emp) {
         </div>
         <div class="stat-box">
           <div class="stat-label">已休天數</div>
-          <div class="stat-value orange">${used} <span style="font-size:14px;color:var(--text3)">天</span></div>
+          <div class="stat-value orange" style="font-size:18px">${formatDays(used)}</div>
           <div class="stat-sub">已使用 ${pct}%</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">剩餘天數</div>
-          <div class="stat-value ${remainColor}">${remaining} <span style="font-size:14px;color:var(--text3)">天</span></div>
+          <div class="stat-value ${remainColor}" style="font-size:18px">${formatDays(remaining)}</div>
           <div class="stat-sub">週年日 ${nextAnniv.getMonth()+1}/${nextAnniv.getDate()} 還有 ${daysToAnniv} 天</div>
         </div>
       </div>
@@ -487,8 +497,8 @@ function renderAdminTable() {
       <td>${yText}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2)">${nextAnniv.getFullYear()}/${nextAnniv.getMonth()+1}/${nextAnniv.getDate()}</td>
       <td style="font-weight:700">${quota} 天</td>
-      <td>${used} 天</td>
-      <td style="font-weight:700;color:${remaining===0?'var(--red)':remaining<=3?'var(--orange)':'var(--green)'}">${remaining} 天</td>
+      <td>${formatDays(used)}</td>
+      <td style="font-weight:700;color:${remaining===0?'var(--red)':remaining<=3?'var(--orange)':'var(--green)'}">${formatDays(remaining)}</td>
       <td>
         <div class="leave-bar-wrap">
           <div class="leave-bar"><div class="leave-bar-fill" style="width:${Math.min(pct,100)}%;background:${fillColor}"></div></div>
@@ -496,7 +506,7 @@ function renderAdminTable() {
         </div>
       </td>
       <td>
-        ${warn ? `<span class="tag-warn">⚠️ 剩${remaining}天 / ${daysToAnniv}天後到期</span>` : remaining===0 ? `<span class="tag-full">已休完</span>` : `<span class="tag-ok">正常</span>`}
+        ${warn ? `<span class="tag-warn">⚠️ 剩${formatDays(remaining)} / ${daysToAnniv}天後到期</span>` : remaining===0 ? `<span class="tag-full">已休完</span>` : `<span class="tag-ok">正常</span>`}
       </td>
       <td>
         <button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button>
