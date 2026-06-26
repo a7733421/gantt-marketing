@@ -185,14 +185,12 @@ tr:hover td{background:var(--surface2)}
           <thead>
             <tr>
               <th>姓名</th>
-              <th>部門</th>
               <th>到職日</th>
               <th>年資</th>
               <th>本期特休起算</th>
               <th>可休天數</th>
               <th>已休天數</th>
               <th>剩餘天數</th>
-              <th>特休使用率</th>
               <th>週年提醒</th>
               <th>可旅遊期間</th>
               <th>旅遊津貼</th>
@@ -484,7 +482,7 @@ function render() {
   // 管理員總覽
   if (isAdmin) {
     document.getElementById('admin-section').style.display = 'block';
-    renderAdminTable();
+    renderAdminTable(true);
   }
 }
 
@@ -568,13 +566,13 @@ function renderMyCard(emp) {
     </div>`;
 }
 
-function renderAdminTable() {
+function renderAdminTable(isAdmin) {
   const tbody = document.getElementById('admin-tbody');
   tbody.innerHTML = employees.map(e => {
     if (!e.startDate) {
       return `<tr>
         <td><strong>${e.name}</strong> <span class="badge badge-admin">管理員</span></td>
-        <td colspan="13" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
+        <td colspan="12" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
         <td></td>
       </tr>`;
     }
@@ -617,19 +615,27 @@ function renderAdminTable() {
       paidCell = '<span style="color:var(--text3)">—</span>';
     }
 
-    if (tv.locked && tv.nextEligible) {
+    // 請領狀態欄：只有管理員可點擊編輯
+    let tripCell;
+    if (!tv.eligible) {
+      tripCell = '—';
+    } else if (tv.locked && tv.nextEligible) {
       const nd = tv.nextEligible;
       const ndStr = nd.getFullYear()+'/'+(nd.getMonth()+1)+'/'+nd.getDate();
-      tripCell = '<span class="tag-ok" style="display:block;margin-bottom:3px">✓ 已請領</span>'
-               + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>';
-    } else if (tv.eligible) {
-      tripCell = '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openTravelModal(\''+e.id+'\')">＋ 出遊紀錄</button>';
-      if (history.length > 0) {
-        tripCell = '<span class="tag-ok" style="display:block;margin-bottom:3px">✓ 已請領</span>'
-                 + '<button class="edit-btn" style="font-size:11px;padding:3px 10px;margin-top:3px" onclick="openTravelModal(\''+e.id+'\')">紀錄管理</button>';
-      }
+      tripCell = '<div>'
+               + (isAdmin
+                  ? '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領 ✎</span>'
+                  : '<span class="tag-ok" style="display:block;margin-bottom:4px">✓ 已請領</span>')
+               + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
+               + '</div>';
+    } else if (history.length > 0) {
+      tripCell = isAdmin
+        ? '<span class="tag-ok" style="cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領 ✎</span>'
+        : '<span class="tag-ok">✓ 已請領</span>';
     } else {
-      tripCell = '—';
+      tripCell = isAdmin
+        ? '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openTravelModal(\''+e.id+'\')">＋ 出遊紀錄</button>'
+        : '—';
     }
 
     return `<tr>
@@ -640,19 +646,12 @@ function renderAdminTable() {
         </div>
         <div style="font-size:11px;color:var(--text3)">${e.title||''}</div>
       </td>
-      <td style="color:var(--text2)">${e.dept}</td>
       <td style="font-size:13px">${e.startDate?.replace(/-/g,'/')}</td>
       <td style="font-size:13px">${yText}</td>
       <td style="font-size:13px;color:var(--text2)">${nextAnniv.getFullYear()}/${nextAnniv.getMonth()+1}/${nextAnniv.getDate()}</td>
       <td style="font-weight:700">${quota} 天</td>
       <td>${formatDays(used)}</td>
       <td style="font-weight:700;color:${remaining===0?'var(--red)':remaining<=3?'var(--orange)':'var(--green)'}">${formatDays(remaining)}</td>
-      <td>
-        <div class="leave-bar-wrap">
-          <div class="leave-bar"><div class="leave-bar-fill" style="width:${Math.min(pct,100)}%;background:${fillColor}"></div></div>
-          <span style="font-size:11px;color:var(--text3)">${pct}%</span>
-        </div>
-      </td>
       <td>${warn ? '<span class="tag-warn">⚠️ '+daysToAnniv+'天後到期</span>' : remaining===0 ? '<span class="tag-full">已休完</span>' : '<span class="tag-ok">正常</span>'}</td>
       <td>${travelPeriodCell}</td>
       <td>${travelAmtCell}</td>
