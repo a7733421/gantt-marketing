@@ -196,6 +196,7 @@ tr:hover td{background:var(--surface2)}
               <th>週年提醒</th>
               <th>可旅遊期間</th>
               <th>旅遊津貼</th>
+              <th>請領狀態</th>
               <th>出遊期間</th>
               <th>發放月份</th>
               <th></th>
@@ -630,6 +631,7 @@ function renderAdminTable() {
       <td>${warn ? '<span class="tag-warn">⚠️ '+daysToAnniv+'天後到期</span>' : remaining===0 ? '<span class="tag-full">已休完</span>' : '<span class="tag-ok">正常</span>'}</td>
       <td>${travelPeriodCell}</td>
       <td>${travelAmtCell}</td>
+      <td>${tripCell}</td>
       <td>${tripDateCell}</td>
       <td>${paidCell}</td>
       <td><button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button></td>
