@@ -8,6 +8,8 @@
     { "src": "/seniority.html", "dest": "/seniority.html" },
     { "src": "/leave.html", "dest": "/leave.html" },
     { "src": "/import_leaves.html", "dest": "/import_leaves.html" },
+    { "src": "/fix_status.html", "dest": "/fix_status.html" },
+    { "src": "/auth_callback.html", "dest": "/auth_callback.html" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
