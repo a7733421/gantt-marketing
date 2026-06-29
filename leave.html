@@ -512,13 +512,15 @@ window.submitLeave = async () => {
   const agentEmp2=agent2?employees.find(e=>e.email===agent2):null;
   const myEmp=getMyEmployee();
   try {
+    // HR 帳號測試用：直接跳至經理簽核
+    const initStatus = isViewer() ? 'pending_m2' : 'agent_pending';
     await addDoc(collection(db,'leaves'),{
       applicantEmail:currentUser.email, applicantName:myEmp?.name||currentUser.displayName,
       applicantDept:myEmp?.dept||'', type, start, end, days, reason,
       agent, agentName:agentEmp?.name||agent,
       agent2:agent2||'', agentName2:agentEmp2?.name||'',
-      attachment, status:'agent_pending', agentStatus:'pending',
-      agent2Status:agent2?'pending':'na',
+      attachment, status:initStatus, agentStatus:'agreed',
+      agent2Status:agent2?'agreed':'na',
       createdAt:new Date().toISOString(), reviewNote:'', reviewedBy:'', reviewedAt:''
     });
     showToast('假單已送出 ✓');
