@@ -753,16 +753,19 @@ window.approveLeave = async (id) => {
     newStatus='pending_m2'; // 副理簽完→等經理
   } else if (isManager2() && leave.status==='pending_m2') {
     newStatus='approved';   // 經理簽完→核准
+  } else if (isViewer() && ['pending_m1','pending_m2'].includes(leave.status)) {
+    newStatus='approved';   // HR/協理直接核准
   } else {
     showToast('您沒有簽核此假單的權限'); return;
   }
+  const signKey = isManager1()?'manager1':isManager2()?'manager2':'hr';
   await updateDoc(doc(db,'leaves',id),{
     status:newStatus,
-    [`${isManager1()?'manager1':'manager2'}SignedBy`]:currentUser.displayName||currentUser.email,
-    [`${isManager1()?'manager1':'manager2'}SignedAt`]:new Date().toISOString(),
+    [`${signKey}SignedBy`]:currentUser.displayName||currentUser.email,
+    [`${signKey}SignedAt`]:new Date().toISOString(),
   });
   if (newStatus==='approved' && leave.type==='特休') await updateUsedDays(leave.applicantEmail,leave.days);
-  showToast(newStatus==='approved'?'已核准 ✓':'已送交經理簽核 ✓');
+  showToast('已核准 ✓');
   await loadLeaves();
   updateManagerCounts();
   renderCalendar();
