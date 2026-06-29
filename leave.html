@@ -281,6 +281,26 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- Edit Leave Time Modal -->
+<div class="modal-overlay" id="edit-leave-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="edit-leave-title">修改假單時間</span>
+      <button class="modal-close" onclick="closeEditLeaveModal()">✕</button>
+    </div>
+    <div id="edit-leave-info" style="font-size:13px;color:var(--text2);margin-bottom:1rem"></div>
+    <label>開始時間</label>
+    <input type="datetime-local" id="edit-start" style="margin-bottom:.75rem">
+    <label>結束時間</label>
+    <input type="datetime-local" id="edit-end" style="margin-bottom:.75rem">
+    <div class="duration-hint" id="edit-duration-hint"></div>
+    <div class="modal-actions" style="margin-top:.75rem">
+      <button class="btn-save" onclick="saveEditLeave()" style="padding:10px 20px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer">儲存</button>
+      <button class="btn-secondary" onclick="closeEditLeaveModal()">取消</button>
+    </div>
+  </div>
+</div>
+
 <!-- Reject Modal -->
 <div class="modal-overlay" id="reject-modal">
   <div class="modal">
@@ -661,7 +681,9 @@ window.openDayModal = (y,m,d) => {
     const canApprove=(isManager1()&&l.status==='pending_m1')||(isManager2()&&l.status==='pending_m2');
     const adminBtns=canApprove?
       `<div class="li-actions"><button class="btn-approve" onclick="approveLeave('${l.id}')">核准${isManager1()?'（副理）':'（經理）'}</button><button class="btn-reject" onclick="openRejectModal('${l.id}')">退回</button></div>`:'';
-    const statusNote=isViewer()&&['pending_m1','pending_m2'].includes(l.status)?'<span style="font-size:11px;color:var(--text3)">（檢視模式）</span>':'';    return `<div class="leave-item ${l.status}">
+    const editBtn=isAdmin()?`<button onclick="openEditLeaveModal('${l.id}')" style="margin-top:6px;padding:4px 12px;border-radius:20px;border:1.5px solid var(--border2);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;font-weight:600">✏️ 修改時間</button>`:'';
+    const statusNote=isViewer()&&['pending_m1','pending_m2'].includes(l.status)?'<span style="font-size:11px;color:var(--text3)">（檢視模式）</span>':'';
+    return `<div class="leave-item ${l.status}">
       <div class="li-top">
         <span class="li-name">${l.applicantName||''}</span>
         <span class="li-type type-${l.type||'其他'}">${l.type||''}</span>
@@ -671,11 +693,48 @@ window.openDayModal = (y,m,d) => {
       ${l.reason?'<div class="li-reason">💬 '+l.reason+'</div>':''}
       <div style="margin-top:4px"><span class="li-status s-${l.status}">${sLabel}</span>${statusNote}${l.agentName?' <span style="font-size:11px;color:var(--text3)">代理：'+l.agentName+(l.agentName2?' / '+l.agentName2:'')+'</span>':''}</div>
       ${adminBtns}
+      ${editBtn}
     </div>`;
   }).join('')||'<div style="text-align:center;padding:1rem;color:var(--text3)">無假單</div>';
   document.getElementById('day-modal').classList.add('show');
 };
 window.closeDayModal = () => document.getElementById('day-modal').classList.remove('show');
+
+// ── 修改假單時間（HR/管理員）──
+let editingLeaveId = null;
+window.openEditLeaveModal = (id) => {
+  const l = leaves.find(x => x.id === id);
+  if (!l) return;
+  editingLeaveId = id;
+  document.getElementById('edit-leave-info').textContent = l.applicantName + ' · ' + l.type;
+  document.getElementById('edit-start').value = l.start ? l.start.slice(0,16) : '';
+  document.getElementById('edit-end').value = l.end ? l.end.slice(0,16) : '';
+  document.getElementById('edit-duration-hint').textContent = '';
+  document.getElementById('edit-leave-modal').classList.add('show');
+  document.getElementById('edit-start').addEventListener('change', updateEditDuration);
+  document.getElementById('edit-end').addEventListener('change', updateEditDuration);
+};
+function updateEditDuration() {
+  const days = calcLeaveDays(document.getElementById('edit-start').value, document.getElementById('edit-end').value);
+  document.getElementById('edit-duration-hint').textContent = days > 0 ? '請假時數：' + formatDays(days) : '';
+}
+window.closeEditLeaveModal = () => {
+  document.getElementById('edit-leave-modal').classList.remove('show');
+  editingLeaveId = null;
+};
+window.saveEditLeave = async () => {
+  const start = document.getElementById('edit-start').value;
+  const end = document.getElementById('edit-end').value;
+  if (!start || !end) { showToast('請填寫時間'); return; }
+  const days = calcLeaveDays(start, end);
+  if (days <= 0) { showToast('結束時間必須晚於開始時間'); return; }
+  await updateDoc(doc(db, 'leaves', editingLeaveId), { start, end, days });
+  showToast('時間已更新 ✓');
+  closeEditLeaveModal();
+  await loadLeaves();
+  renderCalendar();
+  closeDayModal();
+};
 
 window.calPrev = () => { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); };
 window.calNext = () => { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); };

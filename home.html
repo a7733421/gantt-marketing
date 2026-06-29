@@ -12,6 +12,7 @@
   --bg:#f5f6f8;--surface:#ffffff;--surface2:#f0f1f4;--border:#e4e6eb;--border2:#d0d3db;
   --text:#1a1d23;--text2:#5a5f6e;--text3:#9099aa;
   --accent:#4f6ef7;--accent-dim:#eef1fe;--orange:#e8622a;--orange-dim:#fdf0eb;
+  --green:#2e9e6b;--green-dim:#ebf7f2;
   --radius:14px;--radius-sm:8px;
   --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
   --shadow-hover:0 4px 12px rgba(0,0,0,.1),0 8px 32px rgba(0,0,0,.08);
@@ -26,7 +27,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .login-sub{font-size:13px;color:var(--text3);margin-bottom:2rem;line-height:1.6}
 .google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--surface);font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .google-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(79,110,247,.2)}
-.google-btn:disabled{opacity:.6;cursor:not-allowed}
 .google-btn img{width:20px;height:20px}
 .login-error{font-size:12px;color:#e53935;margin-top:1rem;display:none;padding:8px;background:#fef2f2;border-radius:6px}
 .app{display:none}
@@ -44,7 +44,7 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2r
 .hero-sub{font-size:15px;color:var(--text2);line-height:1.7;max-width:440px;margin:0 auto}
 .divider{max-width:780px;margin:0 auto;padding:0 2rem;border-top:1px solid var(--border)}
 .tools{max-width:780px;margin:0 auto;padding:2rem 2rem 4rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
-.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-decoration:none;color:var(--text);display:flex;flex-direction:column;gap:.875rem;box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s,border-color .2s}
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-decoration:none;color:var(--text);display:flex;flex-direction:column;gap:.875rem;box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s,border-color .2s;position:relative}
 .tool-card:hover{box-shadow:var(--shadow-hover);transform:translateY(-3px);border-color:var(--card-color,var(--accent))}
 .tool-icon-wrap{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--icon-bg)}
 .tool-tag{display:inline-block;font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;background:var(--tag-bg);color:var(--tag-color);align-self:flex-start}
@@ -52,7 +52,8 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2r
 .tool-desc{font-size:13px;color:var(--text2);line-height:1.6;flex:1}
 .tool-arrow{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--card-color,var(--accent));margin-top:.25rem;transition:gap .15s}
 .tool-card:hover .tool-arrow{gap:8px}
-.tool-card-disabled{opacity:.4;pointer-events:none}
+.pending-badge{position:absolute;top:1rem;right:1rem;background:var(--orange);color:#fff;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;display:none}
+.pending-badge.show{display:block}
 footer{border-top:1px solid var(--border);text-align:center;padding:1.25rem;font-size:12px;color:var(--text3);background:var(--surface)}
 .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;z-index:999;font-size:14px;color:var(--text3)}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -60,7 +61,6 @@ footer{border-top:1px solid var(--border);text-align:center;padding:1.25rem;font
 </style>
 </head>
 <body>
-
 <div class="loading-overlay" id="loading"><div class="spinner"></div> 載入中...</div>
 
 <div class="login-page" id="login-page" style="display:none">
@@ -105,18 +105,28 @@ footer{border-top:1px solid var(--border);text-align:center;padding:1.25rem;font
       <div><div class="tool-tag">出差費用</div><div class="tool-name">出差油錢計算</div><div class="tool-desc">支援租車、私家車、公司車三種車型，AI 自動抓取中油油價與計算公里數，可匯出 CSV。</div></div>
       <div class="tool-arrow">開啟工具 →</div>
     </a>
-    <div class="tool-card tool-card-disabled" style="--card-color:#9099aa;--icon-bg:#f0f1f4;--tag-bg:#f0f1f4;--tag-color:#9099aa">
-      <div class="tool-icon-wrap">＋</div>
-      <div><div class="tool-tag">即將推出</div><div class="tool-name">更多工具</div><div class="tool-desc">下一個工具開發中，敬請期待。</div></div>
-      <div class="tool-arrow" style="color:var(--text3)">開發中</div>
-    </div>
+    <a class="tool-card" href="seniority.html" style="--card-color:#7c3aed;--icon-bg:#f5f3ff;--tag-bg:#f5f3ff;--tag-color:#7c3aed">
+      <div class="tool-icon-wrap">📅</div>
+      <div><div class="tool-tag">人事管理</div><div class="tool-name">員工年資查詢</div><div class="tool-desc">查詢個人到職日、年資、可休特休與剩餘天數，生日月份自動提醒，管理員可看全員總覽。</div></div>
+      <div class="tool-arrow">開啟工具 →</div>
+    </a>
+    <a class="tool-card" href="leave.html" id="leave-card" style="--card-color:#2e9e6b;--icon-bg:#ebf7f2;--tag-bg:#ebf7f2;--tag-color:#2e9e6b">
+      <div class="pending-badge" id="leave-badge"></div>
+      <div class="tool-icon-wrap">🗓️</div>
+      <div><div class="tool-tag">假勤管理</div><div class="tool-name">請假簽核</div>
+      <div class="tool-desc">線上申請請假、主管簽核、自動扣除特休天數，支援批次核准與全員假單總覽。</div>
+      <div id="leave-pending-hint" style="font-size:12px;color:var(--orange);font-weight:600;margin-top:6px;display:none"></div>
+      </div>
+      <div class="tool-arrow">開啟工具 →</div>
+    </a>
   </div>
   <footer>© 2026 Team Gantt · 內部使用</footer>
 </div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
@@ -127,15 +137,13 @@ const firebaseConfig = {
   appId: "1:966398251503:web:d6a2173863f9ca1cfd261a"
 };
 
-const ALLOWED_EMAILS = [
-  "webview168@gmail.com","mimo.jsm@gmail.com","am578222@gmail.com",
-  "amy.ete@gmail.com","annie907120@gmail.com","bellsugar@gmail.com",
-  "maggie80405@gmail.com","miemie686@gmail.com","s0912656315@gmail.com",
-  "teresaho0901@gmail.com","a7733421@gmail.com","vivi7733421@gmail.com"
-];
+const ALLOWED_EMAILS = ["webview168@gmail.com","mimo.jsm@gmail.com","am578222@gmail.com","amy.ete@gmail.com","annie907120@gmail.com","bellsugar@gmail.com","maggie80405@gmail.com","miemie686@gmail.com","s0912656315@gmail.com","teresaho0901@gmail.com","a7733421@gmail.com","vivi7733421@gmail.com"];
+const MANAGER1 = "am578222@gmail.com";
+const MANAGER2 = "mimo.jsm@gmail.com";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 function showLoading(v){document.getElementById('loading').style.display=v?'flex':'none'}
@@ -148,37 +156,76 @@ function showApp(user){
   if(user.photoURL)document.getElementById('user-avatar').src=user.photoURL;
 }
 
-// 處理重新導向結果
-getRedirectResult(auth).then(result=>{
-  if(result?.user){
-    if(!ALLOWED_EMAILS.includes(result.user.email)){
-      signOut(auth);
-      showLogin();
-      document.getElementById('login-error').style.display='block';
-    }
-  }
-}).catch(err=>console.error(err));
+async function loadPendingCount(email) {
+  try {
+    const snap = await getDocs(collection(db, 'leaves'));
+    const leaves = [];
+    snap.forEach(d => leaves.push(d.data()));
 
-onAuthStateChanged(auth,user=>{
-  if(user&&ALLOWED_EMAILS.includes(user.email)){
+    let count = 0;
+    let hint = '';
+
+    if (email === MANAGER2) {
+      // 經理：待經理簽核
+      count = leaves.filter(l => l.status === 'pending_m2').length;
+      hint = `待您簽核 ${count} 筆`;
+    } else if (email === MANAGER1) {
+      // 副理：待副理簽核
+      count = leaves.filter(l => l.status === 'pending_m1').length;
+      hint = `待您簽核 ${count} 筆`;
+    } else {
+      // 一般員工：自己的假單待代理確認
+      const agentPending = leaves.filter(l =>
+        (l.agent === email || l.agent2 === email) && l.status === 'agent_pending'
+      ).length;
+      // 自己送出待簽核的
+      const myPending = leaves.filter(l =>
+        l.applicantEmail === email && ['agent_pending','pending_m1','pending_m2'].includes(l.status)
+      ).length;
+      count = agentPending + myPending;
+      if (agentPending > 0) hint = `待您代理確認 ${agentPending} 筆`;
+      else if (myPending > 0) hint = `您有 ${myPending} 筆假單處理中`;
+    }
+
+    if (count > 0) {
+      const badge = document.getElementById('leave-badge');
+      badge.textContent = count + ' 筆待處理';
+      badge.classList.add('show');
+      const hintEl = document.getElementById('leave-pending-hint');
+      hintEl.textContent = '⚠️ ' + hint;
+      hintEl.style.display = 'block';
+    }
+  } catch(e) { console.error(e); }
+}
+
+onAuthStateChanged(auth, async user => {
+  if(user && ALLOWED_EMAILS.includes(user.email)){
     showApp(user);
-  }else if(user){
+    await loadPendingCount(user.email);
+  } else if(user){
     signOut(auth);
     showLogin();
     document.getElementById('login-error').style.display='block';
-  }else{
+  } else {
     showLogin();
   }
 });
 
-window.signIn=()=>{
-  const btn=document.getElementById('login-btn');
-  btn.disabled=true;
-  btn.innerHTML='<div style="width:16px;height:16px;border:2px solid #ccc;border-top-color:#4f6ef7;border-radius:50%;animation:spin .6s linear infinite;margin-right:8px"></div> 登入中...';
-  signInWithRedirect(auth,provider);
+window.signIn = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    if(!ALLOWED_EMAILS.includes(result.user.email)){
+      await signOut(auth);
+      document.getElementById('login-error').style.display='block';
+    }
+  } catch(e) {
+    if(e.code === 'auth/popup-blocked'){
+      document.getElementById('login-error').textContent='請允許彈出視窗';
+      document.getElementById('login-error').style.display='block';
+    }
+  }
 };
-
-window.doSignOut=()=>signOut(auth);
+window.doSignOut = () => signOut(auth);
 </script>
 </body>
 </html>
