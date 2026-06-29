@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>Google 行事曆授權</title>
+<style>
+body{font-family:sans-serif;max-width:500px;margin:3rem auto;padding:1rem;background:#f5f6f8;text-align:center}
+.card{background:#fff;border-radius:12px;padding:2rem;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.btn{background:#4f6ef7;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;margin-top:1rem;width:100%}
+.code-box{background:#f0f1f4;border-radius:8px;padding:1rem;font-family:monospace;font-size:12px;word-break:break-all;margin:1rem 0;text-align:left}
+.ok{color:#2e9e6b;font-weight:700}
+.err{color:#e53935}
+</style>
+</head>
+<body>
+<div class="card">
+  <div style="font-size:2rem;margin-bottom:1rem">📅</div>
+  <h2 style="margin-bottom:.5rem">Google 行事曆授權</h2>
+  <p style="font-size:13px;color:#666;margin-bottom:1.5rem">授權後系統可自動將核准假單新增至 Google 行事曆</p>
+  <div id="status"></div>
+</div>
+
+<script>
+const CLIENT_ID = '966398251503-dmk6mqe57lhj6a42gp3bgdjjtkjf4df4.apps.googleusercontent.com';
+const CLIENT_SECRET = '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';
+const REDIRECT_URI = 'https://gantt-marketing-qcru.vercel.app/auth_callback.html';
+const WORKER_URL = 'https://api-proxy.vivi7733421.workers.dev';
+
+const params = new URLSearchParams(window.location.search);
+const code = params.get('code');
+
+if (code) {
+  // 用 code 換 token
+  document.getElementById('status').innerHTML = '<p>正在取得授權 token...</p>';
+  
+  fetch(`${WORKER_URL}/google-token`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      code,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      redirect_uri: REDIRECT_URI,
+      grant_type: 'authorization_code'
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.refresh_token) {
+      document.getElementById('status').innerHTML = `
+        <p class="ok">✅ 授權成功！</p>
+        <p style="font-size:13px;color:#666;margin:.5rem 0">請將以下 Refresh Token 複製，儲存到 Cloudflare Worker 環境變數：</p>
+        <div class="code-box">GOOGLE_REFRESH_TOKEN = ${data.refresh_token}</div>
+        <p style="font-size:12px;color:#999">儲存後可關閉此頁面，之後核准假單會自動新增至行事曆</p>
+      `;
+    } else {
+      document.getElementById('status').innerHTML = `<p class="err">❌ 錯誤：${JSON.stringify(data)}</p>`;
+    }
+  })
+  .catch(e => {
+    document.getElementById('status').innerHTML = `<p class="err">❌ 失敗：${e.message}</p>`;
+  });
+} else {
+  // 顯示授權按鈕
+  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'code',
+    scope: 'https://www.googleapis.com/auth/calendar',
+    access_type: 'offline',
+    prompt: 'consent',
+    login_hint: 'vivi7733421@gmail.com'
+  });
+  
+  document.getElementById('status').innerHTML = `
+    <p style="font-size:13px;color:#666">點擊下方按鈕，用 <strong>webview168@gmail.com</strong> 授權存取 Google 行事曆</p>
+    <button class="btn" onclick="window.location.href='${authUrl}'">🔐 授權 Google 行事曆</button>
+  `;
+}
+</script>
+</body>
+</html>
