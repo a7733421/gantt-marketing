@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>刪除測試假單</title>
+<style>
+body{font-family:sans-serif;max-width:600px;margin:3rem auto;padding:1rem;background:#f5f6f8}
+.card{background:#fff;border-radius:12px;padding:2rem;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.btn{background:#e53935;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.log{margin-top:1rem;background:#f0f1f4;border-radius:8px;padding:1rem;font-size:12px;font-family:monospace;height:300px;overflow-y:auto;white-space:pre-wrap}
+.ok{color:#2e9e6b}.err{color:#e53935}.info{color:#4f6ef7}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🗑️ 刪除 6/30 測試假單</h2>
+  <p style="font-size:13px;color:#666;margin-bottom:1.5rem">刪除所有 2026/6/30 的假單（測試用）。⚠️ 只需執行一次！</p>
+  <button class="btn" id="btn" onclick="runDelete()">開始刪除</button>
+  <div class="log" id="log">等待執行...</div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+window.runDelete = async () => {
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  document.getElementById('log').innerHTML = '';
+  log('🔐 登入中...', 'info');
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    log('❌ 登入失敗：' + e.message, 'err');
+    btn.disabled = false;
+    return;
+  }
+  log('✓ 登入成功\n', 'ok');
+  const snap = await getDocs(collection(db, 'leaves'));
+  const toDelete = [];
+  snap.forEach(d => {
+    const start = d.data().start || '';
+    if (start.startsWith('2026-06-30')) toDelete.push({id: d.id, data: d.data()});
+  });
+  log(`找到 ${toDelete.length} 筆 6/30 假單\n`, 'info');
+  let ok = 0;
+  for (const item of toDelete) {
+    try {
+      await deleteDoc(doc(db, 'leaves', item.id));
+      log(`✓ 已刪除：${item.data.applicantName} ${item.data.type} ${item.data.start}`, 'ok');
+      ok++;
+    } catch(e) {
+      log(`❌ 失敗：${e.message}`, 'err');
+    }
+  }
+  log(`\n✅ 完成！刪除 ${ok} 筆`, 'ok');
+  btn.textContent = '✅ 已完成';
+};
+</script>
+</body>
+</html>
