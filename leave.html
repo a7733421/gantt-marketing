@@ -368,10 +368,12 @@ function getMyEmployee() { return employees.find(e => e.email === currentUser?.e
 
 function formatDays(d) {
   if (!d) return '0 天';
-  const days = Math.floor(d), hrs = Math.round((d-days)*8);
-  if (hrs===0) return days+' 天';
-  if (days===0) return hrs+' 小時';
-  return days+' 天 '+hrs+' 小時';
+  const days = Math.floor(d);
+  const hrsRaw = (d - days) * 8;
+  const hrs = Math.round(hrsRaw * 2) / 2; // 精確到0.5小時
+  if (hrs === 0) return days + ' 天';
+  if (days === 0) return hrs + ' 小時';
+  return days + ' 天 ' + hrs + ' 小時';
 }
 
 function fmtTime(dt) {
@@ -678,11 +680,13 @@ window.openDayModal = (y,m,d) => {
     const isFullDay=l.days>=1;
     const timeStr=isFullDay?'全天':fmtTime(l.start)+'～'+fmtTime(l.end);
     const sLabel=statusText(l.status);
-    const canApprove=(isManager1()&&l.status==='pending_m1')||(isManager2()&&l.status==='pending_m2');
+    const canApprove=(isManager1()&&l.status==='pending_m1')||(isManager2()&&l.status==='pending_m2')||(isViewer()&&['pending_m1','pending_m2'].includes(l.status));
+    const approveLabel=isManager1()?'核准（副理）':isManager2()?'核准（經理）':'核准';
     const adminBtns=canApprove?
-      `<div class="li-actions"><button class="btn-approve" onclick="approveLeave('${l.id}')">核准${isManager1()?'（副理）':'（經理）'}</button><button class="btn-reject" onclick="openRejectModal('${l.id}')">退回</button></div>`:'';
+      `<div class="li-actions"><button class="btn-approve" onclick="approveLeave('${l.id}')">${approveLabel}</button><button class="btn-reject" onclick="openRejectModal('${l.id}')">退回</button></div>`:'';
+    const statusNote='';
     const editBtn=isAdmin()?`<button onclick="openEditLeaveModal('${l.id}')" style="margin-top:6px;padding:4px 12px;border-radius:20px;border:1.5px solid var(--border2);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;font-weight:600">✏️ 修改時間</button>`:'';
-    const statusNote=isViewer()&&['pending_m1','pending_m2'].includes(l.status)?'<span style="font-size:11px;color:var(--text3)">（檢視模式）</span>':'';
+
     return `<div class="leave-item ${l.status}">
       <div class="li-top">
         <span class="li-name">${l.applicantName||''}</span>
@@ -834,7 +838,7 @@ function renderSignList(status, containerId) {
       <div style="font-size:13px;color:var(--text2);margin-bottom:4px">📅 ${dateStr}</div>
       ${l.reason?'<div style="font-size:12px;color:var(--text3);margin-bottom:.625rem">💬 '+l.reason+'</div>':''}
       <div style="font-size:11px;color:var(--text3);margin-bottom:.625rem">代理：${l.agentName||'—'}${l.agentName2?' / '+l.agentName2:''}</div>
-      ${canSign() ? `<div style="display:flex;gap:.5rem">
+      ${canSign() || isViewer() ? `<div style="display:flex;gap:.5rem">
         <button class="btn-approve" onclick="approveLeave('${l.id}')">核准</button>
         <button class="btn-reject" onclick="openRejectModal('${l.id}')">退回</button>
       </div>` : '<span style="font-size:12px;color:var(--text3)">檢視模式</span>'}
