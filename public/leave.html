@@ -200,7 +200,7 @@ textarea{resize:vertical;min-height:80px}
           </select>
         </div>
         <div class="field-row">
-          <div><label>開始時間</label><input type="datetime-local" id="f-start" value="" onchange="calcDuration()"></div>
+          <div><label>開始時間</label><input type="datetime-local" id="f-start" value="" onchange="onStartChange()"></div>
           <div><label>結束時間</label><input type="datetime-local" id="f-end" value="" onchange="calcDuration()"></div>
         </div>
         <div class="duration-hint" id="duration-hint"></div>
@@ -473,6 +473,17 @@ window.onTypeChange = () => {
   } else { hint.classList.remove('show'); }
 };
 
+window.onStartChange = () => {
+  const start = document.getElementById('f-start').value;
+  if (!start) return;
+  const end = document.getElementById('f-end').value;
+  // 自動帶入相同日期，保留結束時間18:00
+  const startDate = start.slice(0, 10);
+  const endTime = end ? end.slice(11) : '18:00';
+  document.getElementById('f-end').value = startDate + 'T' + endTime;
+  calcDuration();
+};
+
 window.calcDuration = () => {
   const days=calcLeaveDays(document.getElementById('f-start').value,document.getElementById('f-end').value);
   document.getElementById('duration-hint').textContent=days>0?'請假時數：'+formatDays(days):'';
@@ -576,7 +587,10 @@ window.agentAgree = async (id, isA1) => {
   if (isA1) update.agentStatus='agreed'; else update.agent2Status='agreed';
   const a1ok=isA1?'agreed':leave.agentStatus, a2ok=!isA1?'agreed':leave.agent2Status;
   const bothOk=(a1ok==='agreed')&&(leave.agent2?a2ok==='agreed':true);
-  if (bothOk) update.status='pending_m1';
+  if (bothOk) {
+    // 副理自己請假，直接跳到經理簽核
+    update.status = leave.applicantEmail === MANAGER1_EMAIL ? 'pending_m2' : 'pending_m1';
+  }
   await updateDoc(doc(db,'leaves',id),update);
   showToast('已確認同意');
   await loadLeaves();
@@ -904,10 +918,14 @@ function renderSignList(status, containerId) {
       <div style="font-size:13px;color:var(--text2);margin-bottom:4px">📅 ${dateStr}</div>
       ${l.reason?'<div style="font-size:12px;color:var(--text3);margin-bottom:.625rem">💬 '+l.reason+'</div>':''}
       <div style="font-size:11px;color:var(--text3);margin-bottom:.625rem">代理：${l.agentName||'—'}${l.agentName2?' / '+l.agentName2:''}</div>
-      ${canSign() || isViewer() ? `<div style="display:flex;gap:.5rem">
+      // 副理Tab：只有副理+HR可核准；經理Tab：只有經理+HR可核准
+      const canApproveThis = status==='pending_m1'
+        ? (isManager1() || isViewer())
+        : (isManager2() || isViewer());
+      ${`\${canApproveThis ? \`<div style="display:flex;gap:.5rem">
         <button class="btn-approve" onclick="approveLeave('${l.id}')">核准</button>
         <button class="btn-reject" onclick="openRejectModal('${l.id}')">退回</button>
-      </div>` : '<span style="font-size:12px;color:var(--text3)">檢視模式</span>'}
+      </div>\` : '<span style="font-size:12px;color:var(--text3)">檢視模式</span>'}`}
     </div>`;
   }).join('');
 }
