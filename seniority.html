@@ -374,6 +374,24 @@ function calcTravel(startDate, years, lastTripEnd) {
   return { domestic, overseas, periodStart, periodEnd, eligible: true, locked, nextEligible };
 }
 
+// ── 週年期別判斷（與 leave.html 一致：依到職日 + 任一參考日，回傳該期起算年份字串，如 '2025'）──
+function getPeriodKey(empStartDate, refDate) {
+  const start = new Date(empStartDate);
+  const ref = new Date(refDate);
+  const ps = new Date(start);
+  ps.setFullYear(ref.getFullYear());
+  if (ps > ref) ps.setFullYear(ref.getFullYear() - 1);
+  return String(ps.getFullYear());
+}
+
+// 取得員工在指定週年期內，已休天數加總（依每筆紀錄的實際日期判斷所屬期別）
+function getUsedDaysForPeriod(emp, periodKey) {
+  if (!Array.isArray(emp.leaveHistory)) return 0;
+  return Math.round(emp.leaveHistory
+    .filter(r => r.date && getPeriodKey(emp.startDate, r.date) === periodKey)
+    .reduce((s, r) => s + (parseFloat(r.days) || 0), 0) * 1000) / 1000;
+}
+
 // ── 天數格式化（小數 → X天X小時）──
 function formatDays(d) {
   if (d === 0) return '0 天';
@@ -427,7 +445,7 @@ function calcAnnualLeave(startDate) {
   else if (years >= 2 && years < 3) { travelDomestic = 3000;  travelOverseas = 6000; }
   else if (years >= 3)              { travelDomestic = 12000; travelOverseas = 24000; }
 
-  return { years, months, quota, yText, periodStart, nextAnniv, daysToAnniv, travelDomestic, travelOverseas };
+  return { years, months, quota, yText, periodStart, periodKey: String(periodStart.getFullYear()), nextAnniv, daysToAnniv, travelDomestic, travelOverseas };
 }
 
 // ── 生日判斷（本月）──
@@ -525,25 +543,26 @@ function renderBirthdayBar(list, isAdmin) {
 }
 
 function renderAlertBar() {
-  const today = new Date();
   const warns = employees.filter(e => {
     if (!e.startDate) return false;
-    const { quota, daysToAnniv } = calcAnnualLeave(e.startDate);
-    const remaining = quota - (e.usedDays || 0);
+    const { quota, daysToAnniv, periodKey } = calcAnnualLeave(e.startDate);
+    const used = getUsedDaysForPeriod(e, periodKey);
+    const remaining = quota - used;
     return daysToAnniv <= 60 && remaining > 0;
   });
   if (!warns.length) return;
   document.getElementById('alert-bar').classList.add('show');
   document.getElementById('alert-list').innerHTML = warns.map(e => {
-    const { quota, daysToAnniv } = calcAnnualLeave(e.startDate);
-    const remaining = quota - (e.usedDays || 0);
+    const { quota, daysToAnniv, periodKey } = calcAnnualLeave(e.startDate);
+    const used = getUsedDaysForPeriod(e, periodKey);
+    const remaining = quota - used;
     return `<div class="alert-item">⚠️ <strong>${e.name}</strong> — 剩餘 <strong>${formatDays(remaining)}</strong>特休，週年日還有 ${daysToAnniv} 天</div>`;
   }).join('');
 }
 
 function renderMyCard(emp) {
-  const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas } = calcAnnualLeave(emp.startDate);
-  const used = emp.usedDays || 0;
+  const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas, periodKey } = calcAnnualLeave(emp.startDate);
+  const used = getUsedDaysForPeriod(emp, periodKey);
   const remaining = Math.max(0, quota - used);
   const pct = quota > 0 ? Math.round((used/quota)*100) : 0;
   const remainColor = remaining === 0 ? 'red' : remaining <= 3 ? 'orange' : 'green';
@@ -600,8 +619,8 @@ function renderAdminTable() {
         <td></td>
       </tr>`;
     }
-    const { quota, yText, daysToAnniv, nextAnniv, years: eYears } = calcAnnualLeave(e.startDate);
-    const used = e.usedDays || 0;
+    const { quota, yText, daysToAnniv, nextAnniv, years: eYears, periodKey } = calcAnnualLeave(e.startDate);
+    const used = getUsedDaysForPeriod(e, periodKey);
     const remaining = Math.max(0, quota - used);
     const pct = quota > 0 ? Math.round((used/quota)*100) : 0;
     const fillColor = pct >= 100 ? 'var(--red)' : pct >= 60 ? 'var(--orange)' : 'var(--green)';
@@ -872,13 +891,18 @@ function renderLeaveHistoryList(e) {
     el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:.5rem 0">尚無已休天數紀錄</div>';
     return;
   }
+  const curPeriodKey = e.startDate ? calcAnnualLeave(e.startDate).periodKey : null;
+  const curTotal = curPeriodKey ? getUsedDaysForPeriod(e, curPeriodKey) : history.reduce((s,r)=>s+(r.days||0),0);
   const sorted = history.map((r, i) => ({ ...r, _idx: i })).sort((a, b) => (a.date||'').localeCompare(b.date||''));
-  el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem">歷史紀錄（共 '+formatDays(history.reduce((s,r)=>s+(r.days||0),0))+'）</div>'
+  el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem">本期（'+curPeriodKey+'）合計：'+formatDays(curTotal)+'</div>'
     + sorted.map(r => {
+      const pk = (e.startDate && r.date) ? getPeriodKey(e.startDate, r.date) : null;
+      const isOtherPeriod = pk && pk !== curPeriodKey;
+      const periodTag = pk ? '<span style="font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;font-weight:700;background:'+(isOtherPeriod?'var(--accent-dim);color:var(--accent)':'var(--green-dim);color:var(--green)')+'">'+pk+'期'+(isOtherPeriod?'（未來）':'')+'</span>' : '';
       return '<div style="background:var(--surface2);border-radius:8px;padding:.625rem .875rem;margin-bottom:.5rem">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">'
         + '<div>'
-        + '<div style="font-size:13px;font-weight:600">'+(r.date||'未填日期')+'　'+formatDays(r.days||0)+'</div>'
+        + '<div style="font-size:13px;font-weight:600">'+(r.date||'未填日期')+'　'+formatDays(r.days||0)+periodTag+'</div>'
         + (r.note ? '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+r.note+'</div>' : '')
         + '</div>'
         + '<div style="display:flex;gap:6px">'
@@ -903,6 +927,7 @@ window.editLeaveRecord = (idx) => {
 };
 
 function recalcUsedDays(emp) {
+  // usedDays（舊欄位）僅作「所有紀錄總和」參考用，實際本期已休一律以 leaveHistory + 週年期動態計算（getUsedDaysForPeriod）
   emp.usedDays = Math.round((emp.leaveHistory || []).reduce((s, r) => s + (parseFloat(r.days) || 0), 0) * 1000) / 1000;
 }
 
