@@ -496,8 +496,21 @@ async function loadEmployees() {
   });
 }
 
-async function saveEmployees() {
+async function saveEmployees(changedId) {
   try {
+    if (changedId) {
+      // 寫入前先重新讀取 Firestore 最新資料，只合併「這次變更的那位員工」，避免整包覆蓋掉其他人/其他分頁同時間的變更
+      const snap = await getDoc(doc(db, 'seniority', 'employees'));
+      if (snap.exists() && snap.data().list) {
+        const fresh = JSON.parse(snap.data().list);
+        const myRecord = employees.find(e => e.id === changedId);
+        const idx = fresh.findIndex(e => e.id === changedId);
+        if (myRecord) {
+          if (idx >= 0) fresh[idx] = myRecord; else fresh.push(myRecord);
+        }
+        employees = fresh; // 同步本地狀態，確保畫面跟資料庫一致
+      }
+    }
     await setDoc(doc(db, 'seniority', 'employees'), {
       list: JSON.stringify(employees),
       updatedAt: new Date().toISOString()
@@ -794,7 +807,7 @@ window.saveTravelRecord = async () => {
     showToast('出遊紀錄已新增 ✓');
   }
   employees[idx].travelHistory = history;
-  await saveEmployees();
+  await saveEmployees(employees[idx].id);
   renderTravelHistory(employees[idx], canEditTravel());
   resetTravelForm();
   render();
@@ -805,7 +818,7 @@ window.deleteTravelRecord = async (id, idx) => {
   const empIdx = employees.findIndex(e => e.id === id);
   if (empIdx < 0) return;
   employees[empIdx].travelHistory.splice(idx, 1);
-  await saveEmployees();
+  await saveEmployees(id);
   renderTravelHistory(employees[empIdx], canEditTravel());
   render();
   showToast('已刪除');
@@ -844,13 +857,15 @@ window.saveEmployee = async () => {
     birthday: document.getElementById('m-bday').value,
     email: document.getElementById('m-email').value.trim(),
   };
+  let savedId = editingId;
   if (editingId) {
     const idx = employees.findIndex(e => e.id === editingId);
     if (idx >= 0) employees[idx] = { ...employees[idx], ...data };
   } else {
-    employees.push({ ...data, id: 'e' + Date.now(), usedDays: 0, leaveHistory: [] });
+    savedId = 'e' + Date.now();
+    employees.push({ ...data, id: savedId, usedDays: 0, leaveHistory: [] });
   }
-  await saveEmployees();
+  await saveEmployees(savedId);
   closeModal();
   render();
   showToast('已儲存 ✓');
@@ -897,8 +912,9 @@ function renderLeaveHistoryList(e) {
   el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem">本期（'+curPeriodKey+'）合計：'+formatDays(curTotal)+'</div>'
     + sorted.map(r => {
       const pk = (e.startDate && r.date) ? getPeriodKey(e.startDate, r.date) : null;
-      const isOtherPeriod = pk && pk !== curPeriodKey;
-      const periodTag = pk ? '<span style="font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;font-weight:700;background:'+(isOtherPeriod?'var(--accent-dim);color:var(--accent)':'var(--green-dim);color:var(--green)')+'">'+pk+'期'+(isOtherPeriod?'（未來）':'')+'</span>' : '';
+      const isFuturePeriod = pk && Number(pk) > Number(curPeriodKey);
+      const isPastPeriod = pk && Number(pk) < Number(curPeriodKey);
+      const periodTag = pk ? '<span style="font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;font-weight:700;background:'+(isFuturePeriod?'var(--accent-dim);color:var(--accent)':isPastPeriod?'var(--surface2);color:var(--text3)':'var(--green-dim);color:var(--green)')+'">'+pk+'期'+(isFuturePeriod?'（未來）':isPastPeriod?'（已過期）':'')+'</span>' : '';
       return '<div style="background:var(--surface2);border-radius:8px;padding:.625rem .875rem;margin-bottom:.5rem">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">'
         + '<div>'
@@ -949,7 +965,7 @@ window.saveLeaveRecord = async () => {
   }
   employees[idx].leaveHistory = history;
   recalcUsedDays(employees[idx]);
-  await saveEmployees();
+  await saveEmployees(employees[idx].id);
   renderLeaveHistoryList(employees[idx]);
   resetLeaveForm();
   render();
@@ -961,7 +977,7 @@ window.deleteLeaveRecord = async (id, idx) => {
   if (empIdx < 0) return;
   employees[empIdx].leaveHistory.splice(idx, 1);
   recalcUsedDays(employees[empIdx]);
-  await saveEmployees();
+  await saveEmployees(id);
   renderLeaveHistoryList(employees[empIdx]);
   render();
 };
