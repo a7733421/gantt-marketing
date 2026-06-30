@@ -10,14 +10,15 @@ th,td{padding:10px 12px;border-bottom:1px solid #eee;text-align:left}
 th{background:#f0f1f4;font-weight:700}
 .btn{background:#4f6ef7;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:1rem}
 .approved{background:#ebf7f2}
-.pending{background:#fef3c7}
+.pending_m1,.pending_m2,.pending{background:#fef3c7}
 .cancelled{background:#f0f1f4;color:#999}
 .rejected{background:#fee2e2}
+.agent_pending{background:#dbeafe}
 </style>
 </head>
 <body>
 <h2>李靜憶 (am578222@gmail.com) 所有假單明細</h2>
-<button class="btn" onclick="run()">查詢</button>
+<button class="btn" id="runBtn">查詢</button>
 <div id="summary" style="margin-bottom:1rem;font-weight:700;font-size:15px"></div>
 <table id="result"><thead><tr><th>#</th><th>文件ID</th><th>日期</th><th>假別</th><th>天數</th><th>狀態</th></tr></thead><tbody></tbody></table>
 
@@ -35,7 +36,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-window.run = async () => {
+async function run() {
   await signInWithPopup(auth, provider);
   const snap = await getDocs(collection(db, 'leaves'));
   const all = [];
@@ -56,7 +57,9 @@ window.run = async () => {
   const total = approvedSpecial.reduce((s,l)=>s+l.days,0);
   document.getElementById('summary').textContent =
     `共 ${mine.length} 筆假單 ｜ 已核准特休 ${approvedSpecial.length} 筆 ｜ 合計 ${total} 天`;
-};
+}
+
+document.getElementById('runBtn').addEventListener('click', run);
 </script>
 </body>
 </html>
