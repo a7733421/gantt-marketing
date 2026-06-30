@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>員工年資查詢 — Team Gantt</title>
+<title>同仁年資查詢 — Team Gantt</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -52,7 +52,7 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .logout-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 /* Main layout */
-.main{max-width:1400px;margin:0 auto;padding:1.5rem}
+.main{width:100%;padding:1.5rem 2rem}
 
 /* Alert banner */
 .alert-bar{background:var(--red-dim);border:1.5px solid #fca5a5;border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.25rem;display:none}
@@ -91,9 +91,9 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-table{width:100%;border-collapse:collapse;font-size:15px}
-th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:11px 14px;border-bottom:1.5px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
-td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:11px 12px;border-bottom:1.5px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:12px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:14px}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--surface2)}
 .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.03em}
@@ -147,9 +147,10 @@ tr:hover td{background:var(--surface2)}
     <div class="nav-left">
       <a class="nav-logo" href="home.html">← <span>TEAM</span> GANTT</a>
       <div class="nav-divider"></div>
-      <span class="nav-title">員工年資查詢</span>
+      <span class="nav-title">同仁年資查詢</span>
     </div>
     <div class="nav-right">
+      <a href="leave.html" style="font-size:13px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);color:var(--text2);text-decoration:none;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">📅 請假簽核</a>
       <div class="user-info">
         <img class="user-avatar" id="user-avatar" src="" alt="">
         <span id="user-name"></span>
@@ -185,16 +186,18 @@ tr:hover td{background:var(--surface2)}
           <thead>
             <tr>
               <th>姓名</th>
-              <th>部門</th>
               <th>到職日</th>
               <th>年資</th>
               <th>本期特休起算</th>
               <th>可休天數</th>
               <th>已休天數</th>
               <th>剩餘天數</th>
-              <th>特休使用率</th>
               <th>週年提醒</th>
-              <th>旅遊津貼（本期）</th>
+              <th>可旅遊期間</th>
+              <th>旅遊津貼</th>
+              <th>請領狀態</th>
+              <th>出遊期間</th>
+              <th>發放月份</th>
               <th></th>
             </tr>
           </thead>
@@ -214,8 +217,6 @@ tr:hover td{background:var(--surface2)}
     </div>
     <label>姓名</label>
     <input id="m-name" type="text" placeholder="王小明">
-    <label>部門</label>
-    <input id="m-dept" type="text" placeholder="行政部">
     <label>職稱</label>
     <input id="m-title" type="text" placeholder="業務助理">
     <label>到職日</label>
@@ -226,6 +227,10 @@ tr:hover td{background:var(--surface2)}
     <input id="m-email" type="email" placeholder="xxx@gmail.com">
     <label>已休天數（本期）</label>
     <input id="m-used" type="number" step="0.125" min="0" placeholder="0">
+    <div id="m-leave-history" style="margin-top:1rem;display:none">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem;border-top:1px solid var(--border);padding-top:.75rem">📋 請假明細（已核准）</div>
+      <div id="m-leave-list" style="max-height:200px;overflow-y:auto"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEmployee()">儲存</button>
       <button class="btn-cancel" onclick="closeModal()">取消</button>
@@ -233,16 +238,31 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
-<!-- 已休天數明細 Modal -->
-<div class="modal-overlay" id="history-modal">
+<!-- Travel Modal 旅遊紀錄 -->
+<div class="modal-overlay" id="travel-modal">
   <div class="modal">
     <div class="modal-title">
-      <span id="history-modal-title">已休天數明細</span>
-      <button class="modal-close" onclick="closeHistoryModal()">✕</button>
+      <span id="travel-modal-title">新增出遊紀錄</span>
+      <button class="modal-close" onclick="closeTravelModal()">✕</button>
     </div>
-    <div id="history-modal-body" style="font-size:13px"></div>
+    <div id="travel-history-list" style="margin-bottom:1rem"></div>
+    <div id="travel-form-section" style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem">
+      <div id="travel-form-title" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.75rem">＋ 新增一筆出遊紀錄</div>
+      <label>出遊日期起</label>
+      <input id="tv-start" type="date">
+      <label>出遊日期訖</label>
+      <input id="tv-end" type="date">
+      <label>國內／國外</label>
+      <select id="tv-type" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:14px;color:var(--text);outline:none">
+        <option value="國外">國外</option>
+        <option value="國內">國內</option>
+      </select>
+      <label>發放月份（例：115/6/5）</label>
+      <input id="tv-paid" type="text" placeholder="115/6/5">
+    </div>
     <div class="modal-actions">
-      <button class="btn-cancel" style="flex:1" onclick="closeHistoryModal()">關閉</button>
+      <button id="travel-save-btn" class="btn-save" onclick="saveTravelRecord()">新增紀錄</button>
+      <button class="btn-cancel" onclick="closeTravelModal()">關閉</button>
     </div>
   </div>
 </div>
@@ -252,7 +272,7 @@ tr:hover td{background:var(--surface2)}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
@@ -272,6 +292,10 @@ const ALLOWED_EMAILS = [
 
 // 管理員：純管理員（無到職日）+ HR管理員（有到職日）
 const ADMIN_EMAILS = ["mimo.jsm@gmail.com","amy.ete@gmail.com","vivi7733421@gmail.com","a7733421@gmail.com","webview168@gmail.com"];
+
+// 出遊紀錄編輯權限：僅這 3 位可新增/修改/刪除出遊紀錄，其餘管理員僅可檢視
+const TRAVEL_EDIT_EMAILS = ["mimo.jsm@gmail.com","amy.ete@gmail.com","vivi7733421@gmail.com"];
+function canEditTravel() { return TRAVEL_EDIT_EMAILS.includes(currentUser?.email); }
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -294,31 +318,13 @@ let employees = [];
 let currentUser = null;
 let editingId = null;
 
-// ── 週年期別判斷（共用：依到職日 + 任一參考日，回傳該期起算年份字串，如 '2025'）──
-function getPeriodKey(empStartDate, refDate) {
-  const start = new Date(empStartDate);
-  const ref = new Date(refDate);
-  const ps = new Date(start);
-  ps.setFullYear(ref.getFullYear());
-  if (ps > ref) ps.setFullYear(ref.getFullYear() - 1);
-  return String(ps.getFullYear());
-}
-
-// ── 取得員工在指定期別的已休天數（從 leaveHistory 讀取，相容舊資料）──
-function getUsedDaysForPeriod(emp, periodKey) {
-  if (Array.isArray(emp.leaveHistory)) {
-    const entry = emp.leaveHistory.find(h => h.period === periodKey);
-    return entry ? (entry.usedDays || 0) : 0;
-  }
-  return emp.usedDays || 0; // 尚未遷移資料的舊員工，退回舊欄位
-}
-
 // ── 旅遊津貼計算 ──
-function calcTravel(startDate, years) {
+function calcTravel(startDate, years, lastTripEnd) {
   // 週年制：滿1年後才有，每期1年
   const start = new Date(startDate);
   const today = new Date();
-  // 當期起算日（最近一次週年）
+
+  // 當期週年起算日
   const periodStart = new Date(start);
   periodStart.setFullYear(today.getFullYear());
   if (periodStart > today) periodStart.setFullYear(today.getFullYear() - 1);
@@ -326,14 +332,28 @@ function calcTravel(startDate, years) {
   periodEnd.setFullYear(periodEnd.getFullYear() + 1);
 
   // 未滿1年無津貼
-  if (years < 1) return { domestic: 0, overseas: 0, periodStart, periodEnd, eligible: false };
+  if (years < 1) return { domestic: 0, overseas: 0, periodStart, periodEnd, eligible: false, nextEligible: null };
 
   let domestic, overseas;
   if (years < 2)       { domestic = 1500;  overseas = 3000; }
   else if (years < 3)  { domestic = 3000;  overseas = 6000; }
   else                 { domestic = 12000; overseas = 24000; }
 
-  return { domestic, overseas, periodStart, periodEnd, eligible: true };
+  // 下次可申請日：max(下次週年日, 上次出遊結束+1年)
+  let nextEligible = null;
+  if (lastTripEnd) {
+    const tripEndDate = new Date(lastTripEnd);
+    const oneYearAfterTrip = new Date(tripEndDate);
+    oneYearAfterTrip.setFullYear(oneYearAfterTrip.getFullYear() + 1);
+    // 下次週年日
+    const nextPeriodStart = new Date(periodEnd); // periodEnd = 下次週年日
+    nextEligible = oneYearAfterTrip > nextPeriodStart ? oneYearAfterTrip : nextPeriodStart;
+  }
+
+  // 已請領且在鎖定期內（有lastTripEnd且今天 < nextEligible）則本期不可再申請
+  const locked = nextEligible && today < nextEligible;
+
+  return { domestic, overseas, periodStart, periodEnd, eligible: true, locked, nextEligible };
 }
 
 // ── 天數格式化（小數 → X天X小時）──
@@ -389,7 +409,7 @@ function calcAnnualLeave(startDate) {
   else if (years >= 2 && years < 3) { travelDomestic = 3000;  travelOverseas = 6000; }
   else if (years >= 3)              { travelDomestic = 12000; travelOverseas = 24000; }
 
-  return { years, months, quota, yText, periodStart, periodKey: String(periodStart.getFullYear()), nextAnniv, daysToAnniv, travelDomestic, travelOverseas };
+  return { years, months, quota, yText, periodStart, nextAnniv, daysToAnniv, travelDomestic, travelOverseas };
 }
 
 // ── 生日判斷（本月）──
@@ -406,6 +426,25 @@ async function loadEmployees() {
     const snap = await getDoc(doc(db, 'seniority', 'employees'));
     if (snap.exists() && snap.data().list) {
       employees = JSON.parse(snap.data().list);
+      // 自動轉換舊資料：travelTripStart → travelHistory
+      let migrated = false;
+      employees = employees.map(e => {
+        if (e.travelTripStart && (!e.travelHistory || e.travelHistory.length === 0)) {
+          migrated = true;
+          return {
+            ...e,
+            travelHistory: [{
+              tripStart: e.travelTripStart,
+              tripEnd:   e.travelTripEnd || '',
+              type:      e.travelTripType || '國外',
+              paidMonth: e.travelPaidMonth || '',
+              addedAt:   new Date().toISOString()
+            }]
+          };
+        }
+        return e;
+      });
+      if (migrated) await saveEmployees();
     } else {
       employees = DEFAULT_EMPLOYEES;
       await saveEmployees();
@@ -413,6 +452,12 @@ async function loadEmployees() {
   } catch(e) {
     employees = DEFAULT_EMPLOYEES;
   }
+  // 按年資長到短排序（有到職日的排前面）
+  employees.sort((a, b) => {
+    if (!a.startDate) return 1;
+    if (!b.startDate) return -1;
+    return new Date(a.startDate) - new Date(b.startDate);
+  });
 }
 
 async function saveEmployees() {
@@ -465,24 +510,22 @@ function renderAlertBar() {
   const today = new Date();
   const warns = employees.filter(e => {
     if (!e.startDate) return false;
-    const { quota, daysToAnniv, periodKey } = calcAnnualLeave(e.startDate);
-    const used = getUsedDaysForPeriod(e, periodKey);
-    const remaining = quota - used;
+    const { quota, daysToAnniv } = calcAnnualLeave(e.startDate);
+    const remaining = quota - (e.usedDays || 0);
     return daysToAnniv <= 60 && remaining > 0;
   });
   if (!warns.length) return;
   document.getElementById('alert-bar').classList.add('show');
   document.getElementById('alert-list').innerHTML = warns.map(e => {
-    const { quota, daysToAnniv, periodKey } = calcAnnualLeave(e.startDate);
-    const used = getUsedDaysForPeriod(e, periodKey);
-    const remaining = quota - used;
+    const { quota, daysToAnniv } = calcAnnualLeave(e.startDate);
+    const remaining = quota - (e.usedDays || 0);
     return `<div class="alert-item">⚠️ <strong>${e.name}</strong> — 剩餘 <strong>${formatDays(remaining)}</strong>特休，週年日還有 ${daysToAnniv} 天</div>`;
   }).join('');
 }
 
 function renderMyCard(emp) {
-  const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas, periodKey } = calcAnnualLeave(emp.startDate);
-  const used = getUsedDaysForPeriod(emp, periodKey);
+  const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas } = calcAnnualLeave(emp.startDate);
+  const used = emp.usedDays || 0;
   const remaining = Math.max(0, quota - used);
   const pct = quota > 0 ? Math.round((used/quota)*100) : 0;
   const remainColor = remaining === 0 ? 'red' : remaining <= 3 ? 'orange' : 'green';
@@ -495,7 +538,7 @@ function renderMyCard(emp) {
         <img class="my-avatar" src="${currentUser.photoURL||''}" alt="">
         <div>
           <div class="my-name">${emp.name}</div>
-          <div class="my-dept">${emp.dept} · ${emp.title||''}</div>
+          <div class="my-dept">${emp.title||''}</div>
         </div>
       </div>
       <div class="my-stats">
@@ -512,10 +555,9 @@ function renderMyCard(emp) {
           <div class="stat-value">${quota} <span style="font-size:14px;color:var(--text3)">天</span></div>
           <div class="stat-sub">週年起算制</div>
         </div>
-        <div class="stat-box" style="cursor:pointer" onclick="openHistoryModal('${emp.id}')" title="點擊查看逐期明細">
-          <div class="stat-label">已休天數 🔍</div>
+        <div class="stat-box">
+          <div class="stat-label">已休天數</div>
           <div class="stat-value orange" style="font-size:18px">${formatDays(used)}</div>
-          <div class="stat-sub">已使用 ${pct}%（${periodKey}期）</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">剩餘天數</div>
@@ -536,77 +578,200 @@ function renderAdminTable() {
     if (!e.startDate) {
       return `<tr>
         <td><strong>${e.name}</strong> <span class="badge badge-admin">管理員</span></td>
-        <td colspan="10" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
+        <td colspan="12" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
         <td></td>
       </tr>`;
     }
-    const { quota, yText, daysToAnniv, nextAnniv, travelDomestic, travelOverseas, periodKey } = calcAnnualLeave(e.startDate);
-    const used = getUsedDaysForPeriod(e, periodKey);
+    const { quota, yText, daysToAnniv, nextAnniv, years: eYears } = calcAnnualLeave(e.startDate);
+    const used = e.usedDays || 0;
     const remaining = Math.max(0, quota - used);
     const pct = quota > 0 ? Math.round((used/quota)*100) : 0;
     const fillColor = pct >= 100 ? 'var(--red)' : pct >= 60 ? 'var(--orange)' : 'var(--green)';
     const warn = daysToAnniv <= 60 && remaining > 0;
     const isBday = isBirthdayMonth(e.birthday);
 
+    // 旅遊津貼 — 用 travelHistory 陣列
+    const history = e.travelHistory || [];
+    // 最近一筆
+    const lastTrip = history.length > 0 ? history[history.length - 1] : null;
+    const lastTripEndStr = lastTrip ? lastTrip.tripEnd : '';
+    const tv = calcTravel(e.startDate, eYears, lastTripEndStr);
+    const ps = tv.periodStart;
+    const pe = tv.periodEnd;
+    const psStr = ps.getFullYear()+'/'+(ps.getMonth()+1)+'/'+ps.getDate();
+    const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
+
+    const travelPeriodCell = tv.eligible
+      ? '<span style="font-size:12px">'+psStr+'～'+peStr+'</span>'
+      : '<span style="color:var(--text3);font-size:12px">未達資格</span>';
+
+    const travelAmtCell = tv.eligible
+      ? '<div style="font-size:12px;line-height:1.7">🏠 NT$ '+tv.domestic.toLocaleString()+'<br>✈️ NT$ '+tv.overseas.toLocaleString()+'</div>'
+      : '—';
+
+    // 出遊欄
+    let tripDateCell, paidCell;
+    if (lastTrip) {
+      tripDateCell = '<span style="font-size:12px">'+lastTrip.tripStart+'～'+lastTrip.tripEnd+'</span>';
+      paidCell = lastTrip.paidMonth
+        ? '<span style="font-size:13px">'+lastTrip.paidMonth+'</span>'
+        : '<span style="color:var(--text3)">—</span>';
+    } else {
+      tripDateCell = '<span style="color:var(--text3);font-size:12px">—</span>';
+      paidCell = '<span style="color:var(--text3)">—</span>';
+    }
+
+    // 請領狀態欄：有紀錄者皆可點開查看，僅 TRAVEL_EDIT_EMAILS 可編輯
+    const editable = canEditTravel();
+    let tripCell;
+    if (!tv.eligible) {
+      tripCell = '—';
+    } else if (tv.locked && tv.nextEligible) {
+      const nd = tv.nextEligible;
+      const ndStr = nd.getFullYear()+'/'+(nd.getMonth()+1)+'/'+nd.getDate();
+      tripCell = '<div>'
+               + '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>'
+               + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
+               + '</div>';
+    } else if (history.length > 0) {
+      tripCell = '<span class="tag-ok" style="cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>';
+    } else {
+      tripCell = editable
+        ? '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openTravelModal(\''+e.id+'\')">＋ 出遊紀錄</button>'
+        : '—';
+    }
+
     return `<tr>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
-          <strong>${e.name}</strong>
-          ${isBday ? '<span style="font-size:14px" title="本月生日">🌟</span>' : ''}
+          <strong style="font-size:14px">${e.name}</strong>
+          ${isBday ? '<span title="本月生日">🌟</span>' : ''}
         </div>
         <div style="font-size:11px;color:var(--text3)">${e.title||''}</div>
       </td>
-      <td style="color:var(--text2)">${e.dept}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${e.startDate?.replace(/-/g,'/')}</td>
-      <td>${yText}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2)">${nextAnniv.getFullYear()}/${nextAnniv.getMonth()+1}/${nextAnniv.getDate()}</td>
+      <td style="font-size:13px">${e.startDate?.replace(/-/g,'/')}</td>
+      <td style="font-size:13px">${yText}</td>
+      <td style="font-size:13px;color:var(--text2)">${nextAnniv.getFullYear()}/${nextAnniv.getMonth()+1}/${nextAnniv.getDate()}</td>
       <td style="font-weight:700">${quota} 天</td>
-      <td style="cursor:pointer;color:var(--accent)" onclick="openHistoryModal('${e.id}')" title="點擊查看逐期明細">${formatDays(used)} 🔍</td>
+      <td>${formatDays(used)}</td>
       <td style="font-weight:700;color:${remaining===0?'var(--red)':remaining<=3?'var(--orange)':'var(--green)'}">${formatDays(remaining)}</td>
-      <td>
-        <div class="leave-bar-wrap">
-          <div class="leave-bar"><div class="leave-bar-fill" style="width:${Math.min(pct,100)}%;background:${fillColor}"></div></div>
-          <span style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${pct}%</span>
-        </div>
-      </td>
-      <td>
-        ${warn ? `<span class="tag-warn">⚠️ 剩${formatDays(remaining)} / ${daysToAnniv}天後到期</span>` : remaining===0 ? `<span class="tag-full">已休完</span>` : `<span class="tag-ok">正常</span>`}
-      </td>
-      <td>
-        ${(()=>{
-          const {years: eYears} = calcAnnualLeave(e.startDate);
-          const tv = calcTravel(e.startDate, eYears);
-          if (!tv.eligible) return '<span style="color:var(--text3);font-size:12px">未達資格</span>';
-          const periodKey = tv.periodStart.getFullYear()+'-'+tv.periodStart.getMonth();
-          const claimed = (e.travelClaimed||[]).includes(periodKey);
-          const pe = tv.periodEnd;
-          const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
-          if (claimed) return '<span class="tag-full">已請領 ✓</span>';
-          return '<div style="font-size:12px;line-height:1.8">' +
-            '<div>🏠 NT$ '+tv.domestic.toLocaleString()+' / ✈️ NT$ '+tv.overseas.toLocaleString()+'</div>' +
-            '<div style="color:var(--text3)">效期至 '+peStr+'</div>' +
-            '<button class="edit-btn" style="margin-top:4px;font-size:11px;padding:3px 10px" onclick="markTravel(\'' + e.id + '\',\'' + periodKey + '\')">標記已請領</button>' +
-            '</div>';
-        })()}
-      </td>
-      <td>
-        <button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button>
-      </td>
+      <td>${warn ? '<span class="tag-warn">⚠️ '+daysToAnniv+'天後到期</span>' : remaining===0 ? '<span class="tag-full">已休完</span>' : '<span class="tag-ok">正常</span>'}</td>
+      <td>${travelPeriodCell}</td>
+      <td>${travelAmtCell}</td>
+      <td>${tripCell}</td>
+      <td>${tripDateCell}</td>
+      <td>${paidCell}</td>
+      <td><button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button></td>
     </tr>`;
   }).join('');
 }
 
-// ── 旅遊津貼標記 ──
-window.markTravel = async (id, periodKey) => {
-  const idx = employees.findIndex(e => e.id === id);
-  if (idx < 0) return;
-  const claimed = employees[idx].travelClaimed || [];
-  if (!claimed.includes(periodKey)) {
-    employees[idx].travelClaimed = [...claimed, periodKey];
-    await saveEmployees();
-    render();
-    showToast('已標記旅遊津貼請領 ✓');
+// ── 旅遊紀錄 Modal ──
+let travelEditingId = null;
+let travelEditingIdx = null; // 正在編輯的紀錄 index，null = 新增模式
+
+window.openTravelModal = (id) => {
+  travelEditingId = id;
+  travelEditingIdx = null;
+  const e = employees.find(x => x.id === id);
+  if (!e) return;
+  const editable = canEditTravel();
+  document.getElementById('travel-modal-title').textContent = e.name + (editable ? ' 出遊紀錄' : ' 出遊紀錄（檢視）');
+  renderTravelHistory(e, editable);
+  document.getElementById('travel-form-section').style.display = editable ? 'block' : 'none';
+  document.getElementById('travel-save-btn').style.display = editable ? 'inline-block' : 'none';
+  if (editable) resetTravelForm();
+  document.getElementById('travel-modal').classList.add('show');
+};
+
+window.closeTravelModal = () => {
+  document.getElementById('travel-modal').classList.remove('show');
+  travelEditingId = null;
+  travelEditingIdx = null;
+};
+
+function resetTravelForm() {
+  ['tv-start','tv-end','tv-paid'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('tv-type').value = '國外';
+  document.getElementById('travel-save-btn').textContent = '新增紀錄';
+  document.getElementById('travel-form-title').textContent = '＋ 新增一筆出遊紀錄';
+  travelEditingIdx = null;
+}
+
+function renderTravelHistory(e, editable) {
+  const history = e.travelHistory || [];
+  const el = document.getElementById('travel-history-list');
+  if (!history.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:.5rem 0">尚無出遊紀錄</div>';
+    return;
   }
+  el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem">歷史紀錄</div>'
+    + [...history].reverse().map((r, ri) => {
+      const realIdx = history.length - 1 - ri;
+      return '<div style="background:var(--surface2);border-radius:8px;padding:.625rem .875rem;margin-bottom:.5rem">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">'
+        + '<div>'
+        + '<div style="font-size:13px;font-weight:600">'+r.tripStart+' ～ '+r.tripEnd+'</div>'
+        + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+r.type+' ／ 發放：'+(r.paidMonth||'—')+'</div>'
+        + '</div>'
+        + (editable
+          ? ('<div style="display:flex;gap:6px">'
+            + '<button onclick="editTravelRecord('+realIdx+')" style="background:var(--accent-dim);color:var(--accent);border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:700">修改</button>'
+            + '<button onclick="deleteTravelRecord(\''+e.id+'\','+realIdx+')" style="background:var(--red-dim);color:var(--red);border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:700">刪除</button>'
+            + '</div>')
+          : '')
+        + '</div>'
+        + '</div>';
+    }).join('');
+}
+
+window.editTravelRecord = (idx) => {
+  const e = employees.find(x => x.id === travelEditingId);
+  if (!e) return;
+  const r = e.travelHistory[idx];
+  travelEditingIdx = idx;
+  document.getElementById('tv-start').value = r.tripStart || '';
+  document.getElementById('tv-end').value   = r.tripEnd   || '';
+  document.getElementById('tv-type').value  = r.type      || '國外';
+  document.getElementById('tv-paid').value  = r.paidMonth || '';
+  document.getElementById('travel-save-btn').textContent = '儲存修改';
+  document.getElementById('travel-form-title').textContent = '✏️ 修改紀錄';
+};
+
+window.saveTravelRecord = async () => {
+  const start = document.getElementById('tv-start').value;
+  const end   = document.getElementById('tv-end').value;
+  const type  = document.getElementById('tv-type').value;
+  const paid  = document.getElementById('tv-paid').value.trim();
+  if (!start || !end) { showToast('請填寫出遊日期'); return; }
+  const idx = employees.findIndex(e => e.id === travelEditingId);
+  if (idx < 0) return;
+  const history = employees[idx].travelHistory || [];
+  if (travelEditingIdx !== null) {
+    // 修改模式
+    history[travelEditingIdx] = { ...history[travelEditingIdx], tripStart: start, tripEnd: end, type, paidMonth: paid };
+    showToast('已更新 ✓');
+  } else {
+    // 新增模式
+    history.push({ tripStart: start, tripEnd: end, type, paidMonth: paid, addedAt: new Date().toISOString() });
+    showToast('出遊紀錄已新增 ✓');
+  }
+  employees[idx].travelHistory = history;
+  await saveEmployees();
+  renderTravelHistory(employees[idx], canEditTravel());
+  resetTravelForm();
+  render();
+};
+
+window.deleteTravelRecord = async (id, idx) => {
+  if (!confirm('確定刪除這筆出遊紀錄？')) return;
+  const empIdx = employees.findIndex(e => e.id === id);
+  if (empIdx < 0) return;
+  employees[empIdx].travelHistory.splice(idx, 1);
+  await saveEmployees();
+  renderTravelHistory(employees[empIdx], canEditTravel());
+  render();
+  showToast('已刪除');
 };
 
 // ── Modal ──
@@ -616,75 +781,82 @@ window.openEditModal = (id) => {
   if (!e) return;
   document.getElementById('modal-title-text').textContent = '編輯員工資料';
   document.getElementById('m-name').value = e.name || '';
-  document.getElementById('m-dept').value = e.dept || '';
   document.getElementById('m-title').value = e.title || '';
   document.getElementById('m-start').value = e.startDate || '';
   document.getElementById('m-bday').value = e.birthday || '';
   document.getElementById('m-email').value = e.email || '';
-  const { periodKey } = e.startDate ? calcAnnualLeave(e.startDate) : { periodKey: null };
-  document.getElementById('m-used').value = periodKey ? getUsedDaysForPeriod(e, periodKey) : (e.usedDays || 0);
+  document.getElementById('m-used').value = e.usedDays || 0;
   document.getElementById('modal').classList.add('show');
+  // 讀取請假明細
+  if (e.email) loadLeaveHistory(e.email, e.name);
 };
+
+async function loadLeaveHistory(email, name) {
+  const histEl = document.getElementById('m-leave-history');
+  const listEl = document.getElementById('m-leave-list');
+  histEl.style.display = 'none';
+  listEl.innerHTML = '<div style="font-size:12px;color:var(--text3)">載入中...</div>';
+  try {
+    const snap = await getDocs(collection(db, 'leaves'));
+    const leaves = [];
+    snap.forEach(d => {
+      const l = d.data();
+      if (l.applicantEmail === email && l.status === 'approved' && l.type === '特休') {
+        leaves.push(l);
+      }
+    });
+    leaves.sort((a,b) => new Date(a.start) - new Date(b.start));
+    if (!leaves.length) {
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:.5rem 0">尚無已核准特休紀錄</div>';
+    } else {
+      listEl.innerHTML = leaves.map(l => {
+        const d = new Date(l.start);
+        const dateStr = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+        const hrsRaw = (l.days - Math.floor(l.days)) * 8;
+        const hrs = Math.round(hrsRaw * 2) / 2;
+        const daysStr = Math.floor(l.days) > 0
+          ? Math.floor(l.days)+'天'+(hrs>0?hrs+'小時':'')
+          : hrs+'小時';
+        return '<div style="display:flex;justify-content:space-between;padding:5px 8px;border-radius:6px;margin-bottom:3px;background:var(--surface2);font-size:12px">'
+          + '<span>'+dateStr+'</span>'
+          + '<span style="color:var(--accent)">'+l.type+'</span>'
+          + '<span style="font-weight:700">'+daysStr+'</span>'
+          + '</div>';
+      }).join('');
+    }
+    histEl.style.display = 'block';
+  } catch(e) {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--red)">載入失敗</div>';
+    histEl.style.display = 'block';
+  }
+}
 
 window.openAddModal = () => {
   editingId = null;
   document.getElementById('modal-title-text').textContent = '新增員工';
-  ['m-name','m-dept','m-title','m-start','m-bday','m-email'].forEach(id => document.getElementById(id).value='');
+  ['m-name','m-title','m-start','m-bday','m-email'].forEach(id => document.getElementById(id).value='');
   document.getElementById('m-used').value = 0;
   document.getElementById('modal').classList.add('show');
 };
 
 window.closeModal = () => document.getElementById('modal').classList.remove('show');
 
-// ── 已休天數明細 Modal ──
-window.openHistoryModal = (id) => {
-  const e = employees.find(x => x.id === id);
-  if (!e) return;
-  document.getElementById('history-modal-title').textContent = `${e.name} — 已休天數明細`;
-  const hist = Array.isArray(e.leaveHistory) ? [...e.leaveHistory].sort((a,b) => b.period.localeCompare(a.period)) : [];
-  const body = document.getElementById('history-modal-body');
-  if (!hist.length) {
-    body.innerHTML = '<div style="color:var(--text3);text-align:center;padding:1.5rem 0">尚無逐期紀錄</div>';
-  } else {
-    body.innerHTML = hist.map(h => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--text2)">${h.period} 期</span>
-        <strong style="font-family:'JetBrains Mono',monospace">${formatDays(h.usedDays||0)}</strong>
-      </div>`).join('');
-  }
-  document.getElementById('history-modal').classList.add('show');
-};
-window.closeHistoryModal = () => document.getElementById('history-modal').classList.remove('show');
-
 window.saveEmployee = async () => {
   const name = document.getElementById('m-name').value.trim();
   if (!name) { showToast('請填寫姓名'); return; }
-  const startDate = document.getElementById('m-start').value;
-  const usedVal = parseFloat(document.getElementById('m-used').value) || 0;
   const data = {
     name,
-    dept: document.getElementById('m-dept').value.trim(),
     title: document.getElementById('m-title').value.trim(),
-    startDate,
+    startDate: document.getElementById('m-start').value,
     birthday: document.getElementById('m-bday').value,
     email: document.getElementById('m-email').value.trim(),
+    usedDays: parseFloat(document.getElementById('m-used').value) || 0,
   };
-  let emp;
   if (editingId) {
     const idx = employees.findIndex(e => e.id === editingId);
-    if (idx >= 0) { employees[idx] = { ...employees[idx], ...data }; emp = employees[idx]; }
+    if (idx >= 0) employees[idx] = { ...employees[idx], ...data };
   } else {
-    emp = { ...data, id: 'e' + Date.now(), leaveHistory: [] };
-    employees.push(emp);
-  }
-  if (emp && emp.startDate) {
-    const { periodKey } = calcAnnualLeave(emp.startDate);
-    if (!Array.isArray(emp.leaveHistory)) emp.leaveHistory = [];
-    let entry = emp.leaveHistory.find(h => h.period === periodKey);
-    if (!entry) { entry = { period: periodKey, usedDays: 0 }; emp.leaveHistory.push(entry); }
-    entry.usedDays = usedVal;
-    emp.leaveHistory.sort((a,b) => a.period.localeCompare(b.period));
-    emp.usedDays = usedVal; // 舊欄位同步（相容用）
+    employees.push({ ...data, id: 'e' + Date.now() });
   }
   await saveEmployees();
   closeModal();
