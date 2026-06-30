@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>李靜憶假單明細</title>
+<style>
+body{font-family:sans-serif;max-width:900px;margin:2rem auto;padding:1rem;background:#f5f6f8}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+th,td{padding:10px 12px;border-bottom:1px solid #eee;text-align:left}
+th{background:#f0f1f4;font-weight:700}
+.btn{background:#4f6ef7;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:1rem}
+.approved{background:#ebf7f2}
+.pending{background:#fef3c7}
+.cancelled{background:#f0f1f4;color:#999}
+.rejected{background:#fee2e2}
+</style>
+</head>
+<body>
+<h2>李靜憶 (am578222@gmail.com) 所有假單明細</h2>
+<button class="btn" onclick="run()">查詢</button>
+<div id="summary" style="margin-bottom:1rem;font-weight:700;font-size:15px"></div>
+<table id="result"><thead><tr><th>#</th><th>文件ID</th><th>日期</th><th>假別</th><th>天數</th><th>狀態</th></tr></thead><tbody></tbody></table>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+window.run = async () => {
+  await signInWithPopup(auth, provider);
+  const snap = await getDocs(collection(db, 'leaves'));
+  const all = [];
+  snap.forEach(d => all.push({id: d.id, ...d.data()}));
+  const mine = all.filter(l => l.applicantEmail === 'am578222@gmail.com');
+  mine.sort((a,b) => new Date(a.start) - new Date(b.start));
+
+  const tbody = document.querySelector('#result tbody');
+  tbody.innerHTML = mine.map((l,i) => {
+    return `<tr class="${l.status}">
+      <td>${i+1}</td><td style="font-size:10px;color:#999">${l.id}</td>
+      <td>${l.start}</td><td>${l.type}</td><td>${l.days}</td>
+      <td>${l.status}</td>
+    </tr>`;
+  }).join('');
+
+  const approvedSpecial = mine.filter(l=>l.type==='特休'&&l.status==='approved');
+  const total = approvedSpecial.reduce((s,l)=>s+l.days,0);
+  document.getElementById('summary').textContent =
+    `共 ${mine.length} 筆假單 ｜ 已核准特休 ${approvedSpecial.length} 筆 ｜ 合計 ${total} 天`;
+};
+</script>
+</body>
+</html>
