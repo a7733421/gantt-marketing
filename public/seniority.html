@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>員工年資查詢 — Team Gantt</title>
+<title>同仁年資查詢 — Team Gantt</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -147,9 +147,10 @@ tr:hover td{background:var(--surface2)}
     <div class="nav-left">
       <a class="nav-logo" href="home.html">← <span>TEAM</span> GANTT</a>
       <div class="nav-divider"></div>
-      <span class="nav-title">員工年資查詢</span>
+      <span class="nav-title">同仁年資查詢</span>
     </div>
     <div class="nav-right">
+      <a href="leave.html" style="font-size:13px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);color:var(--text2);text-decoration:none;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">📅 請假簽核</a>
       <div class="user-info">
         <img class="user-avatar" id="user-avatar" src="" alt="">
         <span id="user-name"></span>
@@ -228,6 +229,10 @@ tr:hover td{background:var(--surface2)}
     <input id="m-email" type="email" placeholder="xxx@gmail.com">
     <label>已休天數（本期）</label>
     <input id="m-used" type="number" step="0.125" min="0" placeholder="0">
+    <div id="m-leave-history" style="margin-top:1rem;display:none">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem;border-top:1px solid var(--border);padding-top:.75rem">📋 請假明細（已核准）</div>
+      <div id="m-leave-list" style="max-height:200px;overflow-y:auto"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEmployee()">儲存</button>
       <button class="btn-cancel" onclick="closeModal()">取消</button>
@@ -269,7 +274,7 @@ tr:hover td{background:var(--surface2)}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
@@ -780,7 +785,49 @@ window.openEditModal = (id) => {
   document.getElementById('m-email').value = e.email || '';
   document.getElementById('m-used').value = e.usedDays || 0;
   document.getElementById('modal').classList.add('show');
+  // 讀取請假明細
+  if (e.email) loadLeaveHistory(e.email, e.name);
 };
+
+async function loadLeaveHistory(email, name) {
+  const histEl = document.getElementById('m-leave-history');
+  const listEl = document.getElementById('m-leave-list');
+  histEl.style.display = 'none';
+  listEl.innerHTML = '<div style="font-size:12px;color:var(--text3)">載入中...</div>';
+  try {
+    const snap = await getDocs(collection(db, 'leaves'));
+    const leaves = [];
+    snap.forEach(d => {
+      const l = d.data();
+      if (l.applicantEmail === email && l.status === 'approved' && l.type === '特休') {
+        leaves.push(l);
+      }
+    });
+    leaves.sort((a,b) => new Date(a.start) - new Date(b.start));
+    if (!leaves.length) {
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:.5rem 0">尚無已核准特休紀錄</div>';
+    } else {
+      listEl.innerHTML = leaves.map(l => {
+        const d = new Date(l.start);
+        const dateStr = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+        const hrsRaw = (l.days - Math.floor(l.days)) * 8;
+        const hrs = Math.round(hrsRaw * 2) / 2;
+        const daysStr = Math.floor(l.days) > 0
+          ? Math.floor(l.days)+'天'+(hrs>0?hrs+'小時':'')
+          : hrs+'小時';
+        return '<div style="display:flex;justify-content:space-between;padding:5px 8px;border-radius:6px;margin-bottom:3px;background:var(--surface2);font-size:12px">'
+          + '<span>'+dateStr+'</span>'
+          + '<span style="color:var(--accent)">'+l.type+'</span>'
+          + '<span style="font-weight:700">'+daysStr+'</span>'
+          + '</div>';
+      }).join('');
+    }
+    histEl.style.display = 'block';
+  } catch(e) {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--red)">載入失敗</div>';
+    histEl.style.display = 'block';
+  }
+}
 
 window.openAddModal = () => {
   editingId = null;
