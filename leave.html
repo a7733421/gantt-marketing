@@ -817,6 +817,9 @@ window.approveLeave = async (id) => {
   showToast('已核准 ✓');
   await loadLeaves();
   updateManagerCounts();
+  renderSignList('pending_m1','m1-list');
+  renderSignList('pending_m2','m2-list');
+  if (typeof renderAllLeaves === 'function') renderAllLeaves();
   renderCalendar();
   closeDayModal();
 };
@@ -833,6 +836,10 @@ window.confirmReject = async () => {
   closeRejectModal();
   document.getElementById('reject-reason').value='';
   await loadLeaves();
+  updateManagerCounts();
+  renderSignList('pending_m1','m1-list');
+  renderSignList('pending_m2','m2-list');
+  if (typeof renderAllLeaves === 'function') renderAllLeaves();
   renderCalendar();
   closeDayModal();
 };
