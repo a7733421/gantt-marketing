@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>重建已休天數紀錄（一次性工具）— Team Gantt</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f6f8;--surface:#fff;--surface2:#f0f1f4;--border:#e4e6eb;--border2:#d0d3db;
+  --text:#1a1d23;--text2:#5a5f6e;--text3:#9099aa;
+  --accent:#4f6ef7;--accent-dim:#eef1fe;
+  --green:#2e9e6b;--green-dim:#ebf7f2;
+  --orange:#e8622a;--orange-dim:#fdf0eb;
+  --red:#e53935;--red-dim:#fef2f2;
+  --radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.05);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;min-height:100vh;font-size:15px}
+.main{max-width:1000px;margin:0 auto;padding:2rem 1.5rem}
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center}
+.login-card{background:var(--surface);border-radius:20px;padding:2.5rem;box-shadow:0 8px 40px rgba(0,0,0,.12);text-align:center;width:100%;max-width:380px}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:8px;border:1.5px solid var(--border2);background:var(--surface);font-size:14px;font-weight:500;cursor:pointer}
+.google-btn img{width:20px;height:20px}
+.login-error{font-size:12px;color:var(--red);margin-top:1rem;display:none}
+.app{display:none}
+h1{font-size:20px;margin-bottom:.25rem}
+.sub{font-size:13px;color:var(--text3);margin-bottom:1.5rem}
+.warn-box{background:var(--orange-dim);border:1.5px solid #fdba74;border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:13px;color:#9a3412;line-height:1.7}
+.btn{padding:10px 20px;border-radius:var(--radius-sm);border:none;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:1rem}
+th{background:var(--surface2);text-align:left;color:var(--text3);font-weight:600;padding:8px 10px;font-size:11px;text-transform:uppercase}
+td{padding:8px 10px;border-bottom:1px solid var(--border)}
+.log{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--surface2);border-radius:8px;padding:1rem;white-space:pre-wrap;max-height:300px;overflow-y:auto;margin-top:1rem;display:none}
+.tag{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700}
+.tag-ok{background:var(--green-dim);color:var(--green)}
+.tag-zero{background:var(--surface2);color:var(--text3)}
+</style>
+</head>
+<body>
+
+<div class="login-page" id="login-page">
+  <div class="login-card">
+    <div style="font-size:2.5rem;margin-bottom:1rem">🔧</div>
+    <div style="font-weight:700;margin-bottom:.5rem">內部工具（管理員限定）</div>
+    <button class="google-btn" onclick="signIn()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">使用 Google 帳號登入</button>
+    <div class="login-error" id="login-error">此帳號無權限使用此工具</div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <div class="main">
+    <h1>🔧 重建已休天數逐期紀錄（一次性工具）</h1>
+    <div class="sub">從「請假簽核」已核准的特休假單，重新計算每位同仁各期（依到職日週年制）已休天數</div>
+
+    <div class="warn-box">
+      ⚠️ 這個工具會<strong>清空</strong>所有同仁現有的 <code>usedDays</code> 與 <code>leaveHistory</code>，改用 leave.html 中「已核准 + 特休」假單重新逐期加總計算。請先按「① 計算預覽」確認結果無誤，再按「② 套用寫入」實際覆蓋 Firestore 資料。此操作無法復原（建議先確認預覽資料正確）。
+    </div>
+
+    <div class="section">
+      <button class="btn btn-primary" id="btn-calc" onclick="calcPreview()">① 計算預覽</button>
+      <button class="btn btn-danger" id="btn-apply" onclick="applyWrite()" disabled>② 套用寫入 Firestore</button>
+      <div id="summary" style="margin-top:1rem;font-size:13px;color:var(--text2)"></div>
+      <div id="preview-wrap"></div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+  storageBucket: "gantt-marketing.firebasestorage.app",
+  messagingSenderId: "966398251503",
+  appId: "1:966398251503:web:d6a2173863f9ca1cfd261a"
+};
+const ADMIN_EMAILS = ["mimo.jsm@gmail.com","amy.ete@gmail.com","vivi7733421@gmail.com","a7733421@gmail.com","webview168@gmail.com"];
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let employees = [];
+let leaves = [];
+let computedResult = null; // { newEmployees, summaryRows }
+
+function getPeriodKey(empStartDate, refDate) {
+  const start = new Date(empStartDate);
+  const ref = new Date(refDate);
+  const ps = new Date(start);
+  ps.setFullYear(ref.getFullYear());
+  if (ps > ref) ps.setFullYear(ref.getFullYear() - 1);
+  return String(ps.getFullYear());
+}
+
+function formatDays(d) {
+  if (!d) return '0 天';
+  const days = Math.floor(d);
+  const hours = Math.round((d - days) * 8);
+  if (hours === 0) return `${days} 天`;
+  if (days === 0) return `${hours} 小時`;
+  return `${days} 天 ${hours} 小時`;
+}
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.style.display = 'block';
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+async function loadEmployees() {
+  const snap = await getDoc(doc(db, 'seniority', 'employees'));
+  employees = (snap.exists() && snap.data().list) ? JSON.parse(snap.data().list) : [];
+}
+
+async function loadLeaves() {
+  const snap = await getDocs(collection(db, 'leaves'));
+  leaves = [];
+  snap.forEach(d => leaves.push({ id: d.id, ...d.data() }));
+}
+
+window.calcPreview = async () => {
+  document.getElementById('btn-calc').disabled = true;
+  document.getElementById('log').textContent = '';
+  log('讀取同仁資料與假單紀錄中...');
+  await loadEmployees();
+  await loadLeaves();
+  log(`共 ${employees.length} 位同仁、${leaves.length} 筆假單紀錄`);
+
+  const approved = leaves.filter(l => l.type === '特休' && l.status === 'approved');
+  log(`其中已核准的特休假單共 ${approved.length} 筆`);
+
+  // 依 email 分組同仁，建立新的 leaveHistory
+  const newEmployees = employees.map(e => ({ ...e, leaveHistory: [] }));
+  let matched = 0, unmatched = 0;
+  approved.forEach(l => {
+    const emp = newEmployees.find(e => e.email === l.applicantEmail);
+    if (!emp || !emp.startDate) { unmatched++; log(`⚠️ 找不到對應同仁或缺到職日，略過：${l.applicantName||l.applicantEmail} (${l.start})`); return; }
+    matched++;
+    const periodKey = getPeriodKey(emp.startDate, l.start);
+    let entry = emp.leaveHistory.find(h => h.period === periodKey);
+    if (!entry) { entry = { period: periodKey, usedDays: 0 }; emp.leaveHistory.push(entry); }
+    entry.usedDays = Math.round((entry.usedDays + (l.days || 0)) * 1000) / 1000;
+  });
+  newEmployees.forEach(e => {
+    e.leaveHistory.sort((a,b) => a.period.localeCompare(b.period));
+    // usedDays（舊欄位）同步為「目前期別」的天數，供尚未更新的舊頁面相容
+    if (e.startDate) {
+      const curPeriod = getPeriodKey(e.startDate, new Date().toISOString());
+      const cur = e.leaveHistory.find(h => h.period === curPeriod);
+      e.usedDays = cur ? cur.usedDays : 0;
+    } else {
+      e.usedDays = 0;
+    }
+  });
+
+  computedResult = newEmployees;
+  log(`比對完成：${matched} 筆成功歸入同仁、${unmatched} 筆無法比對`);
+  document.getElementById('summary').textContent = `預覽完成（${matched} 筆配對成功，${unmatched} 筆無法比對）。請確認下方表格無誤後再套用寫入。`;
+
+  const rows = newEmployees.filter(e => e.startDate).map(e => {
+    const histStr = e.leaveHistory.length
+      ? e.leaveHistory.map(h => `${h.period}期: ${formatDays(h.usedDays)}`).join('　')
+      : '—';
+    return `<tr><td><strong>${e.name}</strong></td><td>${e.email||''}</td><td>${histStr}</td><td><span class="tag ${e.leaveHistory.length?'tag-ok':'tag-zero'}">${e.leaveHistory.length?'有紀錄':'無紀錄'}</span></td></tr>`;
+  }).join('');
+  document.getElementById('preview-wrap').innerHTML = `
+    <table>
+      <thead><tr><th>姓名</th><th>Email</th><th>逐期已休天數</th><th>狀態</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  document.getElementById('btn-apply').disabled = false;
+  document.getElementById('btn-calc').disabled = false;
+};
+
+window.applyWrite = async () => {
+  if (!computedResult) { alert('請先按「① 計算預覽」'); return; }
+  if (!confirm('確定要覆蓋寫入 Firestore？此操作會清空舊的 usedDays / leaveHistory，無法復原。')) return;
+  document.getElementById('btn-apply').disabled = true;
+  log('寫入 Firestore 中...');
+  try {
+    await setDoc(doc(db, 'seniority', 'employees'), {
+      list: JSON.stringify(computedResult),
+      updatedAt: new Date().toISOString()
+    });
+    log('✅ 寫入完成！請至 seniority.html 確認結果。');
+    document.getElementById('summary').textContent = '✅ 已成功寫入 Firestore。可以前往 seniority.html 確認已休天數明細。';
+  } catch(e) {
+    log('❌ 寫入失敗：' + e.message);
+  }
+};
+
+function showLoginPage() { document.getElementById('login-page').style.display='flex'; document.getElementById('app').style.display='none'; }
+function showApp() { document.getElementById('login-page').style.display='none'; document.getElementById('app').style.display='block'; }
+
+onAuthStateChanged(auth, user => {
+  if (user && ADMIN_EMAILS.includes(user.email)) { showApp(); }
+  else if (user) { signOut(auth); showLoginPage(); document.getElementById('login-error').style.display='block'; }
+  else { showLoginPage(); }
+});
+
+window.signIn = async () => {
+  try {
+    const r = await signInWithPopup(auth, provider);
+    if (!ADMIN_EMAILS.includes(r.user.email)) { await signOut(auth); document.getElementById('login-error').style.display='block'; }
+  } catch(e) {
+    if (e.code === 'auth/popup-blocked') { document.getElementById('login-error').textContent='請允許彈出視窗'; document.getElementById('login-error').style.display='block'; }
+  }
+};
+</script>
+</body>
+</html>
