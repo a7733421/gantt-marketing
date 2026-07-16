@@ -640,28 +640,28 @@ function renderAdminTable() {
     const warn = daysToAnniv <= 60 && remaining > 0;
     const isBday = isBirthdayMonth(e.birthday);
 
-    // 旅遊津貼 — 用 travelHistory 陣列，只取「本期週年區間」內的紀錄
+    // 旅遊津貼 — travelHistory 全部歷史
     const history = e.travelHistory || [];
 
-    // 先計算本期週年區間（不傳 lastTripEnd，單純算區間）
+    // 本期週年區間（單純算區間，不傳 lastTripEnd）
     const tvBase = calcTravel(e.startDate, eYears, '');
     const ps = tvBase.periodStart;
     const pe = tvBase.periodEnd;
+    const psStr = ps.getFullYear()+'/'+(ps.getMonth()+1)+'/'+ps.getDate();
+    const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
 
-    // 只篩「本期」出遊紀錄：出遊結束日在 periodStart～periodEnd 之間
+    // 本期出遊紀錄（出遊結束日落在 periodStart～periodEnd 之間）
     const curPeriodTrips = history.filter(r => {
       if (!r.tripEnd) return false;
       const te = new Date(r.tripEnd);
       return te >= ps && te < pe;
     });
     const curLastTrip = curPeriodTrips.length > 0 ? curPeriodTrips[curPeriodTrips.length - 1] : null;
-    const curLastTripEndStr = curLastTrip ? curLastTrip.tripEnd : '';
 
-    // 再帶入本期最後一筆出遊來算鎖定狀態
-    const tv = calcTravel(e.startDate, eYears, curLastTripEndStr);
-
-    const psStr = ps.getFullYear()+'/'+(ps.getMonth()+1)+'/'+ps.getDate();
-    const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
+    // 鎖定狀態：依「所有歷史」最近一筆計算（上期出遊也要鎖）
+    const lastTripOverall = history.length > 0 ? history[history.length - 1] : null;
+    const lastTripOverallEnd = lastTripOverall ? lastTripOverall.tripEnd : '';
+    const tv = calcTravel(e.startDate, eYears, lastTripOverallEnd);
 
     const travelPeriodCell = tv.eligible
       ? '<span style="font-size:12px">'+psStr+'～'+peStr+'</span>'
@@ -671,7 +671,7 @@ function renderAdminTable() {
       ? '<div style="font-size:12px;line-height:1.7">🏠 NT$ '+tv.domestic.toLocaleString()+'<br>✈️ NT$ '+tv.overseas.toLocaleString()+'</div>'
       : '—';
 
-    // 出遊欄：只顯示本期的出遊紀錄
+    // 出遊期間 / 發放月份：只顯示本期
     let tripDateCell, paidCell;
     if (curLastTrip) {
       tripDateCell = '<span style="font-size:12px">'+curLastTrip.tripStart+'～'+curLastTrip.tripEnd+'</span>';
@@ -683,7 +683,7 @@ function renderAdminTable() {
       paidCell = '<span style="color:var(--text3)">—</span>';
     }
 
-    // 請領狀態欄：有紀錄者皆可點開查看，僅 TRAVEL_EDIT_EMAILS 可編輯
+    // 請領狀態：區分「本期已請領」vs「上期紀錄造成鎖定」
     const editable = canEditTravel();
     let tripCell;
     if (!tv.eligible) {
@@ -691,13 +691,24 @@ function renderAdminTable() {
     } else if (tv.locked && tv.nextEligible) {
       const nd = tv.nextEligible;
       const ndStr = nd.getFullYear()+'/'+(nd.getMonth()+1)+'/'+nd.getDate();
-      tripCell = '<div>'
-               + '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>'
-               + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
-               + '</div>';
+      if (curLastTrip) {
+        // 本期有出遊，且仍在鎖定期
+        tripCell = '<div>'
+                 + '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>'
+                 + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
+                 + '</div>';
+      } else {
+        // 上期出遊造成鎖定，本期尚未請領
+        tripCell = '<div>'
+                 + '<span style="display:block;margin-bottom:4px;font-size:12px;font-weight:700;color:var(--orange)">🔒 鎖定中</span>'
+                 + '<span style="font-size:11px;color:var(--text3)">可申請：'+ndStr+'後</span>'
+                 + '</div>';
+      }
     } else if (curPeriodTrips.length > 0) {
+      // 本期已請領，無鎖定（可申請下期）
       tripCell = '<span class="tag-ok" style="cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>';
     } else {
+      // 本期未請領，可新增出遊紀錄
       tripCell = editable
         ? '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openTravelModal(\''+e.id+'\')">＋ 出遊紀錄</button>'
         : '—';
