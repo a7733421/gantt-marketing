@@ -658,8 +658,10 @@ function renderAdminTable() {
     });
     const curLastTrip = curPeriodTrips.length > 0 ? curPeriodTrips[curPeriodTrips.length - 1] : null;
 
-    // 最近一筆出遊（任何期別），用來算1年鎖定
-    const lastTripOverall = history.length > 0 ? history[history.length - 1] : null;
+    // 最近一筆出遊（依 tripEnd 日期最大值，不依陣列順序）
+    const lastTripOverall = history.length > 0
+      ? history.reduce((latest, r) => (!latest || (r.tripEnd || '') > (latest.tripEnd || '')) ? r : latest, null)
+      : null;
     let oneYearMark = null;
     if (lastTripOverall) {
       oneYearMark = new Date(lastTripOverall.tripEnd);
