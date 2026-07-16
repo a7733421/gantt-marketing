@@ -312,7 +312,7 @@ const ALLOWED_EMAILS = [
 const ADMIN_EMAILS = ["mimo.jsm@gmail.com","amy.ete@gmail.com","vivi7733421@gmail.com","a7733421@gmail.com","webview168@gmail.com"];
 
 // 出遊紀錄編輯權限：僅這 3 位可新增/修改/刪除出遊紀錄，其餘管理員僅可檢視
-const TRAVEL_EDIT_EMAILS = ["mimo.jsm@gmail.com","amy.ete@gmail.com","vivi7733421@gmail.com"];
+const TRAVEL_EDIT_EMAILS = ["mimo.jsm@gmail.com","amy.ete@gmail.com","vivi7733421@gmail.com","webview168@gmail.com","a7733421@gmail.com"];
 function canEditTravel() { return TRAVEL_EDIT_EMAILS.includes(currentUser?.email); }
 
 const app = initializeApp(firebaseConfig);
