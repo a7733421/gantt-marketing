@@ -643,7 +643,7 @@ function renderAdminTable() {
     // 旅遊津貼 — travelHistory 全部歷史
     const history = e.travelHistory || [];
 
-    // 本期週年區間（單純算區間，不傳 lastTripEnd）
+    // 本期週年區間
     const tvBase = calcTravel(e.startDate, eYears, '');
     const ps = tvBase.periodStart;
     const pe = tvBase.periodEnd;
@@ -658,10 +658,28 @@ function renderAdminTable() {
     });
     const curLastTrip = curPeriodTrips.length > 0 ? curPeriodTrips[curPeriodTrips.length - 1] : null;
 
-    // 鎖定狀態：依「所有歷史」最近一筆計算（上期出遊也要鎖）
+    // 最近一筆出遊（任何期別），用來算1年鎖定
     const lastTripOverall = history.length > 0 ? history[history.length - 1] : null;
-    const lastTripOverallEnd = lastTripOverall ? lastTripOverall.tripEnd : '';
-    const tv = calcTravel(e.startDate, eYears, lastTripOverallEnd);
+    let oneYearMark = null;
+    if (lastTripOverall) {
+      oneYearMark = new Date(lastTripOverall.tripEnd);
+      oneYearMark.setFullYear(oneYearMark.getFullYear() + 1);
+    }
+
+    const today2 = new Date();
+    const lockedCurPeriod = curPeriodTrips.length > 0;          // 本期已請領
+    const locked1Year = !!oneYearMark && today2 < oneYearMark;  // 距上次出遊未滿1年
+
+    // nextEligible：下次可申請時間
+    let nextEligible = null;
+    if (lockedCurPeriod) {
+      nextEligible = pe;   // 下次週年日
+    } else if (locked1Year) {
+      // 取 max(1年到期日, 本期結束日) — 例如3月出遊加一年=隔年3月，但下次週年6月才能重新請領
+      nextEligible = (oneYearMark > pe) ? oneYearMark : pe;
+    }
+
+    const tv = tvBase; // eligible / domestic / overseas 沿用
 
     const travelPeriodCell = tv.eligible
       ? '<span style="font-size:12px">'+psStr+'～'+peStr+'</span>'
@@ -683,35 +701,33 @@ function renderAdminTable() {
       paidCell = '<span style="color:var(--text3)">—</span>';
     }
 
-    // 請領狀態：區分「本期已請領」vs「上期紀錄造成鎖定」
+    // 請領狀態
     const editable = canEditTravel();
     let tripCell;
     if (!tv.eligible) {
       tripCell = '—';
-    } else if (tv.locked && tv.nextEligible) {
-      const nd = tv.nextEligible;
-      const ndStr = nd.getFullYear()+'/'+(nd.getMonth()+1)+'/'+nd.getDate();
-      if (curLastTrip) {
-        // 本期有出遊，且仍在鎖定期
-        tripCell = '<div>'
-                 + '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>'
-                 + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
-                 + '</div>';
-      } else {
-        // 上期出遊造成鎖定，本期尚未請領
-        tripCell = '<div>'
-                 + '<span style="display:block;margin-bottom:4px;font-size:12px;font-weight:700;color:var(--orange)">🔒 鎖定中</span>'
-                 + '<span style="font-size:11px;color:var(--text3)">可申請：'+ndStr+'後</span>'
-                 + '</div>';
-      }
+    } else if (lockedCurPeriod && nextEligible) {
+      // 本期已請領，且仍在鎖定期
+      const ndStr = nextEligible.getFullYear()+'/'+(nextEligible.getMonth()+1)+'/'+nextEligible.getDate();
+      tripCell = '<div>'
+               + '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>'
+               + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
+               + '</div>';
+    } else if (locked1Year && nextEligible) {
+      // 上期出遊距今未滿1年，鎖定中；可點開查看歷史
+      const ndStr = nextEligible.getFullYear()+'/'+(nextEligible.getMonth()+1)+'/'+nextEligible.getDate();
+      tripCell = '<div>'
+               + '<span style="display:block;margin-bottom:4px;font-size:12px;font-weight:700;color:var(--orange);cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">🔒 鎖定中'+(history.length>0?' 📋':'')+'</span>'
+               + '<span style="font-size:11px;color:var(--text3)">可申請：'+ndStr+'後</span>'
+               + '</div>';
     } else if (curPeriodTrips.length > 0) {
-      // 本期已請領，無鎖定（可申請下期）
+      // 本期已請領，無鎖定
       tripCell = '<span class="tag-ok" style="cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>';
     } else {
-      // 本期未請領，可新增出遊紀錄
+      // 本期未請領，可新增
       tripCell = editable
         ? '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openTravelModal(\''+e.id+'\')">＋ 出遊紀錄</button>'
-        : '—';
+        : (history.length > 0 ? '<span style="cursor:pointer;font-size:12px;color:var(--text3)" onclick="openTravelModal(\''+e.id+'\')">📋 查看紀錄</span>' : '—');
     }
 
     return `<tr>
