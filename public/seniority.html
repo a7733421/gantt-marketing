@@ -640,14 +640,26 @@ function renderAdminTable() {
     const warn = daysToAnniv <= 60 && remaining > 0;
     const isBday = isBirthdayMonth(e.birthday);
 
-    // 旅遊津貼 — 用 travelHistory 陣列
+    // 旅遊津貼 — 用 travelHistory 陣列，只取「本期週年區間」內的紀錄
     const history = e.travelHistory || [];
-    // 最近一筆
-    const lastTrip = history.length > 0 ? history[history.length - 1] : null;
-    const lastTripEndStr = lastTrip ? lastTrip.tripEnd : '';
-    const tv = calcTravel(e.startDate, eYears, lastTripEndStr);
-    const ps = tv.periodStart;
-    const pe = tv.periodEnd;
+
+    // 先計算本期週年區間（不傳 lastTripEnd，單純算區間）
+    const tvBase = calcTravel(e.startDate, eYears, '');
+    const ps = tvBase.periodStart;
+    const pe = tvBase.periodEnd;
+
+    // 只篩「本期」出遊紀錄：出遊結束日在 periodStart～periodEnd 之間
+    const curPeriodTrips = history.filter(r => {
+      if (!r.tripEnd) return false;
+      const te = new Date(r.tripEnd);
+      return te >= ps && te < pe;
+    });
+    const curLastTrip = curPeriodTrips.length > 0 ? curPeriodTrips[curPeriodTrips.length - 1] : null;
+    const curLastTripEndStr = curLastTrip ? curLastTrip.tripEnd : '';
+
+    // 再帶入本期最後一筆出遊來算鎖定狀態
+    const tv = calcTravel(e.startDate, eYears, curLastTripEndStr);
+
     const psStr = ps.getFullYear()+'/'+(ps.getMonth()+1)+'/'+ps.getDate();
     const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
 
@@ -659,12 +671,12 @@ function renderAdminTable() {
       ? '<div style="font-size:12px;line-height:1.7">🏠 NT$ '+tv.domestic.toLocaleString()+'<br>✈️ NT$ '+tv.overseas.toLocaleString()+'</div>'
       : '—';
 
-    // 出遊欄
+    // 出遊欄：只顯示本期的出遊紀錄
     let tripDateCell, paidCell;
-    if (lastTrip) {
-      tripDateCell = '<span style="font-size:12px">'+lastTrip.tripStart+'～'+lastTrip.tripEnd+'</span>';
-      paidCell = lastTrip.paidMonth
-        ? '<span style="font-size:13px">'+lastTrip.paidMonth+'</span>'
+    if (curLastTrip) {
+      tripDateCell = '<span style="font-size:12px">'+curLastTrip.tripStart+'～'+curLastTrip.tripEnd+'</span>';
+      paidCell = curLastTrip.paidMonth
+        ? '<span style="font-size:13px">'+curLastTrip.paidMonth+'</span>'
         : '<span style="color:var(--text3)">—</span>';
     } else {
       tripDateCell = '<span style="color:var(--text3);font-size:12px">—</span>';
@@ -683,7 +695,7 @@ function renderAdminTable() {
                + '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>'
                + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
                + '</div>';
-    } else if (history.length > 0) {
+    } else if (curPeriodTrips.length > 0) {
       tripCell = '<span class="tag-ok" style="cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>';
     } else {
       tripCell = editable
