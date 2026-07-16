@@ -673,10 +673,9 @@ function renderAdminTable() {
     // nextEligible：下次可申請時間
     let nextEligible = null;
     if (lockedCurPeriod) {
-      nextEligible = pe;   // 下次週年日
+      nextEligible = pe;         // 本期已請領 → 下次週年日才能再領
     } else if (locked1Year) {
-      // 取 max(1年到期日, 本期結束日) — 例如3月出遊加一年=隔年3月，但下次週年6月才能重新請領
-      nextEligible = (oneYearMark > pe) ? oneYearMark : pe;
+      nextEligible = oneYearMark; // 單純1年後（不需取max週年日）
     }
 
     const tv = tvBase; // eligible / domestic / overseas 沿用
