@@ -690,6 +690,8 @@ function renderAdminTable() {
 
     const isLocked = lockedCurPeriod || lockedCalYear;
 
+    const tv = tvBase; // eligible / domestic / overseas
+
     const travelPeriodCell = tv.eligible
       ? '<span style="font-size:12px">'+psStr+'～'+peStr+'</span>'
       : '<span style="color:var(--text3);font-size:12px">未達資格</span>';
@@ -711,7 +713,6 @@ function renderAdminTable() {
     }
 
     // 請領狀態
-    const tv = tvBase;
     const editable = canEditTravel();
     let tripCell;
     if (!tv.eligible) {
