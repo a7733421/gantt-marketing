@@ -267,7 +267,7 @@ tr:hover td{background:var(--surface2)}
     <div id="travel-form-section" style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem">
       <div id="travel-form-title" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.75rem">＋ 新增一筆出遊紀錄</div>
       <label>出遊日期起</label>
-      <input id="tv-start" type="date">
+      <input id="tv-start" type="date" oninput="autoFillPeriod()">
       <label>出遊日期訖</label>
       <input id="tv-end" type="date">
       <label>國內／國外</label>
@@ -275,6 +275,8 @@ tr:hover td{background:var(--surface2)}
         <option value="國外">國外</option>
         <option value="國內">國內</option>
       </select>
+      <label>所屬週年期（自動帶入，提早出遊可手動改）</label>
+      <input id="tv-period" type="text" placeholder="例：2026（代表 2026/6/8～2027/6/8 那一期）" style="background:var(--accent-dim);color:var(--accent);font-weight:600">
       <label>發放月份（例：115/6/5）</label>
       <input id="tv-paid" type="text" placeholder="115/6/5">
     </div>
@@ -650,37 +652,21 @@ function renderAdminTable() {
     const psStr = ps.getFullYear()+'/'+(ps.getMonth()+1)+'/'+ps.getDate();
     const peStr = pe.getFullYear()+'/'+(pe.getMonth()+1)+'/'+pe.getDate();
 
-    // 本期出遊紀錄（出遊結束日落在 periodStart～periodEnd 之間）
+    // 本期出遊紀錄：優先用 periodKey（手動指定），沒有才用出遊結束日自動判斷
+    const curPeriodKey = getPeriodKey(e.startDate, new Date());
     const curPeriodTrips = history.filter(r => {
+      if (r.periodKey) return r.periodKey === curPeriodKey;
       if (!r.tripEnd) return false;
       const te = new Date(r.tripEnd);
       return te >= ps && te < pe;
     });
     const curLastTrip = curPeriodTrips.length > 0 ? curPeriodTrips[curPeriodTrips.length - 1] : null;
 
-    // 最近一筆出遊（依 tripEnd 日期最大值，不依陣列順序）
-    const lastTripOverall = history.length > 0
-      ? history.reduce((latest, r) => (!latest || (r.tripEnd || '') > (latest.tripEnd || '')) ? r : latest, null)
-      : null;
-    let oneYearMark = null;
-    if (lastTripOverall) {
-      oneYearMark = new Date(lastTripOverall.tripEnd);
-      oneYearMark.setFullYear(oneYearMark.getFullYear() + 1);
-    }
+    // 鎖定判斷：本期是否已有出遊紀錄（每週年期一次，不跨期）
+    const lockedCurPeriod = curPeriodTrips.length > 0;
+    const nextEligible = lockedCurPeriod ? pe : null; // 下次到職日才能再申請
 
-    const today2 = new Date();
-    const lockedCurPeriod = curPeriodTrips.length > 0;          // 本期已請領
-    const locked1Year = !!oneYearMark && today2 < oneYearMark;  // 距上次出遊未滿1年
-
-    // nextEligible：下次可申請時間
-    let nextEligible = null;
-    if (lockedCurPeriod) {
-      nextEligible = pe;         // 本期已請領 → 下次週年日才能再領
-    } else if (locked1Year) {
-      nextEligible = oneYearMark; // 單純1年後（不需取max週年日）
-    }
-
-    const tv = tvBase; // eligible / domestic / overseas 沿用
+    const tv = tvBase;
 
     const travelPeriodCell = tv.eligible
       ? '<span style="font-size:12px">'+psStr+'～'+peStr+'</span>'
@@ -708,24 +694,14 @@ function renderAdminTable() {
     if (!tv.eligible) {
       tripCell = '—';
     } else if (lockedCurPeriod && nextEligible) {
-      // 本期已請領，且仍在鎖定期
+      // 本期已出遊，鎖定到下次到職日
       const ndStr = nextEligible.getFullYear()+'/'+(nextEligible.getMonth()+1)+'/'+nextEligible.getDate();
       tripCell = '<div>'
                + '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>'
                + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
                + '</div>';
-    } else if (locked1Year && nextEligible) {
-      // 上期出遊距今未滿1年，鎖定中；可點開查看歷史
-      const ndStr = nextEligible.getFullYear()+'/'+(nextEligible.getMonth()+1)+'/'+nextEligible.getDate();
-      tripCell = '<div>'
-               + '<span style="display:block;margin-bottom:4px;font-size:12px;font-weight:700;color:var(--orange);cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">🔒 鎖定中'+(history.length>0?' 📋':'')+'</span>'
-               + '<span style="font-size:11px;color:var(--text3)">可申請：'+ndStr+'後</span>'
-               + '</div>';
-    } else if (curPeriodTrips.length > 0) {
-      // 本期已請領，無鎖定
-      tripCell = '<span class="tag-ok" style="cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>';
     } else {
-      // 本期未請領，可新增
+      // 本期未出遊，可申請
       tripCell = editable
         ? '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openTravelModal(\''+e.id+'\')">＋ 出遊紀錄</button>'
         : (history.length > 0 ? '<span style="cursor:pointer;font-size:12px;color:var(--text3)" onclick="openTravelModal(\''+e.id+'\')">📋 查看紀錄</span>' : '—');
@@ -781,12 +757,22 @@ window.closeTravelModal = () => {
 };
 
 function resetTravelForm() {
-  ['tv-start','tv-end','tv-paid'].forEach(i => document.getElementById(i).value = '');
+  ['tv-start','tv-end','tv-paid','tv-period'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('tv-type').value = '國外';
   document.getElementById('travel-save-btn').textContent = '新增紀錄';
   document.getElementById('travel-form-title').textContent = '＋ 新增一筆出遊紀錄';
   travelEditingIdx = null;
 }
+
+// 依出遊開始日自動帶入所屬週年期（可手動覆蓋）
+window.autoFillPeriod = () => {
+  const emp = employees.find(x => x.id === travelEditingId);
+  if (!emp || !emp.startDate) return;
+  const startVal = document.getElementById('tv-start').value;
+  if (!startVal) return;
+  const pk = getPeriodKey(emp.startDate, startVal);
+  document.getElementById('tv-period').value = pk;
+};
 
 function renderTravelHistory(e, editable) {
   const history = e.travelHistory || [];
@@ -802,7 +788,7 @@ function renderTravelHistory(e, editable) {
         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">'
         + '<div>'
         + '<div style="font-size:13px;font-weight:600">'+r.tripStart+' ～ '+r.tripEnd+'</div>'
-        + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+r.type+' ／ 發放：'+(r.paidMonth||'—')+'</div>'
+        + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+r.type+' ／ 發放：'+(r.paidMonth||'—')+(r.periodKey?' ／ '+r.periodKey+'期':'')+'</div>'
         + '</div>'
         + (editable
           ? ('<div style="display:flex;gap:6px">'
@@ -820,30 +806,33 @@ window.editTravelRecord = (idx) => {
   if (!e) return;
   const r = e.travelHistory[idx];
   travelEditingIdx = idx;
-  document.getElementById('tv-start').value = r.tripStart || '';
-  document.getElementById('tv-end').value   = r.tripEnd   || '';
-  document.getElementById('tv-type').value  = r.type      || '國外';
-  document.getElementById('tv-paid').value  = r.paidMonth || '';
+  document.getElementById('tv-start').value  = r.tripStart  || '';
+  document.getElementById('tv-end').value    = r.tripEnd    || '';
+  document.getElementById('tv-type').value   = r.type       || '國外';
+  document.getElementById('tv-paid').value   = r.paidMonth  || '';
+  // periodKey：有存就帶入；沒有就依出遊日期自動計算
+  const pk = r.periodKey || (e.startDate && r.tripEnd ? getPeriodKey(e.startDate, r.tripEnd) : '');
+  document.getElementById('tv-period').value = pk;
   document.getElementById('travel-save-btn').textContent = '儲存修改';
   document.getElementById('travel-form-title').textContent = '✏️ 修改紀錄';
 };
 
 window.saveTravelRecord = async () => {
-  const start = document.getElementById('tv-start').value;
-  const end   = document.getElementById('tv-end').value;
-  const type  = document.getElementById('tv-type').value;
-  const paid  = document.getElementById('tv-paid').value.trim();
+  const start    = document.getElementById('tv-start').value;
+  const end      = document.getElementById('tv-end').value;
+  const type     = document.getElementById('tv-type').value;
+  const paid     = document.getElementById('tv-paid').value.trim();
+  const periodKey = document.getElementById('tv-period').value.trim();
   if (!start || !end) { showToast('請填寫出遊日期'); return; }
   const idx = employees.findIndex(e => e.id === travelEditingId);
   if (idx < 0) return;
   const history = employees[idx].travelHistory || [];
+  const record = { tripStart: start, tripEnd: end, type, paidMonth: paid, periodKey: periodKey || undefined };
   if (travelEditingIdx !== null) {
-    // 修改模式
-    history[travelEditingIdx] = { ...history[travelEditingIdx], tripStart: start, tripEnd: end, type, paidMonth: paid };
+    history[travelEditingIdx] = { ...history[travelEditingIdx], ...record };
     showToast('已更新 ✓');
   } else {
-    // 新增模式
-    history.push({ tripStart: start, tripEnd: end, type, paidMonth: paid, addedAt: new Date().toISOString() });
+    history.push({ ...record, addedAt: new Date().toISOString() });
     showToast('出遊紀錄已新增 ✓');
   }
   employees[idx].travelHistory = history;
