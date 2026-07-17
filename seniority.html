@@ -700,39 +700,35 @@ function renderAdminTable() {
       ? '<div style="font-size:12px;line-height:1.7">🏠 NT$ '+tv.domestic.toLocaleString()+'<br>✈️ NT$ '+tv.overseas.toLocaleString()+'</div>'
       : '—';
 
-    // 出遊期間 / 發放月份：只顯示本期
+    // 出遊期間 / 發放月份：鎖定中顯示最新那筆，解鎖後清空
+    const lastTripAny = history.length > 0
+      ? history.reduce((latest, r) => (!latest || (r.tripEnd||'') > (latest.tripEnd||'')) ? r : latest, null)
+      : null;
+    const showTrip = (lockedCurPeriod || lockedCalYear) ? (curLastTrip || lastTripAny) : null;
+
     let tripDateCell, paidCell;
-    if (curLastTrip) {
-      tripDateCell = '<span style="font-size:12px">'+curLastTrip.tripStart+'～'+curLastTrip.tripEnd+'</span>';
-      paidCell = curLastTrip.paidMonth
-        ? '<span style="font-size:13px">'+curLastTrip.paidMonth+'</span>'
+    if (showTrip) {
+      tripDateCell = '<span style="font-size:12px">'+showTrip.tripStart+'～'+showTrip.tripEnd+'</span>';
+      paidCell = showTrip.paidMonth
+        ? '<span style="font-size:13px">'+showTrip.paidMonth+'</span>'
         : '<span style="color:var(--text3)">—</span>';
     } else {
       tripDateCell = '<span style="color:var(--text3);font-size:12px">—</span>';
       paidCell = '<span style="color:var(--text3)">—</span>';
     }
 
-    // 請領狀態
+    // 請領狀態：鎖定中統一顯示「✓ 已請領」，解鎖才顯示「＋ 出遊紀錄」
     const editable = canEditTravel();
     let tripCell;
     if (!tv.eligible) {
       tripCell = '—';
-    } else if (lockedCurPeriod) {
-      // 本期已請領
+    } else if (lockedCurPeriod || lockedCalYear) {
       const ndStr = nextEligible.getFullYear()+'/'+(nextEligible.getMonth()+1)+'/'+nextEligible.getDate();
       tripCell = '<div>'
                + '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>'
                + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
                + '</div>';
-    } else if (lockedCalYear) {
-      // 本期未請領，但同曆年已出遊
-      const ndStr = nextEligible.getFullYear()+'/'+(nextEligible.getMonth()+1)+'/'+nextEligible.getDate();
-      tripCell = '<div>'
-               + '<span style="display:block;margin-bottom:4px;font-size:12px;font-weight:700;color:var(--orange);cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">🔒 同年度已出遊'+(history.length>0?' 📋':'')+'</span>'
-               + '<span style="font-size:11px;color:var(--text3)">可申請：'+ndStr+'後</span>'
-               + '</div>';
     } else {
-      // 可申請
       tripCell = editable
         ? '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openTravelModal(\''+e.id+'\')">＋ 出遊紀錄</button>'
         : (history.length > 0 ? '<span style="cursor:pointer;font-size:12px;color:var(--text3)" onclick="openTravelModal(\''+e.id+'\')">📋 查看紀錄</span>' : '—');
