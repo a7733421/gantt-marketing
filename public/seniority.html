@@ -662,11 +662,33 @@ function renderAdminTable() {
     });
     const curLastTrip = curPeriodTrips.length > 0 ? curPeriodTrips[curPeriodTrips.length - 1] : null;
 
-    // 鎖定判斷：本期是否已有出遊紀錄（每週年期一次，不跨期）
-    const lockedCurPeriod = curPeriodTrips.length > 0;
-    const nextEligible = lockedCurPeriod ? pe : null; // 下次到職日才能再申請
+    // 最近一筆出遊（依 tripEnd 最大值），用於曆年鎖定判斷
+    const lastTripByDate = history.length > 0
+      ? history.reduce((latest, r) => (!latest || (r.tripEnd||'') > (latest.tripEnd||'')) ? r : latest, null)
+      : null;
 
-    const tv = tvBase;
+    // 曆年鎖定：同一曆年不能出遊兩次（例：今年已出遊 → 要等明年1/1）
+    let calYearNextEligible = null;
+    if (lastTripByDate && lastTripByDate.tripEnd) {
+      const lastYear = new Date(lastTripByDate.tripEnd).getFullYear();
+      calYearNextEligible = new Date(lastYear + 1, 0, 1); // 明年 1/1
+    }
+
+    const today2 = new Date();
+    const lockedCurPeriod = curPeriodTrips.length > 0;
+    const lockedCalYear   = !!calYearNextEligible && today2 < calYearNextEligible;
+
+    // nextEligible：取最嚴格的限制
+    let nextEligible = null;
+    if (lockedCurPeriod) {
+      // 本期已請領 → 等下次到職日，另外也不能同曆年
+      nextEligible = (calYearNextEligible && calYearNextEligible > pe) ? calYearNextEligible : pe;
+    } else if (lockedCalYear) {
+      // 本期未請領，但今年已出遊 → 等明年1/1
+      nextEligible = calYearNextEligible;
+    }
+
+    const isLocked = lockedCurPeriod || lockedCalYear;
 
     const travelPeriodCell = tv.eligible
       ? '<span style="font-size:12px">'+psStr+'～'+peStr+'</span>'
@@ -689,19 +711,27 @@ function renderAdminTable() {
     }
 
     // 請領狀態
+    const tv = tvBase;
     const editable = canEditTravel();
     let tripCell;
     if (!tv.eligible) {
       tripCell = '—';
-    } else if (lockedCurPeriod && nextEligible) {
-      // 本期已出遊，鎖定到下次到職日
+    } else if (lockedCurPeriod) {
+      // 本期已請領
       const ndStr = nextEligible.getFullYear()+'/'+(nextEligible.getMonth()+1)+'/'+nextEligible.getDate();
       tripCell = '<div>'
                + '<span class="tag-ok" style="display:block;margin-bottom:4px;cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">✓ 已請領'+(editable?' ✎':'')+'</span>'
                + '<span style="font-size:11px;color:var(--text3)">下次：'+ndStr+'後</span>'
                + '</div>';
+    } else if (lockedCalYear) {
+      // 本期未請領，但同曆年已出遊
+      const ndStr = nextEligible.getFullYear()+'/'+(nextEligible.getMonth()+1)+'/'+nextEligible.getDate();
+      tripCell = '<div>'
+               + '<span style="display:block;margin-bottom:4px;font-size:12px;font-weight:700;color:var(--orange);cursor:pointer" onclick="openTravelModal(\''+e.id+'\')">🔒 同年度已出遊'+(history.length>0?' 📋':'')+'</span>'
+               + '<span style="font-size:11px;color:var(--text3)">可申請：'+ndStr+'後</span>'
+               + '</div>';
     } else {
-      // 本期未出遊，可申請
+      // 可申請
       tripCell = editable
         ? '<button class="edit-btn" style="font-size:11px;padding:3px 10px" onclick="openTravelModal(\''+e.id+'\')">＋ 出遊紀錄</button>'
         : (history.length > 0 ? '<span style="cursor:pointer;font-size:12px;color:var(--text3)" onclick="openTravelModal(\''+e.id+'\')">📋 查看紀錄</span>' : '—');
