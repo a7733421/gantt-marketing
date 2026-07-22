@@ -27,6 +27,7 @@
   --blue:#2196f3;
   --blue-dim:#e8f4fd;
   --red:#e53935;
+  --red-dim:#fdecea;
   --radius:12px;
   --radius-sm:8px;
   --shadow:0 1px 3px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.05);
@@ -210,15 +211,61 @@ tr:last-child td{border-bottom:none}
 
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+
+/* LOGIN / AUTH */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;gap:.5rem;z-index:999;font-size:14px;color:var(--text3)}
+.loading-overlay .spinner{width:16px;height:16px;color:var(--accent)}
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f5f6f8 0%,#eef1fe 100%)}
+.login-card{background:var(--surface);border-radius:20px;padding:2.5rem;box-shadow:0 8px 40px rgba(0,0,0,.12);text-align:center;width:100%;max-width:380px}
+.login-logo{font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--text2);margin-bottom:1.5rem}
+.login-logo span{color:var(--accent)}
+.login-icon{font-size:3rem;margin-bottom:1rem}
+.login-title{font-size:20px;font-weight:700;margin-bottom:.5rem}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:2rem;line-height:1.6}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--surface);font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.google-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(79,110,247,.2)}
+.google-btn img{width:20px;height:20px}
+.login-error{font-size:12px;color:var(--red);margin-top:1rem;display:none;padding:8px;background:var(--red-dim);border-radius:6px}
+#app{display:none}
+.nav-right{display:flex;align-items:center;gap:.75rem}
+.user-info{display:flex;align-items:center;gap:.5rem;font-size:13px;color:var(--text2)}
+.user-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--border)}
+.logout-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .15s}
+.logout-btn:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
+
+<div class="loading-overlay" id="loading"><span class="spinner"></span> 載入中...</div>
+
+<div class="login-page" id="login-page" style="display:none">
+  <div class="login-card">
+    <div class="login-logo"><span>TEAM</span> GANTT</div>
+    <div class="login-icon">⛽</div>
+    <div class="login-title">出差油錢計算</div>
+    <div class="login-sub">請使用公司 Google 帳號登入以繼續</div>
+    <button class="google-btn" onclick="signIn()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      使用 Google 帳號登入
+    </button>
+    <div class="login-error" id="login-error">此帳號無使用權限，請聯絡管理員</div>
+  </div>
+</div>
+
+<div id="app">
 
 <nav>
   <div class="nav-left">
     <a class="nav-logo" href="home.html">← <span>TEAM</span> GANTT</a>
     <div class="nav-divider"></div>
     <span class="nav-title">出差油錢計算</span>
+  </div>
+  <div class="nav-right">
+    <div class="user-info">
+      <img class="user-avatar" id="user-avatar" src="" alt="">
+      <span id="user-name"></span>
+    </div>
+    <button class="logout-btn" onclick="doSignOut()">登出</button>
   </div>
 </nav>
 
@@ -314,9 +361,35 @@ tr:last-child td{border-bottom:none}
   <div class="summary-item"><div class="summary-num" id="s-total">NT$ 0</div><div class="summary-lbl">總補助金額</div></div>
 </div>
 
+</div><!-- /#app -->
+
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+  storageBucket: "gantt-marketing.firebasestorage.app",
+  messagingSenderId: "966398251503",
+  appId: "1:966398251503:web:d6a2173863f9ca1cfd261a"
+};
+const ALLOWED_EMAILS = [
+  "webview168@gmail.com","mimo.jsm@gmail.com","am578222@gmail.com",
+  "amy.ete@gmail.com","annie907120@gmail.com","bellsugar@gmail.com",
+  "maggie80405@gmail.com","miemie686@gmail.com","s0912656315@gmail.com",
+  "teresaho0901@gmail.com","a7733421@gmail.com","vivi7733421@gmail.com"
+];
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+let currentUser = null, tripsUnsub = null;
+
 const WORKER_URL = 'https://api-proxy.vivi7733421.workers.dev';
 const MODEL = '~google/gemini-flash-latest';
 let trips=[], currentPrice=33.9, currentCar='own';
@@ -414,7 +487,7 @@ async function fetchOilPrice(){
   document.getElementById('oil-btn-text').textContent='↻ 自動抓取最新油價';
 }
 
-function addTrip(){
+async function addTrip(){
   const name=document.getElementById('f-name').value.trim();
   const dept=document.getElementById('f-dept').value.trim();
   const date=document.getElementById('f-date').value;
@@ -430,19 +503,22 @@ function addTrip(){
   const receipt=parseFloat(document.getElementById('f-receipt').value)||0;
   if(currentCar==='own')amt=receipt>0?receipt:Math.round((km/15)*currentPrice);
   else amt=parseFloat(document.getElementById('f-fuelcost').value)||0;
-  trips.push({name,dept,date,cartype:currentCar,customer,purpose,km,route,amt,price:currentPrice});
-  ['f-to','f-km','f-receipt','f-fuelcost','f-customer','f-purpose'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('km-hint').textContent='';
-  calcResult();renderList();updateSummary();
-  showToast(`已加入！補助 NT$ ${amt.toLocaleString()}`);
+  const record={name,dept,date,cartype:currentCar,customer,purpose,km,route,amt,price:currentPrice,
+    createdBy:currentUser?currentUser.email:'',createdAt:serverTimestamp()};
+  try{
+    await addDoc(collection(db,'fuelTrips'),record);
+    ['f-to','f-km','f-receipt','f-fuelcost','f-customer','f-purpose'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('km-hint').textContent='';
+    calcResult();
+    showToast(`已加入！補助 NT$ ${amt.toLocaleString()}`);
+  }catch(e){showToast('儲存失敗，請稍後再試');console.error(e);}
 }
 
 function renderList(){
   const wrap=document.getElementById('trip-list');
   document.getElementById('trip-count').textContent=trips.length?`(${trips.length})`:'';
   if(!trips.length){wrap.innerHTML=`<div class="empty"><div class="empty-icon">⛽</div><div class="empty-text">尚無行程記錄<br>填寫左側表單後加入行程</div></div>`;return;}
-  wrap.innerHTML=[...trips].reverse().map((t,ri)=>{
-    const i=trips.length-1-ri;
+  wrap.innerHTML=[...trips].reverse().map((t)=>{
     return `<div class="trip-card">
       <div class="trip-card-top">
         <div class="trip-meta"><span class="trip-date">${t.date}</span><span class="trip-tag ${rules[t.cartype].cls}">${rules[t.cartype].label}</span></div>
@@ -451,12 +527,16 @@ function renderList(){
       <div class="trip-name">${t.name} <span style="color:var(--text3);font-weight:400;font-size:12px">${t.dept}</span></div>
       ${t.customer?`<div class="trip-sub">👤 ${t.customer}${t.purpose?'　'+t.purpose:''}</div>`:''}
       <div class="trip-route">${t.route}</div>
-      <div class="trip-footer"><span class="trip-km">${t.km} km</span><button class="del-btn" onclick="delTrip(${i})">✕</button></div>
+      <div class="trip-footer"><span class="trip-km">${t.km} km</span><button class="del-btn" onclick="delTrip('${t.id}')">✕</button></div>
     </div>`;
   }).join('');
 }
 
-function delTrip(i){if(!confirm('確定刪除此行程？'))return;trips.splice(i,1);renderList();updateSummary();}
+async function delTrip(id){
+  if(!confirm('確定刪除此行程？'))return;
+  try{await deleteDoc(doc(db,'fuelTrips',id));}
+  catch(e){showToast('刪除失敗');console.error(e);}
+}
 
 function updateSummary(){
   document.getElementById('s-trips').textContent=trips.length;
@@ -515,6 +595,57 @@ function showToast(msg){
   el.textContent=msg;el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2500);
 }
+
+/* ── 登入 / 資料同步 ── */
+function showLoading(v){document.getElementById('loading').style.display=v?'flex':'none';}
+function showLoginPage(){showLoading(false);document.getElementById('login-page').style.display='flex';document.getElementById('app').style.display='none';}
+function showApp(user){
+  showLoading(false);
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('user-name').textContent=user.displayName||user.email;
+  if(user.photoURL)document.getElementById('user-avatar').src=user.photoURL;
+}
+
+function subscribeTrips(){
+  if(tripsUnsub)return;
+  const q=query(collection(db,'fuelTrips'),orderBy('date','asc'));
+  tripsUnsub=onSnapshot(q,snap=>{
+    trips=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderList();updateSummary();
+    if(document.getElementById('stats-tab').classList.contains('active'))renderStats();
+  },err=>{console.error(err);showToast('資料讀取失敗');});
+}
+
+onAuthStateChanged(auth,async user=>{
+  if(user&&ALLOWED_EMAILS.includes(user.email)){
+    currentUser=user;
+    showApp(user);
+    subscribeTrips();
+  }else if(user){
+    signOut(auth);showLoginPage();
+    document.getElementById('login-error').style.display='block';
+  }else{
+    showLoginPage();
+  }
+});
+
+function signIn(){
+  signInWithPopup(auth,provider).then(result=>{
+    if(!ALLOWED_EMAILS.includes(result.user.email)){
+      signOut(auth);
+      document.getElementById('login-error').style.display='block';
+    }
+  }).catch(e=>{
+    if(e.code==='auth/popup-blocked'){
+      const el=document.getElementById('login-error');
+      el.textContent='請允許彈出視窗';el.style.display='block';
+    }
+  });
+}
+function doSignOut(){signOut(auth);}
+
+Object.assign(window,{selectCar,swapAddr,openMaps,calcDistanceAI,fetchOilPrice,addTrip,delTrip,switchFormTab,exportCSV,copyText,calcResult,signIn,doSignOut});
 </script>
 </body>
 </html>
