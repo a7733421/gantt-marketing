@@ -27,11 +27,12 @@
   --blue:#2196f3;
   --blue-dim:#e8f4fd;
   --red:#e53935;
+  --red-dim:#fdecea;
   --radius:12px;
   --radius-sm:8px;
   --shadow:0 1px 3px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.05);
 }
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:15px}
 
 nav{
   background:var(--surface);border-bottom:1px solid var(--border);
@@ -68,44 +69,43 @@ nav{
 /* LEFT FORM */
 .form-panel{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:1.25rem}
 .panel-tabs{display:flex;gap:4px;margin-bottom:1.25rem;background:var(--surface2);border-radius:var(--radius-sm);padding:3px}
-.panel-tab{flex:1;padding:7px;font-size:12px;font-weight:500;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;border-radius:6px}
+.panel-tab{flex:1;padding:8px;font-size:13px;font-weight:500;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;border-radius:6px}
 .panel-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
 
 .form-section{display:none}.form-section.active{display:block}
 .field-group{margin-bottom:.875rem}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.875rem}
-label{display:block;font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:500;letter-spacing:.03em}
+label{display:block;font-size:13px;color:var(--text3);margin-bottom:5px;font-weight:500;letter-spacing:.03em}
 input,select{
   width:100%;background:var(--surface2);border:1.5px solid var(--border);
-  border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;color:var(--text);
+  border-radius:var(--radius-sm);padding:9px 11px;font-size:14px;color:var(--text);
   font-family:'Inter',sans-serif;transition:border-color .15s;outline:none;
 }
 input:focus,select:focus{border-color:var(--accent);background:var(--surface)}
 select option{background:var(--surface)}
 
-.car-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.875rem}
+.car-type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:.875rem}
 .car-type-btn{
   padding:10px 6px;border-radius:var(--radius-sm);
   border:1.5px solid var(--border);background:var(--surface2);
-  color:var(--text3);cursor:pointer;font-size:11px;font-weight:600;
+  color:var(--text3);cursor:pointer;font-size:13px;font-weight:600;
   text-align:center;transition:all .15s;line-height:1.4;
 }
 .car-type-btn .icon{font-size:20px;display:block;margin-bottom:4px}
 .car-type-btn:hover{border-color:var(--border2);color:var(--text2);background:var(--surface)}
-.car-type-btn.active[data-type="private"]{border-color:var(--orange);background:var(--orange-dim);color:var(--orange)}
-.car-type-btn.active[data-type="rent"]{border-color:var(--blue);background:var(--blue-dim);color:var(--blue)}
+.car-type-btn.active[data-type="own"]{border-color:var(--orange);background:var(--orange-dim);color:var(--orange)}
 .car-type-btn.active[data-type="company"]{border-color:var(--green);background:var(--green-dim);color:var(--green)}
 
 .rule-hint{
   border-radius:var(--radius-sm);padding:8px 12px;
-  font-size:12px;color:var(--text2);margin-bottom:.875rem;
+  font-size:13px;color:var(--text2);margin-bottom:.875rem;
   line-height:1.6;border:1.5px solid;
 }
 .rule-hint.private{border-color:#fdd0bb;background:var(--orange-dim)}
 .rule-hint.rent{border-color:#bbdaf9;background:var(--blue-dim)}
 .rule-hint.company{border-color:#b2e5cf;background:var(--green-dim)}
 
-.section-title{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.04em;margin-bottom:.5rem;margin-top:.25rem}
+.section-title{font-size:13px;font-weight:600;color:var(--text3);letter-spacing:.04em;margin-bottom:.5rem;margin-top:.25rem}
 
 .addr-wrap{position:relative;margin-bottom:.5rem}
 .addr-wrap input{padding-right:36px}
@@ -116,7 +116,7 @@ select option{background:var(--surface)}
   display:flex;align-items:center;justify-content:center;gap:6px;
   width:100%;padding:8px;border-radius:var(--radius-sm);
   border:1.5px solid var(--accent);background:var(--accent-dim);
-  color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;
+  color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;
   transition:all .15s;margin-bottom:.5rem;
 }
 .ai-btn:hover{background:var(--accent);color:#fff}
@@ -126,19 +126,19 @@ select option{background:var(--surface)}
   display:flex;align-items:center;justify-content:center;gap:6px;
   width:100%;padding:7px;border-radius:var(--radius-sm);
   border:1.5px solid var(--border2);background:transparent;
-  color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;
+  color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;
   transition:all .15s;margin-bottom:.625rem;
 }
 .maps-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-dim)}
-.km-hint{font-size:11px;color:var(--text3);margin-bottom:.75rem;min-height:16px;line-height:1.5}
+.km-hint{font-size:13px;color:var(--text3);margin-bottom:.75rem;min-height:16px;line-height:1.5}
 
 .result-box{
   background:var(--surface2);border:1.5px solid var(--border);
   border-radius:var(--radius);padding:1rem;margin-bottom:.875rem;
 }
-.result-amount{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:var(--text3);margin-bottom:3px}
+.result-amount{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;color:var(--text3);margin-bottom:3px}
 .result-amount.has-value{color:var(--accent)}
-.result-formula{font-size:11px;color:var(--text3);line-height:1.6}
+.result-formula{font-size:13px;color:var(--text3);line-height:1.6}
 
 .add-btn{
   width:100%;padding:10px;border-radius:var(--radius-sm);
@@ -156,7 +156,7 @@ select option{background:var(--surface)}
 .icon-btn{
   padding:6px 12px;border-radius:20px;
   border:1px solid var(--border2);background:var(--surface);
-  color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;
+  color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;
   transition:all .15s;box-shadow:var(--shadow);
 }
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -211,15 +211,61 @@ tr:last-child td{border-bottom:none}
 
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+
+/* LOGIN / AUTH */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;gap:.5rem;z-index:999;font-size:14px;color:var(--text3)}
+.loading-overlay .spinner{width:16px;height:16px;color:var(--accent)}
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f5f6f8 0%,#eef1fe 100%)}
+.login-card{background:var(--surface);border-radius:20px;padding:2.5rem;box-shadow:0 8px 40px rgba(0,0,0,.12);text-align:center;width:100%;max-width:380px}
+.login-logo{font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--text2);margin-bottom:1.5rem}
+.login-logo span{color:var(--accent)}
+.login-icon{font-size:3rem;margin-bottom:1rem}
+.login-title{font-size:20px;font-weight:700;margin-bottom:.5rem}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:2rem;line-height:1.6}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--surface);font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.google-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(79,110,247,.2)}
+.google-btn img{width:20px;height:20px}
+.login-error{font-size:12px;color:var(--red);margin-top:1rem;display:none;padding:8px;background:var(--red-dim);border-radius:6px}
+#app{display:none}
+.nav-right{display:flex;align-items:center;gap:.75rem}
+.user-info{display:flex;align-items:center;gap:.5rem;font-size:13px;color:var(--text2)}
+.user-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--border)}
+.logout-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .15s}
+.logout-btn:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
+
+<div class="loading-overlay" id="loading"><span class="spinner"></span> 載入中...</div>
+
+<div class="login-page" id="login-page" style="display:none">
+  <div class="login-card">
+    <div class="login-logo"><span>TEAM</span> GANTT</div>
+    <div class="login-icon">⛽</div>
+    <div class="login-title">出差油錢計算</div>
+    <div class="login-sub">請使用公司 Google 帳號登入以繼續</div>
+    <button class="google-btn" onclick="signIn()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      使用 Google 帳號登入
+    </button>
+    <div class="login-error" id="login-error">此帳號無使用權限，請聯絡管理員</div>
+  </div>
+</div>
+
+<div id="app">
 
 <nav>
   <div class="nav-left">
     <a class="nav-logo" href="home.html">← <span>TEAM</span> GANTT</a>
     <div class="nav-divider"></div>
     <span class="nav-title">出差油錢計算</span>
+  </div>
+  <div class="nav-right">
+    <div class="user-info">
+      <img class="user-avatar" id="user-avatar" src="" alt="">
+      <span id="user-name"></span>
+    </div>
+    <button class="logout-btn" onclick="doSignOut()">登出</button>
   </div>
 </nav>
 
@@ -257,11 +303,10 @@ tr:last-child td{border-bottom:none}
 
       <label>車輛類型</label>
       <div class="car-type-grid">
-        <button class="car-type-btn active" data-type="private" onclick="selectCar('private')"><span class="icon">🚗</span>私家車</button>
-        <button class="car-type-btn" data-type="rent" onclick="selectCar('rent')"><span class="icon">🚙</span>租車</button>
+        <button class="car-type-btn active" data-type="own" onclick="selectCar('own')"><span class="icon">🚗</span>自用車／租車</button>
         <button class="car-type-btn" data-type="company" onclick="selectCar('company')"><span class="icon">🏢</span>公司車</button>
       </div>
-      <div class="rule-hint private" id="rule-hint">固定補助 <strong>4 元/km</strong>，補貼員工使用自有車輛</div>
+      <div class="rule-hint rent" id="rule-hint"><strong>公里 ÷ 15（km/L）× 當日油價</strong>，算出應加油費</div>
 
       <div class="section-title">行程路線</div>
       <div class="addr-wrap">
@@ -273,15 +318,16 @@ tr:last-child td{border-bottom:none}
       </div>
       <button class="ai-btn" id="ai-km-btn" onclick="calcDistanceAI()">
         <span class="spinner" style="display:none" id="km-spinner"></span>
-        <span id="km-btn-text">✦ AI 自動計算公里數</span>
+        <span id="km-btn-text">✦ 自動計算來回公里數</span>
       </button>
       <button class="maps-btn" onclick="openMaps()">↗ 開啟 Google Maps 查詢距離</button>
       <div class="km-hint" id="km-hint"></div>
 
       <div class="field-row">
         <div><label>行駛公里數 (km)</label><input type="number" id="f-km" placeholder="0" min="0" step="0.1" oninput="calcResult()"></div>
-        <div id="fuelcost-wrap" style="display:none"><label>加油金額 (元)</label><input type="number" id="f-fuelcost" placeholder="0" min="0" oninput="calcResult()"></div>
+        <div><label>實際加油收據 (元) <span style="color:var(--text3);font-weight:400">選填</span></label><input type="number" id="f-receipt" placeholder="依公式計算" min="0" oninput="calcResult()"></div>
       </div>
+      <div id="fuelcost-wrap" style="display:none"><label>加油金額 (元)</label><input type="number" id="f-fuelcost" placeholder="0" min="0" oninput="calcResult()"></div>
 
       <div class="result-box">
         <div class="result-amount" id="result-amount">—</div>
@@ -315,18 +361,44 @@ tr:last-child td{border-bottom:none}
   <div class="summary-item"><div class="summary-num" id="s-total">NT$ 0</div><div class="summary-lbl">總補助金額</div></div>
 </div>
 
+</div><!-- /#app -->
+
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+  storageBucket: "gantt-marketing.firebasestorage.app",
+  messagingSenderId: "966398251503",
+  appId: "1:966398251503:web:d6a2173863f9ca1cfd261a"
+};
+const ALLOWED_EMAILS = [
+  "webview168@gmail.com","mimo.jsm@gmail.com","am578222@gmail.com",
+  "amy.ete@gmail.com","annie907120@gmail.com","bellsugar@gmail.com",
+  "maggie80405@gmail.com","miemie686@gmail.com","s0912656315@gmail.com",
+  "teresaho0901@gmail.com","a7733421@gmail.com","vivi7733421@gmail.com"
+];
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+let currentUser = null, tripsUnsub = null;
+
 const WORKER_URL = 'https://api-proxy.vivi7733421.workers.dev';
-const MODEL = 'google/gemini-flash-1.5';
-let trips=[], currentPrice=33.9, currentCar='private';
+const MODEL = '~google/gemini-flash-latest';
+let trips=[], currentPrice=33.9, currentCar='own';
 const rules={
-  private:{label:'私家車',cls:'tag-private',hint:'固定補助 <strong>4 元/km</strong>，補貼員工使用自有車輛',hintCls:'private'},
-  rent:{label:'租車',cls:'tag-rent',hint:'<strong>公里 ÷ 15（km/L）× 當日油價</strong>，算出應加油費',hintCls:'rent'},
+  own:{label:'自用車／租車',cls:'tag-rent',hint:'<strong>公里 ÷ 15（km/L）× 當日油價</strong>，算出應加油費',hintCls:'rent'},
   company:{label:'公司車',cls:'tag-company',hint:'加油費<strong>全額實報實銷</strong>，輸入收據金額即可',hintCls:'company'}
 };
 document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+fetchOilPrice(); // 頁面載入自動抓油價
 
 function selectCar(type){
   currentCar=type;
@@ -341,8 +413,15 @@ function selectCar(type){
 function calcResult(){
   const km=parseFloat(document.getElementById('f-km').value)||0;
   let amt=0,formula='';
-  if(currentCar==='private'){amt=4*km;formula=`固定 4 元/km × ${km} km`;}
-  else if(currentCar==='rent'){const L=km/15;amt=Math.round(L*currentPrice);formula=`${km} km ÷ 15 × ${currentPrice} 元 = ${L.toFixed(2)} 公升 → NT$ ${amt}`;}
+  if(currentCar==='own'){
+    const L=km/15;
+    const calc=Math.round(L*currentPrice);
+    const receipt=parseFloat(document.getElementById('f-receipt').value)||0;
+    amt=receipt>0?receipt:calc;
+    formula=receipt>0
+      ? `公式試算 NT$ ${calc}，實際收據 NT$ ${receipt}（以收據為準）`
+      : `${km} km ÷ 15 × ${currentPrice} 元 = ${L.toFixed(2)} 公升 → NT$ ${calc}`;
+  }
   else{const fc=parseFloat(document.getElementById('f-fuelcost').value)||0;amt=fc;formula=`加油收據金額：NT$ ${fc}（全額實報）`;}
   const el=document.getElementById('result-amount');
   el.textContent=amt>0?`NT$ ${amt.toLocaleString()}`:'—';
@@ -368,39 +447,39 @@ async function calcDistanceAI(){
   const btn=document.getElementById('ai-km-btn');
   btn.classList.add('loading');
   document.getElementById('km-spinner').style.display='inline-block';
-  document.getElementById('km-btn-text').textContent='AI 計算中...';
-  document.getElementById('km-hint').textContent='正在查詢距離...';
+  document.getElementById('km-btn-text').textContent='計算中...';
+  document.getElementById('km-hint').textContent='正在查詢 Google Maps 距離...';
   try{
-    const resp=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:MODEL,max_tokens:100,messages:[{role:'user',content:`從「${from}」到「${to}」開車距離幾公里？只回答一個數字，例如：12.5`}]})});
+    const resp=await fetch(`${WORKER_URL}/distance?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
     const data=await resp.json();
-    const text=(data.choices?.[0]?.message?.content||'').trim();
-    const km=parseFloat(text.match(/[\d.]+/)?.[0]);
-    if(km&&km>0){document.getElementById('f-km').value=km.toFixed(1);document.getElementById('km-hint').textContent=`✓ 約 ${km.toFixed(1)} 公里`;calcResult();}
-    else{document.getElementById('km-hint').textContent='無法取得距離，請手動輸入';}
+    if(data.round_trip_km){
+      document.getElementById('f-km').value=data.round_trip_km.toFixed(1);
+      document.getElementById('km-hint').textContent=`✓ 單程 ${data.one_way_km} km × 來回 = ${data.round_trip_km} km（${data.duration}）`;
+      calcResult();
+    }else{
+      document.getElementById('km-hint').textContent='無法取得距離，請手動輸入';
+    }
   }catch(e){document.getElementById('km-hint').textContent='查詢失敗，請手動輸入或用 Google Maps';}
   btn.classList.remove('loading');
   document.getElementById('km-spinner').style.display='none';
-  document.getElementById('km-btn-text').textContent='✦ AI 自動計算公里數';
+  document.getElementById('km-btn-text').textContent='✦ 自動計算來回公里數';
 }
 
 async function fetchOilPrice(){
   const btn=document.getElementById('fetch-oil-btn');
   btn.classList.add('loading');
   document.getElementById('oil-spinner').style.display='inline-block';
-  document.getElementById('oil-btn-text').textContent='查詢中...';
+  document.getElementById('oil-btn-text').textContent='抓取中...';
   try{
-    const resp=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:MODEL,max_tokens:100,messages:[{role:'user',content:'台灣中油目前95無鉛汽油每公升牌價是多少元？只回答數字，例如：33.9'}]})});
+    const resp=await fetch(WORKER_URL+'/oil-price');
     const data=await resp.json();
-    const text=(data.choices?.[0]?.message?.content||'').trim();
-    const price=parseFloat(text.match(/[\d.]+/)?.[0]);
+    const price=data.price;
     if(price&&price>20&&price<60){
       currentPrice=price;
       document.getElementById('price-val').textContent=price.toFixed(1);
       const now=new Date();
-      document.getElementById('price-updated').textContent=`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} 自動抓取`;
-      calcResult();showToast(`油價更新：${price} 元/公升`);
+      document.getElementById('price-updated').textContent=`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} 中油官網`;
+      calcResult();showToast(`油價更新：${price} 元/公升 ✓`);
     }else{showToast('無法取得油價，使用現有數值');}
   }catch(e){showToast('查詢失敗，請稍後再試');}
   btn.classList.remove('loading');
@@ -408,7 +487,7 @@ async function fetchOilPrice(){
   document.getElementById('oil-btn-text').textContent='↻ 自動抓取最新油價';
 }
 
-function addTrip(){
+async function addTrip(){
   const name=document.getElementById('f-name').value.trim();
   const dept=document.getElementById('f-dept').value.trim();
   const date=document.getElementById('f-date').value;
@@ -421,22 +500,25 @@ function addTrip(){
   if(!name){showToast('請填寫出差人員姓名');return;}
   if(km<=0&&currentCar!=='company'){showToast('請填寫行駛公里數');return;}
   let amt=0;
-  if(currentCar==='private')amt=4*km;
-  else if(currentCar==='rent')amt=Math.round((km/15)*currentPrice);
+  const receipt=parseFloat(document.getElementById('f-receipt').value)||0;
+  if(currentCar==='own')amt=receipt>0?receipt:Math.round((km/15)*currentPrice);
   else amt=parseFloat(document.getElementById('f-fuelcost').value)||0;
-  trips.push({name,dept,date,cartype:currentCar,customer,purpose,km,route,amt,price:currentPrice});
-  ['f-to','f-km','f-fuelcost','f-customer','f-purpose'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('km-hint').textContent='';
-  calcResult();renderList();updateSummary();
-  showToast(`已加入！補助 NT$ ${amt.toLocaleString()}`);
+  const record={name,dept,date,cartype:currentCar,customer,purpose,km,route,amt,price:currentPrice,
+    createdBy:currentUser?currentUser.email:'',createdAt:serverTimestamp()};
+  try{
+    await addDoc(collection(db,'fuelTrips'),record);
+    ['f-to','f-km','f-receipt','f-fuelcost','f-customer','f-purpose'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('km-hint').textContent='';
+    calcResult();
+    showToast(`已加入！補助 NT$ ${amt.toLocaleString()}`);
+  }catch(e){showToast('儲存失敗，請稍後再試');console.error(e);}
 }
 
 function renderList(){
   const wrap=document.getElementById('trip-list');
   document.getElementById('trip-count').textContent=trips.length?`(${trips.length})`:'';
   if(!trips.length){wrap.innerHTML=`<div class="empty"><div class="empty-icon">⛽</div><div class="empty-text">尚無行程記錄<br>填寫左側表單後加入行程</div></div>`;return;}
-  wrap.innerHTML=[...trips].reverse().map((t,ri)=>{
-    const i=trips.length-1-ri;
+  wrap.innerHTML=[...trips].reverse().map((t)=>{
     return `<div class="trip-card">
       <div class="trip-card-top">
         <div class="trip-meta"><span class="trip-date">${t.date}</span><span class="trip-tag ${rules[t.cartype].cls}">${rules[t.cartype].label}</span></div>
@@ -445,12 +527,16 @@ function renderList(){
       <div class="trip-name">${t.name} <span style="color:var(--text3);font-weight:400;font-size:12px">${t.dept}</span></div>
       ${t.customer?`<div class="trip-sub">👤 ${t.customer}${t.purpose?'　'+t.purpose:''}</div>`:''}
       <div class="trip-route">${t.route}</div>
-      <div class="trip-footer"><span class="trip-km">${t.km} km</span><button class="del-btn" onclick="delTrip(${i})">✕</button></div>
+      <div class="trip-footer"><span class="trip-km">${t.km} km</span><button class="del-btn" onclick="delTrip('${t.id}')">✕</button></div>
     </div>`;
   }).join('');
 }
 
-function delTrip(i){if(!confirm('確定刪除此行程？'))return;trips.splice(i,1);renderList();updateSummary();}
+async function delTrip(id){
+  if(!confirm('確定刪除此行程？'))return;
+  try{await deleteDoc(doc(db,'fuelTrips',id));}
+  catch(e){showToast('刪除失敗');console.error(e);}
+}
 
 function updateSummary(){
   document.getElementById('s-trips').textContent=trips.length;
@@ -509,6 +595,57 @@ function showToast(msg){
   el.textContent=msg;el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2500);
 }
+
+/* ── 登入 / 資料同步 ── */
+function showLoading(v){document.getElementById('loading').style.display=v?'flex':'none';}
+function showLoginPage(){showLoading(false);document.getElementById('login-page').style.display='flex';document.getElementById('app').style.display='none';}
+function showApp(user){
+  showLoading(false);
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('user-name').textContent=user.displayName||user.email;
+  if(user.photoURL)document.getElementById('user-avatar').src=user.photoURL;
+}
+
+function subscribeTrips(){
+  if(tripsUnsub)return;
+  const q=query(collection(db,'fuelTrips'),orderBy('date','asc'));
+  tripsUnsub=onSnapshot(q,snap=>{
+    trips=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderList();updateSummary();
+    if(document.getElementById('stats-tab').classList.contains('active'))renderStats();
+  },err=>{console.error(err);showToast('資料讀取失敗');});
+}
+
+onAuthStateChanged(auth,async user=>{
+  if(user&&ALLOWED_EMAILS.includes(user.email)){
+    currentUser=user;
+    showApp(user);
+    subscribeTrips();
+  }else if(user){
+    signOut(auth);showLoginPage();
+    document.getElementById('login-error').style.display='block';
+  }else{
+    showLoginPage();
+  }
+});
+
+function signIn(){
+  signInWithPopup(auth,provider).then(result=>{
+    if(!ALLOWED_EMAILS.includes(result.user.email)){
+      signOut(auth);
+      document.getElementById('login-error').style.display='block';
+    }
+  }).catch(e=>{
+    if(e.code==='auth/popup-blocked'){
+      const el=document.getElementById('login-error');
+      el.textContent='請允許彈出視窗';el.style.display='block';
+    }
+  });
+}
+function doSignOut(){signOut(auth);}
+
+Object.assign(window,{selectCar,swapAddr,openMaps,calcDistanceAI,fetchOilPrice,addTrip,delTrip,switchFormTab,exportCSV,copyText,calcResult,signIn,doSignOut});
 </script>
 </body>
 </html>
