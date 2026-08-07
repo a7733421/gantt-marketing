@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
@@ -13,6 +14,16 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+// 與 home.html / seniority.html 相同的允許登入名單
+const ALLOWED_EMAILS = [
+  "webview168@gmail.com","mimo.jsm@gmail.com","am578222@gmail.com",
+  "amy.ete@gmail.com","annie907120@gmail.com","bellsugar@gmail.com",
+  "maggie80405@gmail.com","miemie686@gmail.com","s0912656315@gmail.com",
+  "teresaho0901@gmail.com","a7733421@gmail.com","vivi7733421@gmail.com"
+];
 
 const PRIORITY = {
   高: { label: "🔴 高", color: "#ef4444", bg: "rgba(239,68,68,0.13)" },
@@ -78,7 +89,11 @@ export default function GanttMarketing() {
   const [newAttLabel, setNewAttLabel] = useState("");
   const [newAttUrl, setNewAttUrl]     = useState("");
   const [saveMsg, setSaveMsg]         = useState("");
+  const [saveErr, setSaveErr]         = useState(false);
   const [loaded, setLoaded]           = useState(false);
+  const [user, setUser]               = useState(null);
+  const [authReady, setAuthReady]     = useState(false);
+  const [loginErr, setLoginErr]       = useState("");
   const gridRef = useRef(null);
   const scrollRef = useRef(null);
   const [cellW, setCellW] = useState(36);
@@ -87,8 +102,23 @@ export default function GanttMarketing() {
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const monthName = new Date(viewYear, viewMonth, 1).toLocaleDateString("zh-TW", { year:"numeric", month:"long" });
 
-  // Load data from Firestore
+  // 監聽登入狀態；只有允許名單內的帳號才視為已登入
   useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async u => {
+      if (u && ALLOWED_EMAILS.includes(u.email)) {
+        setUser(u);
+      } else {
+        if (u) { setLoginErr("此帳號未被授權：" + u.email); await signOut(auth); }
+        setUser(null);
+      }
+      setAuthReady(true);
+    });
+    return () => unsub();
+  }, []);
+
+  // 登入後才從 Firestore 讀取（安全規則要求 request.auth != null）
+  useEffect(() => {
+    if (!user) return;
     (async () => {
       try {
         const snap = await getDoc(doc(db, "gantt", "data"));
@@ -100,17 +130,31 @@ export default function GanttMarketing() {
       } catch(e) { console.error(e); }
       setLoaded(true);
     })();
-  }, []);
+  }, [user]);
+
+  const doLogin = async () => {
+    setLoginErr("");
+    try {
+      const res = await signInWithPopup(auth, provider);
+      if (!ALLOWED_EMAILS.includes(res.user.email)) {
+        setLoginErr("此帳號未被授權：" + res.user.email);
+        await signOut(auth);
+      }
+    } catch(e) { setLoginErr("登入失敗：" + (e.code || e.message)); console.error(e); }
+  };
+  const doLogout = () => signOut(auth);
 
   const save = async (t, y, m) => {
+    if (!user) { setSaveErr(true); setSaveMsg("未登入，無法儲存"); return; }
     try {
       await setDoc(doc(db, "gantt", "data"), {
         tasks: JSON.stringify(t),
         view: JSON.stringify({y,m}),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        updatedBy: user.email
       });
-      setSaveMsg("✓ 已儲存"); setTimeout(()=>setSaveMsg(""), 2000);
-    } catch(e) { setSaveMsg("儲存失敗"); console.error(e); }
+      setSaveErr(false); setSaveMsg("✓ 已儲存"); setTimeout(()=>setSaveMsg(""), 2000);
+    } catch(e) { setSaveErr(true); setSaveMsg("儲存失敗"); console.error(e); }
   };
   const updateTasks = (nt) => { setTasks(nt); save(nt, viewYear, viewMonth); };
 
@@ -186,6 +230,17 @@ export default function GanttMarketing() {
 
   const pColor = (p) => p>=100?"#22c55e":p>=60?"#4f8ef7":p>=30?"#f59e0b":"#ef4444";
 
+  if (!authReady) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#faf7f4",fontSize:18,fontFamily:"sans-serif"}}>載入中⋯</div>;
+
+  if (!user) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#faf7f4",fontFamily:"'Noto Sans TC',sans-serif",gap:20}}>
+      <div style={{color:"#f59e0b",fontWeight:900,letterSpacing:3,fontSize:20,textTransform:"uppercase"}}>Team Gantt</div>
+      <div style={{color:"#6b5540",fontSize:15}}>工作進度追蹤 · 請先登入</div>
+      <button onClick={doLogin} style={{background:"#1a1208",color:"#f59e0b",border:"none",borderRadius:10,padding:"13px 34px",fontWeight:800,fontSize:15,cursor:"pointer"}}>使用 Google 登入</button>
+      {loginErr && <div style={{color:"#ef4444",fontSize:13,maxWidth:340,textAlign:"center"}}>{loginErr}</div>}
+    </div>
+  );
+
   if (!loaded) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#faf7f4",fontSize:18,fontFamily:"sans-serif"}}>載入中⋯</div>;
 
   return (
@@ -199,8 +254,10 @@ export default function GanttMarketing() {
           <span style={{color:"#e8dcc8",fontSize:15}}>工作進度追蹤</span>
         </div>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
-          {saveMsg && <span style={{fontSize:13,color:"#22c55e",fontWeight:700}}>{saveMsg}</span>}
+          {saveMsg && <span style={{fontSize:13,color:saveErr?"#ef4444":"#22c55e",fontWeight:700}}>{saveMsg}</span>}
           <button onClick={openAdd} style={{background:"#f59e0b",color:"#1a1208",border:"none",borderRadius:6,padding:"8px 18px",cursor:"pointer",fontWeight:800,fontSize:14}}>＋ 新增任務</button>
+          <span title={user.email} style={{color:"#b08040",fontSize:12,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</span>
+          <button onClick={doLogout} style={{background:"transparent",color:"#b08040",border:"1px solid #3a2a18",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12}}>登出</button>
         </div>
       </div>
 
