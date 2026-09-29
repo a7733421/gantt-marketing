@@ -243,12 +243,10 @@ tr:hover td{background:var(--surface2)}
     <div id="leave-form-section" style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem">
       <div id="leave-form-title" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.75rem">＋ 新增一筆已休紀錄</div>
       <label>請假日期</label>
-      <input id="lv-date" type="date" oninput="autoFillLeavePeriod()">
+      <input id="lv-date" type="date">
       <label>天數（可填小數，如 0.5、1.125）</label>
       <input id="lv-days" type="number" step="0.125" min="0" placeholder="1">
-      <label>歸屬週年期（自動帶入，提早/跨期請假可手動改）</label>
-      <input id="lv-period" type="text" placeholder="例：2025（代表該到職日年度）" style="background:var(--accent-dim);color:var(--accent);font-weight:600">
-      <label>備註（選填）</label>
+      <label>備註（選填，如假別）</label>
       <input id="lv-note" type="text" placeholder="特休">
     </div>
     <div class="modal-actions">
@@ -392,10 +390,7 @@ function getPeriodKey(empStartDate, refDate) {
 function getUsedDaysForPeriod(emp, periodKey) {
   if (!Array.isArray(emp.leaveHistory)) return 0;
   return Math.round(emp.leaveHistory
-    .filter(r => {
-      const rPeriod = r.period || (r.date && emp.startDate ? getPeriodKey(emp.startDate, r.date) : null);
-      return rPeriod === periodKey;
-    })
+    .filter(r => r.date && getPeriodKey(emp.startDate, r.date) === periodKey)
     .reduce((s, r) => s + (parseFloat(r.days) || 0), 0) * 1000) / 1000;
 }
 
@@ -589,6 +584,51 @@ function renderMyCard(emp) {
   const isBday = isBirthdayMonth(emp.birthday);
   const bday = emp.birthday ? new Date(emp.birthday) : null;
 
+  // 旅遊津貼申請狀態（與 renderAdminTable 邏輯一致）
+  let travelStatusHtml = '';
+  if (travelDomestic > 0) {
+    const history = emp.travelHistory || [];
+    const tvBase = calcTravel(emp.startDate, calcAnnualLeave(emp.startDate).years, '');
+    const ps = tvBase.periodStart, pe = tvBase.periodEnd;
+    const curPeriodKey2 = periodKey;
+    const curPeriodTrips = history.filter(r => {
+      if (r.periodKey) return r.periodKey === curPeriodKey2;
+      if (!r.tripEnd) return false;
+      const te = new Date(r.tripEnd);
+      return te >= ps && te < pe;
+    });
+    const lastTripByDate = history.length > 0
+      ? history.reduce((latest, r) => (!latest || (r.tripEnd||'') > (latest.tripEnd||'')) ? r : latest, null)
+      : null;
+    let calYearNextEligible = null;
+    if (lastTripByDate && lastTripByDate.tripEnd) {
+      const lastYear = new Date(lastTripByDate.tripEnd).getFullYear();
+      calYearNextEligible = new Date(lastYear + 1, 0, 1);
+    }
+    const today3 = new Date();
+    const lockedCur = curPeriodTrips.length > 0;
+    const lockedCal = !!calYearNextEligible && today3 < calYearNextEligible;
+    let nextEl = null;
+    if (lockedCur) {
+      nextEl = (calYearNextEligible && calYearNextEligible > pe) ? calYearNextEligible : pe;
+    } else if (lockedCal) {
+      nextEl = calYearNextEligible;
+    }
+    const ndStr = nextEl ? (nextEl.getFullYear()+'/'+(nextEl.getMonth()+1)+'/'+nextEl.getDate()) : '';
+    let statusBadge = '';
+    if (lockedCur || lockedCal) {
+      statusBadge = '<span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px">✓ 已請領</span>'
+                  + '<span style="font-size:12px;color:var(--text3);margin-left:8px">下次可申請：<strong style="color:var(--text2)">' + ndStr + '</strong> 後</span>';
+    } else {
+      statusBadge = '<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px">尚未申請</span>'
+                  + '<span style="font-size:12px;color:#065f46;margin-left:8px">✦ 本期可申請</span>';
+    }
+    travelStatusHtml = '<div style="background:var(--accent-dim);border:1.5px solid #c7d2fe;border-radius:8px;padding:.75rem 1rem;margin-top:.875rem;font-size:14px;display:flex;align-items:center;flex-wrap:wrap;gap:.25rem">'
+      + '✈️ <strong>本期旅遊津貼</strong> 國內 NT$ ' + travelDomestic.toLocaleString() + ' ／ 國外 NT$ ' + travelOverseas.toLocaleString()
+      + statusBadge
+      + '</div>';
+  }
+
   document.getElementById('my-section').innerHTML = `
     <div class="my-card">
       <div class="my-card-header">
@@ -622,7 +662,7 @@ function renderMyCard(emp) {
           <div class="stat-sub">週年日 ${nextAnniv.getMonth()+1}/${nextAnniv.getDate()} 還有 ${daysToAnniv} 天</div>
         </div>
       </div>
-      ${ travelDomestic > 0 ? ('<div style="background:var(--accent-dim);border:1.5px solid #c7d2fe;border-radius:8px;padding:.75rem 1rem;margin-top:.875rem;font-size:14px">✈️ <strong>本期旅遊津貼</strong> 國內 NT$ ' + travelDomestic.toLocaleString() + ' ／ 國外 NT$ ' + travelOverseas.toLocaleString() + '</div>') : ''}
+      ${ travelStatusHtml }
       <div class="bday-notice ${isBday?'show':''}">
         🌟 本月是您的生日月份（${bday?`${bday.getMonth()+1}月${bday.getDate()}日`:''}）！記得填寫生日假申請單。
       </div>
@@ -954,20 +994,11 @@ window.closeLeaveModal = () => {
 };
 
 function resetLeaveForm() {
-  ['lv-date','lv-days','lv-note','lv-period'].forEach(i => document.getElementById(i).value = '');
+  ['lv-date','lv-days','lv-note'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('leave-save-btn').textContent = '新增紀錄';
   document.getElementById('leave-form-title').textContent = '＋ 新增一筆已休紀錄';
   leaveEditingIdx = null;
 }
-
-window.autoFillLeavePeriod = () => {
-  const emp = employees.find(x => x.id === leaveEditingId);
-  if (!emp || !emp.startDate) return;
-  const dateVal = document.getElementById('lv-date').value;
-  if (!dateVal) return;
-  const pk = getPeriodKey(emp.startDate, dateVal);
-  document.getElementById('lv-period').value = pk;
-};
 
 function renderLeaveHistoryList(e) {
   const history = e.leaveHistory || [];
@@ -981,7 +1012,7 @@ function renderLeaveHistoryList(e) {
   const sorted = history.map((r, i) => ({ ...r, _idx: i })).sort((a, b) => (a.date||'').localeCompare(b.date||''));
   el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem">本期（'+curPeriodKey+'）合計：'+formatDays(curTotal)+'</div>'
     + sorted.map(r => {
-      const pk = r.period || (e.startDate && r.date ? getPeriodKey(e.startDate, r.date) : null);
+      const pk = (e.startDate && r.date) ? getPeriodKey(e.startDate, r.date) : null;
       const isFuturePeriod = pk && Number(pk) > Number(curPeriodKey);
       const isPastPeriod = pk && Number(pk) < Number(curPeriodKey);
       const periodTag = pk ? '<span style="font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;font-weight:700;background:'+(isFuturePeriod?'var(--accent-dim);color:var(--accent)':isPastPeriod?'var(--surface2);color:var(--text3)':'var(--green-dim);color:var(--green)')+'">'+pk+'期'+(isFuturePeriod?'（未來）':isPastPeriod?'（已過期）':'')+'</span>' : '';
@@ -1008,8 +1039,6 @@ window.editLeaveRecord = (idx) => {
   document.getElementById('lv-date').value = r.date || '';
   document.getElementById('lv-days').value = r.days || '';
   document.getElementById('lv-note').value = r.note || '';
-  const pk = r.period || (e.startDate && r.date ? getPeriodKey(e.startDate, r.date) : '');
-  document.getElementById('lv-period').value = pk;
   document.getElementById('leave-save-btn').textContent = '儲存修改';
   document.getElementById('leave-form-title').textContent = '✏️ 修改紀錄';
 };
@@ -1023,18 +1052,16 @@ window.saveLeaveRecord = async () => {
   const date = document.getElementById('lv-date').value;
   const days = parseFloat(document.getElementById('lv-days').value);
   const note = document.getElementById('lv-note').value.trim();
-  const period = document.getElementById('lv-period').value.trim();
   if (!date) { showToast('請填寫請假日期'); return; }
   if (!days || days <= 0) { showToast('請填寫天數'); return; }
   const idx = employees.findIndex(e => e.id === leaveEditingId);
   if (idx < 0) return;
   const history = employees[idx].leaveHistory || [];
-  const record = { date, days, note, period: period || undefined };
   if (leaveEditingIdx !== null) {
-    history[leaveEditingIdx] = { ...history[leaveEditingIdx], ...record };
+    history[leaveEditingIdx] = { ...history[leaveEditingIdx], date, days, note };
     showToast('已更新 ✓');
   } else {
-    history.push({ ...record, addedAt: new Date().toISOString() });
+    history.push({ date, days, note, addedAt: new Date().toISOString() });
     showToast('已新增 ✓');
   }
   employees[idx].leaveHistory = history;
