@@ -243,10 +243,12 @@ tr:hover td{background:var(--surface2)}
     <div id="leave-form-section" style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem">
       <div id="leave-form-title" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.75rem">＋ 新增一筆已休紀錄</div>
       <label>請假日期</label>
-      <input id="lv-date" type="date">
+      <input id="lv-date" type="date" oninput="autoFillLeavePeriod()">
       <label>天數（可填小數，如 0.5、1.125）</label>
       <input id="lv-days" type="number" step="0.125" min="0" placeholder="1">
-      <label>備註（選填，如假別）</label>
+      <label>歸屬週年期（自動帶入，跨期請假可手動改）</label>
+      <input id="lv-period" type="text" placeholder="例：2025（代表該到職日年度）" style="background:var(--accent-dim);color:var(--accent);font-weight:600">
+      <label>備註（選填）</label>
       <input id="lv-note" type="text" placeholder="特休">
     </div>
     <div class="modal-actions">
@@ -390,7 +392,10 @@ function getPeriodKey(empStartDate, refDate) {
 function getUsedDaysForPeriod(emp, periodKey) {
   if (!Array.isArray(emp.leaveHistory)) return 0;
   return Math.round(emp.leaveHistory
-    .filter(r => r.date && getPeriodKey(emp.startDate, r.date) === periodKey)
+    .filter(r => {
+      const rPeriod = r.period || (r.date && emp.startDate ? getPeriodKey(emp.startDate, r.date) : null);
+      return rPeriod === periodKey;
+    })
     .reduce((s, r) => s + (parseFloat(r.days) || 0), 0) * 1000) / 1000;
 }
 
@@ -994,11 +999,19 @@ window.closeLeaveModal = () => {
 };
 
 function resetLeaveForm() {
-  ['lv-date','lv-days','lv-note'].forEach(i => document.getElementById(i).value = '');
+  ['lv-date','lv-days','lv-note','lv-period'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('leave-save-btn').textContent = '新增紀錄';
   document.getElementById('leave-form-title').textContent = '＋ 新增一筆已休紀錄';
   leaveEditingIdx = null;
 }
+
+window.autoFillLeavePeriod = () => {
+  const emp = employees.find(x => x.id === leaveEditingId);
+  if (!emp || !emp.startDate) return;
+  const dateVal = document.getElementById('lv-date').value;
+  if (!dateVal) return;
+  document.getElementById('lv-period').value = getPeriodKey(emp.startDate, dateVal);
+};
 
 function renderLeaveHistoryList(e) {
   const history = e.leaveHistory || [];
@@ -1012,7 +1025,7 @@ function renderLeaveHistoryList(e) {
   const sorted = history.map((r, i) => ({ ...r, _idx: i })).sort((a, b) => (a.date||'').localeCompare(b.date||''));
   el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.5rem">本期（'+curPeriodKey+'）合計：'+formatDays(curTotal)+'</div>'
     + sorted.map(r => {
-      const pk = (e.startDate && r.date) ? getPeriodKey(e.startDate, r.date) : null;
+      const pk = r.period || (e.startDate && r.date ? getPeriodKey(e.startDate, r.date) : null);
       const isFuturePeriod = pk && Number(pk) > Number(curPeriodKey);
       const isPastPeriod = pk && Number(pk) < Number(curPeriodKey);
       const periodTag = pk ? '<span style="font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;font-weight:700;background:'+(isFuturePeriod?'var(--accent-dim);color:var(--accent)':isPastPeriod?'var(--surface2);color:var(--text3)':'var(--green-dim);color:var(--green)')+'">'+pk+'期'+(isFuturePeriod?'（未來）':isPastPeriod?'（已過期）':'')+'</span>' : '';
@@ -1039,6 +1052,7 @@ window.editLeaveRecord = (idx) => {
   document.getElementById('lv-date').value = r.date || '';
   document.getElementById('lv-days').value = r.days || '';
   document.getElementById('lv-note').value = r.note || '';
+  document.getElementById('lv-period').value = r.period || (emp.startDate && r.date ? getPeriodKey(emp.startDate, r.date) : '');
   document.getElementById('leave-save-btn').textContent = '儲存修改';
   document.getElementById('leave-form-title').textContent = '✏️ 修改紀錄';
 };
@@ -1052,16 +1066,18 @@ window.saveLeaveRecord = async () => {
   const date = document.getElementById('lv-date').value;
   const days = parseFloat(document.getElementById('lv-days').value);
   const note = document.getElementById('lv-note').value.trim();
+  const period = document.getElementById('lv-period').value.trim();
   if (!date) { showToast('請填寫請假日期'); return; }
   if (!days || days <= 0) { showToast('請填寫天數'); return; }
   const idx = employees.findIndex(e => e.id === leaveEditingId);
   if (idx < 0) return;
   const history = employees[idx].leaveHistory || [];
+  const record = { date, days, note, ...(period ? { period } : {}) };
   if (leaveEditingIdx !== null) {
-    history[leaveEditingIdx] = { ...history[leaveEditingIdx], date, days, note };
+    history[leaveEditingIdx] = { ...history[leaveEditingIdx], ...record };
     showToast('已更新 ✓');
   } else {
-    history.push({ date, days, note, addedAt: new Date().toISOString() });
+    history.push({ ...record, addedAt: new Date().toISOString() });
     showToast('已新增 ✓');
   }
   employees[idx].leaveHistory = history;
