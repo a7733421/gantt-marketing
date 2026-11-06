@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>報價單工具 — Team Gantt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--surface:#ffffff;--border:#e4e6eb;--border2:#d0d3db;--text2:#5a5f6e;--text3:#9099aa;--accent:#4f6ef7;--rose:#db2777}
+body{font-family:'Inter',sans-serif}
+/* 站台共用導覽列（比照 fuel.html） */
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-left{display:flex;align-items:center;gap:.875rem}
+.nav-logo{font-size:13px;font-weight:700;color:var(--text2);text-decoration:none;letter-spacing:.04em}
+.nav-logo span{color:var(--accent)}
+.nav-divider{width:1px;height:16px;background:var(--border2)}
+.nav-title{font-size:13px;font-weight:600;color:#1a1d23}
+.nav-right{display:flex;align-items:center;gap:.75rem}
+.user-info{display:flex;align-items:center;gap:.5rem;font-size:13px;color:var(--text2)}
+.user-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--border)}
+.logout-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .15s}
+.logout-btn:hover{border-color:var(--accent);color:var(--accent)}
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;gap:.5rem;z-index:999;font-size:14px;color:var(--text3)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+#app{display:none}
+/* 報價單工具本體（原樣保留，樣式限定在 .ic-ad 內） */
+html,body{margin:0;padding:0;background:#f3f5f8;}
+.ic-ad{box-sizing:border-box;max-width:1120px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:#1f2937;font-size:15px;line-height:1.5;background:#f3f5f8;}
+.ic-ad *{box-sizing:border-box;}
+.ic-ad h1{font-size:22px;margin:0 0 4px;color:#0f3d5e;}
+.ic-ad .ic-sub{color:#6b7280;font-size:13px;margin-bottom:12px;}
+.ic-ad .ic-card{background:#ffffff;border:1px solid #e0e5ec;border-radius:10px;padding:14px;margin-bottom:14px;}
+.ic-ad .ic-card h2{font-size:16px;margin:0 0 10px;color:#0f3d5e;}
+.ic-ad .ic-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;}
+.ic-ad label.ic-f{display:block;font-size:12px;color:#6b7280;margin-bottom:2px;}
+.ic-ad input[type=text],.ic-ad input[type=number],.ic-ad input[type=date],.ic-ad select,.ic-ad textarea{width:100%;padding:8px 10px;border:1px solid #cfd6df;border-radius:6px;font-size:15px;font-family:inherit;background:#ffffff;color:#1f2937;}
+.ic-ad textarea{min-height:70px;resize:vertical;}
+.ic-ad .ic-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;position:sticky;top:52px;background:#f3f5f8;padding:6px 0;z-index:6;}
+.ic-ad .ic-nav button{padding:8px 14px;border-radius:8px;border:1px solid #cfd6df;background:#ffffff;color:#0f3d5e;cursor:pointer;font-size:14px;font-family:inherit;font-weight:600;}
+.ic-ad .ic-nav button.ic-on{background:#0f3d5e;color:#ffffff;border-color:#0f3d5e;}
+.ic-ad .ic-nav button i{font-style:normal;background:#f5a623;color:#1f2937;border-radius:10px;padding:0 6px;margin-left:5px;font-size:12px;}
+.ic-ad .ic-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.ic-ad .ic-tab{padding:7px 16px;border-radius:20px;border:1px solid #cfd6df;background:#ffffff;color:#0f3d5e;cursor:pointer;font-size:14px;font-family:inherit;}
+.ic-ad .ic-tab.ic-on{background:#0f3d5e;color:#ffffff;border-color:#0f3d5e;}
+.ic-ad .ic-gname{font-size:13px;color:#0f3d5e;margin:12px 0 4px;font-weight:700;}
+.ic-ad .ic-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.ic-ad .ic-chip{padding:6px 11px;border-radius:6px;border:1px solid #d5dce6;background:#f8fafc;cursor:pointer;font-size:13px;font-family:inherit;color:#1f2937;}
+.ic-ad .ic-chip.ic-on{background:#f5a623;border-color:#f5a623;color:#1f2937;font-weight:700;}
+.ic-ad .ic-chip small{color:#9ca3af;margin-left:3px;}
+.ic-ad .ic-seg{display:inline-flex;border:1px solid #0f3d5e;border-radius:8px;overflow:hidden;margin-right:12px;}
+.ic-ad .ic-seg button{border:0;background:#ffffff;color:#0f3d5e;padding:7px 14px;font-size:14px;cursor:pointer;font-family:inherit;}
+.ic-ad .ic-seg button.ic-on{background:#0f3d5e;color:#ffffff;}
+.ic-ad table{width:100%;border-collapse:collapse;font-size:14px;}
+.ic-ad th{background:#eef3f8;color:#0f3d5e;padding:7px;text-align:center;font-weight:600;}
+.ic-ad td{padding:6px;border-bottom:1px solid #e5e9ef;text-align:center;vertical-align:middle;}
+.ic-ad td.ic-l,.ic-ad th.ic-l{text-align:left;}
+.ic-ad .ic-cell{min-width:74px;padding:7px 6px;border-radius:6px;border:1px solid #0f3d5e;background:#ffffff;color:#0f3d5e;font-weight:600;cursor:pointer;font-size:14px;font-family:inherit;}
+.ic-ad .ic-cell:hover{background:#0f3d5e;color:#ffffff;}
+.ic-ad .ic-cell[disabled]{border-color:#e5e9ef;color:#c3cad4;background:#fafbfc;cursor:not-allowed;}
+.ic-ad .ic-est{color:#d97706;font-size:11px;}
+.ic-ad .ic-ok{color:#0f7b4f;font-size:11px;}
+.ic-ad .ic-hint{font-size:12px;color:#6b7280;margin-top:6px;}
+.ic-ad .ic-item{display:grid;grid-template-columns:1fr 150px 86px 36px;gap:8px;align-items:center;padding:9px 0;border-top:1px dashed #e5e9ef;}
+.ic-ad .ic-item b{font-weight:600;}
+.ic-ad .ic-item span.ic-m{font-size:12px;color:#6b7280;display:block;}
+.ic-ad .ic-pr{text-align:right;font-weight:600;color:#0f3d5e;}
+.ic-ad .ic-pr s{color:#9ca3af;font-weight:400;font-size:12px;display:block;}
+.ic-ad .ic-line{display:grid;grid-template-columns:1fr 64px 92px 92px 96px 66px;gap:8px;align-items:center;padding:8px 0;border-top:1px dashed #e5e9ef;}
+.ic-ad .ic-line b{font-weight:600;}
+.ic-ad .ic-line span.ic-m{font-size:12px;color:#6b7280;display:block;}
+.ic-ad .ic-lt{text-align:right;font-weight:700;color:#0f3d5e;}
+.ic-ad .ic-more,.ic-ad .ic-edit{grid-column:1 / -1;background:#f8fafc;border:1px solid #e0e5ec;border-radius:8px;padding:10px;}
+.ic-ad .ic-more label{display:inline-block;margin:3px 10px 3px 0;font-size:13px;}
+.ic-ad .ic-chead{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#0f3d5e;background:#eef3f8;border-radius:6px;padding:4px 10px;margin-top:10px;}
+.ic-ad button.ic-btn{cursor:pointer;border:0;border-radius:8px;padding:10px 16px;font-size:15px;font-family:inherit;font-weight:600;}
+.ic-ad .ic-b1{background:#f5a623;color:#1f2937;}
+.ic-ad .ic-b2{background:#e6ebf2;color:#0f3d5e;}
+.ic-ad .ic-b3{background:#06c755;color:#ffffff;}
+.ic-ad .ic-bs{padding:5px 9px !important;font-size:13px !important;}
+.ic-ad .ic-bar{position:sticky;bottom:0;background:#0f3d5e;color:#ffffff;border-radius:10px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;z-index:7;margin-bottom:14px;}
+.ic-ad .ic-big{font-size:22px;font-weight:700;}
+.ic-ad .ic-btns{display:flex;flex-wrap:wrap;gap:8px;}
+.ic-ad details.ic-add{margin-top:12px;background:#f8fafc;border:1px dashed #9aa7b8;border-radius:8px;padding:8px 12px;}
+.ic-ad details.ic-add summary{cursor:pointer;color:#0f3d5e;font-weight:600;font-size:14px;}
+.ic-ad .ic-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:10px;align-items:end;}
+.ic-ad .ic-cu{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:13px;}
+.ic-ad .ic-cu span{background:#e8f6ef;border:1px solid #b7e1cc;border-radius:6px;padding:3px 8px;}
+.ic-ad .ic-cu button{border:0;background:transparent;color:#b91c1c;cursor:pointer;font-size:13px;}
+.ic-ad .ic-pane{display:none;}
+.ic-ad .ic-pane.ic-show{display:block;}
+.ic-ad .ic-sheet{display:none;background:#ffffff;border:1px solid #cfd6df;border-radius:10px;padding:26px;margin-bottom:14px;}
+.ic-ad .ic-sheet.ic-show{display:block;}
+.ic-ad .ic-sheet h2{text-align:center;font-size:22px;margin:0 0 6px;color:#0f3d5e;}
+.ic-ad .ic-deadline{text-align:center;background:#fff4dc;border:1px solid #f5a623;border-radius:6px;padding:6px;font-weight:700;margin:10px 0;}
+.ic-ad .ic-meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin:10px 0;font-size:14px;}
+.ic-ad .ic-sheet th{background:#0f3d5e;color:#ffffff;}
+.ic-ad .ic-sheet td.ic-r,.ic-ad .ic-sheet th.ic-r{text-align:right;}
+.ic-ad .ic-sheet td.ic-cat{background:#eef3f8;font-weight:700;color:#0f3d5e;text-align:left;}
+.ic-ad .ic-sum{margin-top:12px;margin-left:auto;max-width:420px;display:grid;grid-template-columns:1fr auto;gap:4px 14px;font-size:15px;}
+.ic-ad .ic-sum div:nth-child(even){text-align:right;font-weight:600;}
+.ic-ad .ic-rules{font-size:13px;color:#374151;margin-top:14px;border:1px solid #cfd6df;border-radius:6px;padding:10px;white-space:pre-wrap;}
+.ic-ad .ic-sign{margin-top:14px;font-size:13px;border:1px solid #cfd6df;border-radius:6px;padding:10px;}
+.ic-ad .ic-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111827;color:#ffffff;padding:8px 16px;border-radius:20px;font-size:14px;display:none;z-index:20;}
+@media (max-width:760px){
+.ic-ad .ic-line{grid-template-columns:1fr 1fr 1fr;}
+.ic-ad .ic-line > div:first-child{grid-column:1 / 4;}
+.ic-ad .ic-item{grid-template-columns:1fr 100px 70px 32px;}
+.ic-ad .ic-meta{grid-template-columns:1fr;}
+}
+@media print{
+nav,.loading-overlay{display:none !important;}
+html,body{background:#ffffff;}
+.ic-ad{padding:0;background:#ffffff;}
+.ic-ad .ic-noprint{display:none !important;}
+.ic-ad .ic-sheet{display:block !important;border:0;padding:0;}
+}
+</style>
+</head>
+<body>
+<div class="loading-overlay" id="loading"><span class="spinner"></span> 載入中...</div>
+
+<div id="app">
+<nav>
+  <div class="nav-left">
+    <a class="nav-logo" href="home.html">← <span>TEAM</span> GANTT</a>
+    <div class="nav-divider"></div>
+    <span class="nav-title">報價單工具</span>
+  </div>
+  <div class="nav-right">
+    <div class="user-info">
+      <img class="user-avatar" id="user-avatar" src="" alt="">
+      <span id="user-name"></span>
+    </div>
+    <button class="logout-btn" onclick="doSignOut()">登出</button>
+  </div>
+</nav>
+
+<div class="ic-ad" id="icApp">
+<div class="ic-noprint">
+  <h1>景騰報價系統</h1>
+  <div class="ic-sub">點選項目就會加入下方清單並自動算價。找不到的品項可以自己新增（團隊共用、以後都能選）；任何金額都能直接修改。</div>
+  <div class="ic-nav" id="nav"></div>
+
+  <div class="ic-pane ic-show" id="p_cust">
+    <div class="ic-card"><h2>客戶與文件</h2>
+      <div class="ic-grid">
+        <div><label class="ic-f">① 服務地區（請先選，決定廣告站台與主機價格）</label><select id="cBrand" style="border:2px solid #f5a623;font-weight:700"><option value="宜蘭">宜蘭</option><option value="花蓮">花蓮</option><option value="台東">台東</option><option value="其他">其他（不限地區，全部顯示）</option></select></div>
+        <div><label class="ic-f">客戶／民宿名稱</label><input type="text" id="cName"></div>
+        <div><label class="ic-f">聯絡人</label><input type="text" id="cContact"></div>
+        <div><label class="ic-f">電話</label><input type="text" id="cTel"></div>
+        <div><label class="ic-f">承辦業務</label><input type="text" id="cSales" placeholder="例：丁丁"></div>
+        
+        <div><label class="ic-f">客戶身分</label><select id="cType"><option value="會員">會員</option><option value="外網客戶">外網客戶（非會員）</option></select></div>
+        <div><label class="ic-f">文件類型</label><select id="cDoc"><option value="quote">綜合報價單（全部項目）</option><option value="adpkg">廣告優惠專案單（僅主機＋廣告）</option></select></div>
+        <div><label class="ic-f">計價方式（稅）</label><select id="cTax"><option value="0">稅內含（預設，大多數客戶）</option><option value="1">稅外加 5%（少數客戶）</option></select></div>
+        <div><label class="ic-f">報價日期</label><input type="date" id="cDate"></div>
+        <div><label class="ic-f">付款優惠截止日</label><input type="date" id="cDue"></div>
+      </div>
+      <div class="ic-hint">填完後點上方分頁（網站、主機、廣告…）選項目，最後到「報價單」產出。</div>
+    </div>
+  </div>
+
+  <div class="ic-pane" id="p_web"><div class="ic-card"><h2>網站版型</h2><div id="g_web"></div></div></div>
+  <div class="ic-pane" id="p_host"><div class="ic-card"><h2>主機與附加服務</h2><div id="g_host"></div></div></div>
+  <div class="ic-pane" id="p_photo"><div class="ic-card"><h2>攝影服務</h2><div id="g_photo"></div></div></div>
+  <div class="ic-pane" id="p_feat"><div class="ic-card"><h2>功能加購</h2><div class="ic-hint">尚無預設項目，請用下方「新增品項」建立，之後所有人都能直接點選。</div><div id="g_feat"></div></div></div>
+  <div class="ic-pane" id="p_ops"><div class="ic-card"><h2>廣告代操與儲值金</h2><div id="g_ops"></div></div></div>
+
+  <div class="ic-pane" id="p_print">
+    <div class="ic-card"><h2>印刷品</h2>
+      <div class="ic-tabs" id="prTabs"></div>
+      <div id="prBody"></div>
+    </div>
+  </div>
+
+  <div class="ic-pane" id="p_ad">
+    <div class="ic-card">
+      <h2>選地區與站台</h2>
+      <div class="ic-tabs" id="areaTabs"></div>
+      <input type="text" id="siteQ" placeholder="搜尋站台，例如：礁溪、包棟、童玩節" style="max-width:340px;margin-bottom:6px">
+      <div id="siteList"></div>
+      <details class="ic-add"><summary>＋ 找不到站台？新增站台</summary>
+        <div class="ic-form">
+          <div><label class="ic-f">站台名稱</label><input type="text" id="nsName" placeholder="例：宜蘭南澳民宿網"></div>
+          <div><label class="ic-f">分類</label><select id="nsGroup"><option>主題／整合站</option><option>鄉鎮民宿網</option><option>活動節慶</option><option>景點旅遊網</option><option>其他（美食／租車等）</option><option>主站</option></select></div>
+          <div><label class="ic-f">價格層級</label><select id="nsTier"><option value="sub">分站（一般）</option><option value="main">主站</option></select></div>
+          <div><button class="ic-btn ic-b1" id="nsSave">新增到「目前地區」</button></div>
+        </div>
+      </details>
+    </div>
+    <div class="ic-card" id="matrixCard" style="display:none">
+      <h2 id="mTitle"></h2>
+      <div style="margin-bottom:10px">
+        <span class="ic-seg" id="planSeg"></span>
+        <label style="font-size:13px"><input type="checkbox" id="showAll"> 顯示同層級所有版位</label>
+      </div>
+      <div style="overflow-x:auto"><table id="matrix"></table></div>
+      <details class="ic-add"><summary>＋ 新增／修改此站台的版位與價格</summary>
+        <div class="ic-form">
+          <div><label class="ic-f">版位名稱</label><input type="text" id="ncSlot" list="slotList" placeholder="例：強力推薦"><datalist id="slotList"></datalist></div>
+          <div><label class="ic-f">期間</label><select id="ncPer"></select></div>
+          <div><label class="ic-f">常態價（原價）</label><input type="number" id="ncNormal" min="0"></div>
+          <div><label class="ic-f">專案價（可空白）</label><input type="number" id="ncPromo" min="0"></div>
+          <div><button class="ic-btn ic-b1" id="ncSave">儲存</button></div>
+        </div>
+        <div class="ic-hint">同站台、同版位、同期間再存一次＝覆蓋舊價格。</div>
+        <div class="ic-cu" id="cuList"></div>
+      </details>
+      <div class="ic-hint">點價格格子即加入清單。<span class="ic-est">*</span> ＝無成交紀錄，價格依同層級推估；<span class="ic-ok">自</span> ＝自訂價。</div>
+    </div>
+  </div>
+
+  <div class="ic-pane" id="p_quote">
+    <div class="ic-card"><h2>稅務、付款與條款</h2>
+      <div class="ic-grid">
+        <div><label class="ic-f">額外折讓（元）</label><input type="number" id="cDisc" value="0" min="0"></div>
+        <div><label class="ic-f">專案價（手動，留空＝自動）</label><input type="number" id="cOverride" min="0"></div>
+        <div><label class="ic-f">付款方式</label><select id="cPay"><option value="0">不分期</option><option value="1" selected>定金＋尾款</option><option value="2">定金＋中期款＋尾款</option></select></div>
+        <div><label class="ic-f">定金（元）</label><input type="number" id="cDeposit" value="5000" min="0"></div>
+        <div><label class="ic-f">中期款（佔專案價 %）</label><input type="number" id="cMid" value="50" min="0" max="100"></div>
+      </div>
+      <div style="margin-top:10px"><label class="ic-f">備註與條款（會印在報價單）</label>
+      <textarea id="cNote">1. 本報價單於優惠截止日前付款方享專案優惠。
+2. 儲值金為代墊廣告費用，不計稅，依實際投放扣款。
+3. 工期與付款細節於簽約時確認。</textarea></div>
+    </div>
+  </div>
+
+  <div class="ic-card">
+    <h2>已選項目 <span id="cnt" style="font-weight:400;color:#6b7280"></span></h2>
+    <div id="cart"></div>
+    <div class="ic-hint" id="cartEmpty">尚未選擇，請從上方分頁點選。</div>
+    <details class="ic-add"><summary>＋ 一次性自訂項目（只加到這張報價單，不存檔）</summary>
+      <div class="ic-form">
+        <div><label class="ic-f">項目名稱</label><input type="text" id="oiName" placeholder="例：FB 粉專優化"></div>
+        <div><label class="ic-f">單位</label><input type="text" id="oiUnit" placeholder="式"></div>
+        <div><label class="ic-f">數量</label><input type="number" id="oiQty" value="1" min="0"></div>
+        <div><label class="ic-f">原價（單價）</label><input type="number" id="oiOrig" min="0"></div>
+        <div><label class="ic-f">優惠價（單價）</label><input type="number" id="oiPrice" min="0"></div>
+        <div><button class="ic-btn ic-b1" id="oiAdd">加入清單</button></div>
+      </div>
+    </details>
+    <details class="ic-add"><summary>★ 套餐：把目前清單存起來，下次一鍵套用</summary>
+      <div class="ic-form">
+        <div><label class="ic-f">套餐名稱</label><input type="text" id="pkName" placeholder="例：新民宿開站包"></div>
+        <div><button class="ic-btn ic-b1" id="pkSave">另存為套餐</button></div>
+      </div>
+      <div class="ic-cu" id="pkList"></div>
+    </details>
+    <div class="ic-hint" id="dbStat"></div>
+  </div>
+
+  <div class="ic-bar">
+    <div><div style="font-size:12px;opacity:.8">原價（總價值）<span id="tOrig">NT$ 0</span></div><div class="ic-big" id="tTotal">專案價 NT$ 0</div></div>
+    <div class="ic-btns">
+      <button class="ic-btn ic-b2" id="bClear">清空</button>
+      <button class="ic-btn ic-b1" id="bGen">產出報價單</button>
+    </div>
+  </div>
+</div>
+
+<div class="ic-sheet" id="sheet">
+  <h2 id="sTitle"></h2>
+  <div class="ic-deadline" id="sDue"></div>
+  <div class="ic-meta" id="sMeta"></div>
+  <table><thead><tr><th class="ic-l">項目</th><th class="ic-r">原價</th><th class="ic-r">優惠價</th><th class="ic-r">數量</th><th class="ic-r">小計</th></tr></thead><tbody id="sBody"></tbody></table>
+  <div class="ic-sum" id="sSum"></div>
+  <div class="ic-rules" id="sPay"></div>
+  <div class="ic-rules" id="sRules"></div>
+  <div class="ic-sign" id="sSign"></div>
+  <div class="ic-btns ic-noprint" style="margin-top:16px">
+    <button class="ic-btn ic-b3" id="bLine">傳到 LINE</button>
+    <button class="ic-btn ic-b2" id="bCopy">複製文字</button>
+    <button class="ic-btn ic-b2" id="bPrint">列印／存 PDF</button>
+  </div>
+  <div class="ic-sub ic-noprint" style="margin-top:8px">LINE 會開啟分享畫面，由你選擇業者或群組後送出。</div>
+</div>
+<div class="ic-toast" id="toast"></div>
+</div>
+</div>
+
+<script>
+var DATA={"AD":{"sites":[{"n":"宜蘭民宿網","a":"宜蘭","g":"主站","t":"main","c":290,"s":{"HOT民宿":{"10天":[0,0,136],"一個月":[0,0,99],"一年":[0,18000,2]},"強力推薦":{"一年":[18000,0,2],"半年":[9000,0,0]},"熱門民宿":{"一季":[0,0,42],"一年":[0,0,1]},"首選民宿":{"一季":[0,0,3],"一年":[48000,0,5],"半年":[24000,0,0]}}},{"n":"宜蘭包棟民宿推薦","a":"宜蘭","g":"主題／整合站","t":"sub","c":185,"s":{"A區":{"一年":[9000,0,74],"半年":[4500,0,0]},"優惠訊息":{"一年":[12000,8000,28],"半年":[6000,4000,0]},"優質民宿":{"一年":[12000,0,8],"半年":[6000,0,0]},"本月之星":{"一年":[12000,0,26],"半年":[6000,0,0]},"熱門民宿":{"一年":[12000,0,18],"半年":[6000,0,0]},"超值民宿":{"一年":[12000,0,14],"半年":[6000,0,3]},"首選民宿":{"一年":[24000,15000,14],"半年":[12000,7500,0]}}},{"n":"花蓮民宿資訊網","a":"花蓮","g":"主站","t":"main","c":117,"s":{"A區":{"一季":[0,0,10],"一年":[18000,15840,8],"半年":[9000,7920,0]},"D區小格":{"一季":[0,0,3],"五年":[0,0,4]},"F區":{"一年":[16000,0,6],"半年":[8000,0,0]},"HOT民宿":{"10天":[0,0,18],"一個月":[0,0,24]},"熱門民宿":{"一季":[0,0,39]},"首選民宿":{"一季":[0,0,5],"半年":[24000,0,0],"一年":[48000,0,0]}}},{"n":"台東民宿網","a":"台東","g":"主站","t":"main","c":90,"s":{"A區":{"一年":[18000,15840,10],"半年":[9000,7920,0]},"F區":{"一年":[16000,0,2],"半年":[8000,0,0]},"HOT民宿":{"10天":[0,0,34],"一個月":[0,0,15]},"熱門民宿":{"一季":[0,0,25]},"首選民宿":{"一季":[0,0,1],"一年":[48000,0,1],"半年":[24000,0,2]}}},{"n":"國際童玩節child","a":"宜蘭","g":"活動節慶","t":"sub","c":61,"s":{"優惠訊息":{"一年":[12000,8000,20],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,15],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,22],"半年":[10000,6000,0]},"首選民宿":{"一年":[24000,15000,4],"半年":[12000,7500,0]}}},{"n":"宜蘭冬山民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":52,"s":{"優惠訊息":{"一季":[0,0,2],"一年":[12000,8000,1],"半年":[6000,4000,0]},"強力推薦":{"一季":[0,0,6],"一年":[9000,6000,36],"半年":[4500,0,3]},"熱門民宿":{"一季":[0,0,2],"一年":[12000,0,2],"半年":[6000,0,0]}}},{"n":"宜蘭美食網","a":"宜蘭","g":"其他（美食／租車等）","t":"sub","c":52,"s":{"美食推薦":{"一季":[0,0,47],"一年":[0,0,4],"半年":[0,0,1]}}},{"n":"宜蘭五結民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":39,"s":{"優惠訊息":{"一季":[0,0,2],"一年":[12000,8000,1],"半年":[6000,4000,0]},"強力推薦":{"一季":[0,0,5],"一年":[9000,6000,20],"半年":[4500,3000,0]},"熱門民宿":{"一年":[12000,0,11],"半年":[6000,0,0]}}},{"n":"台東包棟民宿網","a":"台東","g":"主題／整合站","t":"sub","c":35,"s":{"A區":{"一年":[9000,0,16],"半年":[4500,0,0]},"優惠訊息":{"一年":[12000,8000,6],"半年":[6000,4000,0]},"精選民宿":{"一年":[20000,12000,13],"半年":[10000,6000,0]}}},{"n":"台東市區民宿網(分區)","a":"台東","g":"鄉鎮民宿網","t":"sub","c":35,"s":{"優惠訊息":{"一年":[12000,8000,7],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,22],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,6],"半年":[10000,6000,0]}}},{"n":"宜蘭礁溪民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":35,"s":{"優惠訊息":{"一季":[0,0,2],"半年":[0,0,1],"一年":[12000,8000,0]},"強力推薦":{"一季":[0,0,3],"一年":[9000,6000,19],"半年":[4500,3000,0]},"熱門民宿":{"一年":[12000,0,10],"半年":[6000,0,0]}}},{"n":"綠色博覽會igreen","a":"宜蘭","g":"活動節慶","t":"sub","c":34,"s":{"優惠訊息":{"一年":[12000,8000,13],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,7],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,11],"半年":[10000,6000,0]},"首選民宿":{"一年":[24000,15000,3],"半年":[12000,7500,0]}}},{"n":"宜蘭羅東民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":33,"s":{"優惠訊息":{"一季":[0,0,2],"半年":[6000,4000,0],"一年":[12000,8000,0]},"強力推薦":{"一年":[9000,2000,26],"半年":[4500,1000,0]},"熱門民宿":{"一年":[12000,0,5],"半年":[6000,0,0]}}},{"n":"宜蘭親子旅遊民宿網","a":"宜蘭","g":"主題／整合站","t":"sub","c":30,"s":{"優惠訊息":{"一年":[12000,8000,25],"半年":[6000,4000,0]},"精選民宿":{"一季":[0,0,1],"一年":[20000,12000,4],"半年":[10000,6000,0]}}},{"n":"旅遊網-dsr nta","a":"宜蘭","g":"景點旅遊網","t":"sub","c":29,"s":{"優惠訊息":{"一年":[12000,8000,10],"半年":[6000,4000,0]},"強力推薦":{"一季":[0,0,3],"一年":[9000,6000,9],"半年":[4500,3000,0]},"精選民宿":{"一季":[0,0,2],"一年":[20000,12000,5],"半年":[10000,6000,0]}}},{"n":"宜蘭三星民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":27,"s":{"優惠訊息":{"半年":[0,0,1],"一年":[12000,8000,0]},"強力推薦":{"一季":[0,0,1],"一年":[9000,6000,22],"半年":[4500,3000,0]},"熱門民宿":{"一年":[12000,0,3],"半年":[6000,0,0]}}},{"n":"宜蘭生活網","a":"宜蘭","g":"主題／整合站","t":"sub","c":25,"s":{"強力推薦":{"一年":[9000,6000,1],"半年":[4500,3000,0]},"熱門推薦":{"一個月":[0,0,1],"一季":[0,0,12],"一年":[0,4000,6],"半年":[0,0,5]}}},{"n":"宜蘭資訊網","a":"宜蘭","g":"主題／整合站","t":"sub","c":25,"s":{"強力推薦":{"一年":[9000,6000,1],"半年":[4500,3000,0]},"熱門推薦":{"一個月":[0,0,1],"一季":[0,0,12],"一年":[0,4000,6],"半年":[0,0,5]}}},{"n":"熱氣球嘉年華","a":"台東","g":"活動節慶","t":"sub","c":25,"s":{"優惠訊息":{"一年":[12000,8000,10],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,12],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,2],"半年":[10000,6000,0]},"首選民宿":{"一年":[24000,15000,1],"半年":[12000,7500,0]}}},{"n":"花蓮住宿網","a":"花蓮","g":"主題／整合站","t":"sub","c":25,"s":{"優惠訊息":{"一年":[12000,8000,3],"半年":[6000,4000,0]},"強力推薦":{"一季":[0,0,1],"一年":[9000,6000,20],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"宜蘭villa風民宿網","a":"宜蘭","g":"主題／整合站","t":"sub","c":23,"s":{"優惠訊息":{"一年":[12000,8000,14],"半年":[6000,4000,0]},"精選民宿":{"一季":[0,0,5],"一年":[20000,12000,4],"半年":[10000,6000,0]}}},{"n":"宜蘭合法民宿","a":"宜蘭","g":"主題／整合站","t":"sub","c":23,"s":{"優惠訊息":{"一年":[12000,8000,16],"半年":[0,0,1]},"精選民宿":{"一個月":[0,0,1],"一季":[0,0,2],"一年":[20000,12000,3],"半年":[10000,6000,0]}}},{"n":"台東住宿網","a":"台東","g":"主題／整合站","t":"sub","c":19,"s":{"優惠訊息":{"一年":[12000,8000,3],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,8],"半年":[0,0,2]},"精選民宿":{"一年":[20000,12000,6],"半年":[10000,6000,0]}}},{"n":"美麗觀察室","a":"宜蘭","g":"其他（美食／租車等）","t":"sub","c":19,"s":{"作品展示區":{"一季":[0,0,19]}}},{"n":"台東民宿資訊網","a":"台東","g":"主題／整合站","t":"sub","c":17,"s":{"優惠訊息":{"一年":[12000,12000,1],"半年":[6000,6000,0]},"強力推薦":{"一季":[0,0,2],"一年":[9000,6000,10],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,4],"半年":[10000,6000,0]}}},{"n":"宜蘭國旅卡專區(同步線上訂房)","a":"宜蘭","g":"主題／整合站","t":"sub","c":17,"s":{"優惠訊息":{"一年":[12000,8000,15],"半年":[6000,4000,0]},"精選民宿":{"一個月":[0,0,1],"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"旅遊網-lym jshs yzcp","a":"宜蘭","g":"景點旅遊網","t":"sub","c":17,"s":{"優惠訊息":{"一年":[12000,8000,3],"半年":[6000,4000,0]},"強力推薦":{"一季":[0,0,1],"一年":[9000,6000,9],"半年":[4500,3000,0]},"精選民宿":{"一季":[0,0,1],"一年":[20000,12000,3],"半年":[10000,6000,0]}}},{"n":"花蓮民宿包棟推薦","a":"花蓮","g":"主題／整合站","t":"sub","c":17,"s":{"A區":{"一年":[9000,0,8],"半年":[4500,0,0]},"優惠訊息":{"一年":[12000,8000,4],"半年":[6000,4000,0]},"精選民宿":{"一年":[20000,12000,3],"半年":[10000,6000,0]},"首選民宿":{"一年":[24000,15000,2],"半年":[12000,7500,0]}}},{"n":"花蓮民宿市區民宿導覽網","a":"花蓮","g":"鄉鎮民宿網","t":"sub","c":16,"s":{"I區":{"一年":[0,6000,6],"半年":[0,0,2]},"優惠訊息":{"一年":[12000,8000,4],"半年":[6000,4000,0]},"本月之星":{"一季":[0,0,4],"半年":[6000,0,0],"一年":[12000,0,0]}}},{"n":"花蓮民宿市區民宿旅遊網city","a":"花蓮","g":"景點旅遊網","t":"sub","c":16,"s":{"優惠訊息":{"一年":[12000,8000,5],"半年":[6000,4000,0]},"強力推薦":{"一季":[0,0,1],"一年":[9000,6000,8],"半年":[4500,3000,0]},"精選民宿":{"半年":[0,0,2],"一年":[20000,12000,0]}}},{"n":"台東市民宿網(鄉鎮)","a":"台東","g":"鄉鎮民宿網","t":"sub","c":15,"s":{"優惠訊息":{"一季":[0,0,4],"一年":[12000,8000,8],"半年":[0,0,1]},"精選民宿":{"一季":[0,0,1],"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"宜蘭民宿村(幫、通)","a":"宜蘭","g":"主題／整合站","t":"sub","c":14,"s":{"強力推薦":{"一年":[9000,6000,11],"半年":[0,0,1]},"精選民宿":{"一季":[0,0,1],"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"宜蘭員山民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":11,"s":{"強力推薦":{"一季":[0,0,1],"一年":[9000,6000,8],"半年":[4500,3000,0]},"熱門民宿":{"一年":[12000,0,2],"半年":[6000,0,0]}}},{"n":"花蓮夏戀嘉年華","a":"花蓮","g":"活動節慶","t":"sub","c":11,"s":{"優惠訊息":{"一年":[12000,8000,5],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,2],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,4],"半年":[10000,6000,0]}}},{"n":"旅遊網-lsp lnm pfl","a":"宜蘭","g":"景點旅遊網","t":"sub","c":10,"s":{"優惠訊息":{"一年":[12000,8000,3],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,3],"半年":[0,0,2]},"精選民宿":{"一年":[20000,12000,2],"半年":[10000,6000,0]}}},{"n":"礁溪溫泉季","a":"宜蘭","g":"活動節慶","t":"sub","c":10,"s":{"優惠訊息":{"一年":[12000,8000,4],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,3],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,2],"半年":[10000,6000,0]},"首選民宿":{"一年":[24000,15000,1],"半年":[12000,7500,0]}}},{"n":"101宜蘭四季旅遊","a":"宜蘭","g":"活動節慶","t":"sub","c":9,"s":{"專題廣告":{"一年":[0,12000,7],"半年":[0,0,2]}}},{"n":"花蓮親子旅遊民宿網","a":"花蓮","g":"主題／整合站","t":"sub","c":9,"s":{"優惠訊息":{"一年":[12000,3000,3],"半年":[6000,1500,0]},"精選民宿":{"一季":[0,0,4],"一年":[20000,12000,1],"半年":[0,0,1]}}},{"n":"頭城衝浪節","a":"宜蘭","g":"活動節慶","t":"sub","c":9,"s":{"優惠訊息":{"一年":[12000,8000,3],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,1],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,2],"半年":[10000,6000,0]},"首選民宿":{"一年":[24000,15000,3],"半年":[12000,7500,0]}}},{"n":"台東海岸民宿網","a":"台東","g":"主題／整合站","t":"sub","c":8,"s":{"優惠訊息":{"一年":[12000,8000,1],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,7],"半年":[4500,3000,0]}}},{"n":"吉安鄉民宿網","a":"花蓮","g":"鄉鎮民宿網","t":"sub","c":8,"s":{"優惠訊息":{"一季":[0,0,3],"一年":[12000,8000,3],"半年":[0,0,1]},"精選民宿":{"一季":[0,0,1],"半年":[10000,6000,0],"一年":[20000,12000,0]}}},{"n":"宜蘭頭城民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":8,"s":{"強力推薦":{"一季":[0,0,2],"一年":[9000,6000,2],"半年":[4500,3000,0]},"熱門民宿":{"一年":[12000,0,4],"半年":[6000,0,0]}}},{"n":"旅遊網-qsgp pll","a":"宜蘭","g":"景點旅遊網","t":"sub","c":8,"s":{"優惠訊息":{"一年":[12000,8000,2],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,4],"半年":[4500,3000,0]},"精選民宿":{"一季":[0,0,1],"半年":[0,0,1],"一年":[20000,12000,0]}}},{"n":"台東親子旅遊民宿網","a":"台東","g":"主題／整合站","t":"sub","c":7,"s":{"優惠訊息":{"一年":[12000,3000,4],"半年":[6000,0,1]},"精選民宿":{"一年":[20000,4000,1],"半年":[0,0,1]}}},{"n":"宜蘭寵物旅遊民宿網","a":"宜蘭","g":"主題／整合站","t":"sub","c":7,"s":{"優惠訊息":{"一年":[12000,8000,5],"半年":[6000,4000,0]},"精選民宿":{"一季":[0,0,1],"半年":[0,0,1],"一年":[20000,12000,0]}}},{"n":"宜蘭壯圍民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":6,"s":{"強力推薦":{"一季":[0,0,1],"一年":[9000,6000,5],"半年":[4500,3000,0]}}},{"n":"宜蘭租車網","a":"宜蘭","g":"其他（美食／租車等）","t":"sub","c":6,"s":{"租車精選":{"一年":[0,4000,6]}}},{"n":"101台東四季旅遊","a":"台東","g":"活動節慶","t":"sub","c":5,"s":{"專題廣告":{"一年":[0,8000,5]}}},{"n":"101花蓮四季旅遊","a":"花蓮","g":"活動節慶","t":"sub","c":5,"s":{"專題廣告":{"一年":[0,12000,5]}}},{"n":"七星潭風景區旅遊網cisingtan","a":"花蓮","g":"景點旅遊網","t":"sub","c":5,"s":{"強力推薦":{"一年":[9000,6000,5],"半年":[4500,3000,0]}}},{"n":"台東關山民宿網","a":"台東","g":"鄉鎮民宿網","t":"sub","c":5,"s":{"優惠訊息":{"一季":[0,0,1],"一年":[12000,8000,2],"半年":[6000,4000,0]},"精選民宿":{"一年":[20000,12000,2],"半年":[10000,6000,0]}}},{"n":"宜蘭大同民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":5,"s":{"優惠訊息":{"一季":[0,0,1],"半年":[6000,4000,0],"一年":[12000,8000,0]},"強力推薦":{"一年":[9000,6000,2],"半年":[4500,3000,0]},"熱門民宿":{"一年":[12000,0,2],"半年":[6000,0,0]}}},{"n":"市區旅遊景點網","a":"台東","g":"景點旅遊網","t":"sub","c":5,"s":{"優惠訊息":{"一年":[12000,8000,4],"半年":[0,0,1]}}},{"n":"旅遊網-wlk suaocs fnl dongyue dre","a":"宜蘭","g":"景點旅遊網","t":"sub","c":5,"s":{"強力推薦":{"一年":[9000,6000,5],"半年":[4500,3000,0]}}},{"n":"台東國旅卡專區(同步線上訂房)","a":"台東","g":"主題／整合站","t":"sub","c":4,"s":{"優惠訊息":{"一年":[12000,8000,3],"半年":[6000,4000,0]},"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"台東縱谷民宿網","a":"台東","g":"主題／整合站","t":"sub","c":4,"s":{"優惠訊息":{"一年":[12000,8000,4],"半年":[6000,4000,0]}}},{"n":"台東鹿野民宿網","a":"台東","g":"鄉鎮民宿網","t":"sub","c":4,"s":{"優惠訊息":{"一季":[0,0,1],"一年":[12000,8000,3],"半年":[6000,4000,0]}}},{"n":"旅遊網-tps(2) mingchih chilan cfl","a":"宜蘭","g":"景點旅遊網","t":"sub","c":4,"s":{"優惠訊息":{"一年":[12000,8000,1],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,2],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"花蓮國旅卡專區(同步線上訂房)","a":"花蓮","g":"主題／整合站","t":"sub","c":4,"s":{"優惠訊息":{"一年":[12000,8000,4],"半年":[6000,4000,0]}}},{"n":"花蓮民宿海岸民宿導覽網","a":"花蓮","g":"主題／整合站","t":"sub","c":4,"s":{"優惠訊息":{"一季":[0,0,1],"一年":[12000,8000,2],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,1],"半年":[4500,3000,0]}}},{"n":"台東太麻里民宿網","a":"台東","g":"鄉鎮民宿網","t":"sub","c":3,"s":{"優惠訊息":{"一年":[12000,8000,2],"半年":[6000,4000,0]},"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"太魯閣風景區旅遊網taroko","a":"花蓮","g":"景點旅遊網","t":"sub","c":3,"s":{"優惠訊息":{"一年":[12000,8000,2],"半年":[6000,4000,0]},"強力推薦":{"一年":[9000,6000,1],"半年":[4500,3000,0]}}},{"n":"宜蘭海岸民宿旅遊網","a":"宜蘭","g":"景點旅遊網","t":"sub","c":3,"s":{"優惠訊息":{"一年":[12000,8000,3],"半年":[6000,4000,0]}}},{"n":"新城鄉民宿網","a":"花蓮","g":"鄉鎮民宿網","t":"sub","c":3,"s":{"優惠訊息":{"一季":[0,0,1],"一年":[12000,8000,1],"半年":[6000,4000,0]},"精選民宿":{"一季":[0,0,1],"半年":[10000,6000,0],"一年":[20000,12000,0]}}},{"n":"花蓮合法民宿","a":"花蓮","g":"主題／整合站","t":"sub","c":3,"s":{"優惠訊息":{"一季":[0,0,1],"一年":[12000,8000,2],"半年":[6000,4000,0]}}},{"n":"花蓮海洋公園旅遊網oceanpark","a":"花蓮","g":"景點旅遊網","t":"sub","c":3,"s":{"強力推薦":{"一年":[9000,6000,2],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"台東成功民宿網","a":"台東","g":"鄉鎮民宿網","t":"sub","c":2,"s":{"優惠訊息":{"一季":[0,0,2],"半年":[6000,4000,0],"一年":[12000,8000,0]}}},{"n":"台東池上民宿網","a":"台東","g":"鄉鎮民宿網","t":"sub","c":2,"s":{"優惠訊息":{"一季":[0,0,1],"一年":[12000,8000,1],"半年":[6000,4000,0]}}},{"n":"台東溫泉住宿推薦網","a":"台東","g":"其他（美食／租車等）","t":"sub","c":2,"s":{"優惠訊息":{"一年":[12000,8000,2],"半年":[6000,4000,0]}}},{"n":"台東背包客民宿網","a":"台東","g":"主題／整合站","t":"sub","c":2,"s":{"優惠訊息":{"一年":[12000,8000,2],"半年":[6000,4000,0]}}},{"n":"壽豐鄉民宿網","a":"花蓮","g":"鄉鎮民宿網","t":"sub","c":2,"s":{"優惠訊息":{"一季":[0,0,1],"半年":[6000,4000,0],"一年":[12000,8000,0]},"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"宜蘭市民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":2,"s":{"強力推薦":{"一年":[9000,6000,2],"半年":[4500,3000,0]}}},{"n":"宜蘭蘇澳民宿網","a":"宜蘭","g":"鄉鎮民宿網","t":"sub","c":2,"s":{"熱門民宿":{"一年":[12000,0,2],"半年":[6000,0,0]}}},{"n":"海岸旅遊景點網","a":"台東","g":"景點旅遊網","t":"sub","c":2,"s":{"優惠訊息":{"一年":[12000,8000,2],"半年":[6000,4000,0]}}},{"n":"玉里鎮民宿網","a":"花蓮","g":"鄉鎮民宿網","t":"sub","c":2,"s":{"會員專區":{"一年":[6000,0,2],"半年":[3000,0,0]}}},{"n":"瑞穗溫泉旅遊網juisui","a":"花蓮","g":"景點旅遊網","t":"sub","c":2,"s":{"強力推薦":{"一年":[9000,6000,2],"半年":[4500,3000,0]}}},{"n":"花蓮鯉魚潭旅遊網liyu","a":"花蓮","g":"景點旅遊網","t":"sub","c":2,"s":{"強力推薦":{"一年":[9000,6000,1],"半年":[4500,3000,0]},"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"金針花季旅遊網daylily","a":"花蓮","g":"景點旅遊網","t":"sub","c":2,"s":{"強力推薦":{"一年":[9000,6000,2],"半年":[4500,3000,0]}}},{"n":"鳳林鎮民宿網","a":"花蓮","g":"鄉鎮民宿網","t":"sub","c":2,"s":{"優惠訊息":{"一年":[12000,8000,2],"半年":[6000,4000,0]}}},{"n":"台東合法民宿","a":"台東","g":"主題／整合站","t":"sub","c":1,"s":{"優惠訊息":{"一年":[12000,8000,1],"半年":[6000,4000,0]}}},{"n":"台東東河民宿網","a":"台東","g":"鄉鎮民宿網","t":"sub","c":1,"s":{"優惠訊息":{"半年":[0,0,1],"一年":[12000,8000,0]}}},{"n":"旅遊網-fushan wlp","a":"宜蘭","g":"景點旅遊網","t":"sub","c":1,"s":{"強力推薦":{"一季":[0,0,1],"半年":[4500,3000,0],"一年":[9000,6000,0]}}},{"n":"旅遊網-jimmy ysp","a":"宜蘭","g":"景點旅遊網","t":"sub","c":1,"s":{"優惠訊息":{"一年":[12000,8000,1],"半年":[6000,4000,0]}}},{"n":"花蓮寵物旅遊民宿網","a":"花蓮","g":"主題／整合站","t":"sub","c":1,"s":{"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"花蓮市民宿網(鄉鎮)","a":"花蓮","g":"鄉鎮民宿網","t":"sub","c":1,"s":{"優惠訊息":{"一季":[0,0,1],"半年":[6000,4000,0],"一年":[12000,8000,0]}}},{"n":"花蓮民宿縱谷民宿導覽網","a":"花蓮","g":"主題／整合站","t":"sub","c":1,"s":{"優惠訊息":{"一年":[12000,8000,1],"半年":[6000,4000,0]}}},{"n":"苗栗合法民宿網","a":"宜蘭","g":"主題／整合站","t":"sub","c":1,"s":{"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"苗栗民宿國民旅遊卡專區","a":"宜蘭","g":"其他（美食／租車等）","t":"sub","c":1,"s":{"精選民宿":{"一年":[20000,12000,1],"半年":[10000,6000,0]}}},{"n":"馬太鞍溼地旅遊網vataan","a":"花蓮","g":"景點旅遊網","t":"sub","c":1,"s":{"強力推薦":{"一年":[9000,6000,1],"半年":[4500,3000,0]}}}],"tierSlots":{"main":{"A區":{"一年":[18000,15840,0],"半年":[9000,7920,0]},"F區":{"一年":[16000,0,0],"半年":[8000,0,0]},"強力推薦":{"一年":[18000,0,0],"半年":[9000,0,0]},"首選民宿":{"一年":[48000,0,0],"半年":[24000,0,0]}},"sub":{"A區":{"一年":[9000,0,0],"半年":[4500,0,0]},"優惠訊息":{"一年":[12000,8000,0],"半年":[6000,4000,0]},"優質民宿":{"一年":[12000,0,0],"半年":[6000,0,0]},"強力推薦":{"一年":[9000,6000,0],"半年":[4500,3000,0]},"會員專區":{"一年":[6000,0,0],"半年":[3000,0,0]},"本月之星":{"一年":[12000,0,0],"半年":[6000,0,0]},"熱門民宿":{"一年":[12000,0,0],"半年":[6000,0,0]},"精選民宿":{"一年":[20000,12000,0],"半年":[10000,6000,0]},"超值民宿":{"一年":[12000,0,0],"半年":[6000,0,0]},"首選民宿":{"一年":[24000,15000,0],"半年":[12000,7500,0]}}},"per":["一年","半年","一季","一個月","10天","五年"]},"CARD":{"boxes":[2.5,3,5,10,20,30],"rows":[{"n":"一級卡","d":"","g":250,"p":[[null,null],[null,null],[799,999],[1299,1599],[2599,3199],[3599,4499]]},{"n":"安格紙","d":"","g":300,"p":[[null,null],[699,799],[999,1199],[1599,1999],[3199,3599],[4499,4999]]},{"n":"萊妮紙","d":"","g":300,"p":[[null,null],[699,799],[999,1199],[1599,1999],[3199,3599],[4499,4999]]},{"n":"象牙卡","d":"","g":300,"p":[[null,null],[699,799],[999,1199],[1599,1999],[3199,3599],[4499,4999]]},{"n":"頂級卡","d":"","g":320,"p":[[699,799],[null,null],[999,1199],[1599,1999],[3199,3599],[4499,4999]]},{"n":"細紋紙","d":"","g":220,"p":[[699,799],[null,null],[999,1199],[1599,1999],[3199,3599],[4499,4999]]},{"n":"雙面亮(一級卡)","d":"","g":250,"p":[[null,null],[699,799],[999,1199],[1599,1999],[3199,3599],[4499,4999]]},{"n":"雙面霧(一級卡)","d":"","g":250,"p":[[null,null],[699,799],[999,1199],[1599,1999],[3199,3599],[4499,4999]]},{"n":"超級合成卡(撕不破)","d":"","g":200,"p":[[null,null],[699,799],[999,1199],[1599,1999],[3199,3599],[4499,4999]]},{"n":"局部上光","d":"一級卡，雙霧單局","g":250,"p":[[null,null],[699,799],[999,1199],[1799,1999],[3499,3999],[4599,5299]]},{"n":"頂級雙面霧(頂級卡)","d":"","g":320,"p":[[899,899],[null,null],[1299,1299],[2399,2399],[4699,4699],[6199,6199]]},{"n":"銀鑽卡","d":"頂級卡，正面鑽石背面銅西","g":320,"p":[[799,1199],[null,null],[999,1399],[1799,2299],[3599,4599],[4799,6199]]},{"n":"頂級雙面霧雙局部光","d":"","g":320,"p":[[999,999],[null,null],[1699,1699],[2699,2699],[5299,5299],[7199,7199]]},{"n":"拼圖卡","d":"","g":320,"p":[[null,null],[899,1299],[1299,1699],[2399,3199],[4699,6299],[6199,8399]]},{"n":"星幻紙","d":"","g":380,"p":[[null,null],[899,1299],[1299,1699],[2399,3199],[4699,6299],[6199,8399]]},{"n":"炫光紙","d":"","g":250,"p":[[899,1199],[null,null],[1299,1699],[2299,3199],[4499,6199],[5999,8199]]},{"n":"絲絨卡(頂級卡)","d":"","g":320,"p":[[1199,1199],[null,null],[1799,1799],[3199,3199],[6199,6199],[8199,8199]]},{"n":"水彩紙","d":"","g":220,"p":[[null,null],[899,1299],[1299,1799],[2199,3199],[4199,6199],[5499,8199]]},{"n":"磨砂卡","d":"頂級卡，雙局雙磨砂","g":320,"p":[[1199,1199],[null,null],[1799,1799],[3199,3199],[6199,6199],[8199,8199]]},{"n":"鑽石卡","d":"頂級卡，正面鑽石雙面磨砂","g":320,"p":[[1199,1199],[null,null],[1799,1799],[3199,3199],[6199,6199],[8199,8199]]},{"n":"絲絨局部光(單面局光，頂級卡)","d":"","g":320,"p":[[1299,1299],[null,null],[1899,1899],[3399,3399],[6699,6699],[8899,8899]]},{"n":"細波紙","d":"","g":220,"p":[[899,1299],[null,null],[1499,2199],[2699,3799],[5399,7499],[7199,9999]]},{"n":"頂級象牙卡","d":"","g":420,"p":[[999,1299],[null,null],[1599,2199],[2599,3399],[5199,6699],[6699,8899]]},{"n":"瑞典一級卡","d":"","g":350,"p":[[null,null],[999,1299],[1599,1999],[2899,3699],[5799,7399],[7699,9899]]},{"n":"立體彩鑽","d":"頂級卡，正面冷燙局部燙銀，雙面磨砂","g":320,"p":[[1199,1199],[null,null],[2199,2199],[3799,3799],[7599,7599],[10199,10199]]},{"n":"冷燙卡","d":"頂級卡，正面冷燙局部燙銀","g":320,"p":[[1199,1199],[null,null],[2199,2199],[3799,3799],[7599,7599],[10199,10199]]},{"n":"立體彩鑽單局部(頂級卡，正面冷燙局部燙銀，雙面磨砂，正面局部上光)","d":"","g":320,"p":[[1599,1599],[null,null],[2299,2299],[3999,3999],[7899,7899],[10499,10499]]},{"n":"立體彩鑽雙局部(頂級卡，正面冷燙局部燙銀，雙面磨砂，雙面局部上光)","d":"","g":320,"p":[[1599,1599],[null,null],[2399,2399],[4199,4199],[8199,8199],[10899,10899]]},{"n":"永采紙(不指定紋路方向)","d":"","g":240,"p":[[1199,1499],[null,null],[1899,2499],[3299,4399],[6599,8799],[8699,11999]]},{"n":"雅紋紙(不指定紋路方向)","d":"","g":220,"p":[[null,null],[1299,1799],[2199,2799],[3599,4999],[7199,9999],[9499,13299]]},{"n":"印尼雲彩","d":"","g":230,"p":[[null,null],[1499,1899],[2299,3199],[3799,5199],[7599,10399],[10199,13899]]},{"n":"柳葉紙(正面紋路)","d":"","g":209,"p":[[1499,1999],[null,null],[2499,3299],[4499,5999],[8999,11899],[11999,15799]]},{"n":"砂點紙(不指定紋路方向)","d":"","g":200,"p":[[null,null],[1699,2199],[2599,3299],[4499,5999],[8999,11899],[11999,15799]]},{"n":"美白儷紋(不指定紋路方向)","d":"","g":216,"p":[[null,null],[1699,2199],[2599,3299],[4499,5999],[8999,11899],[11999,15799]]},{"n":"彩幻紙(不指定紋路方向)","d":"","g":220,"p":[[null,null],[1699,2199],[2599,3299],[4499,5999],[8999,11899],[11999,15799]]},{"n":"棉絮紙(不指定紋路方向)","d":"","g":300,"p":[[null,null],[1699,2199],[2599,3299],[4499,5999],[8999,11899],[11999,15799]]},{"n":"刮刮樂卡","d":"一級卡+正面亮+正面銀色刮刮樂","g":250,"p":[[null,null],[null,null],[3299,3599],[5999,6199],[11999,12399],[15899,16599]]},{"n":"炫卡(1.25mm)","d":"","g":null,"p":[[null,null],[null,null],[3599,3599],[6199,6199],[12399,12399],[16599,16599]]},{"n":"爵士紙(不指定紋路方向)","d":"","g":250,"p":[[1699,2199],[null,null],[2799,3799],[4999,6799],[9899,13599],[13199,18199]]},{"n":"奇幻紙","d":"","g":250,"p":[[null,null],[2199,2499],[3199,3899],[null,null],[null,null],[null,null]]},{"n":"黑卡燙金","d":"","g":370,"p":[[2499,3999],[null,null],[3999,6499],[6699,10499],[13299,20899],[17699,27899]]},{"n":"金綺紙","d":"","g":310,"p":[[null,null],[3999,4499],[6399,7199],[null,null],[null,null],[null,null]]},{"n":"NEW立體浮金","d":"浮銀／頂級卡，雙霧膜，正面3D立體局部金／銀","g":320,"p":[[5299,5299],[null,null],[7399,7399],[null,null],[null,null],[null,null]]},{"n":"全透卡(含白墨，導圓角)","d":"","g":350,"p":[[null,null],[null,null],[3299,null],[5699,null],[11299,null],[14999,null]]},{"n":"霧透卡(不含白墨，導圓角)","d":"","g":420,"p":[[1399,null],[null,null],[1899,null],[3499,null],[6899,null],[9199,null]]}]},"PROC":{"boxes":[2.5,3,5,10,15,20],"rows":[{"n":"燙金（限金、銀）款式A","p":[700,700,700,1100,1500,1900]},{"n":"燙金（限金、銀）款式B","p":[1000,1100,1650,3000,4350,5700]},{"n":"燙金（限金、銀）款式C","p":[700,700,850,1400,1900,2400]},{"n":"燙金（限金、銀）款式D","p":[1200,1350,2100,3800,5600,7400]},{"n":"打凸","p":[900,null,1300,1300,1700,2100]}]}};
+window.startQuote=function(store){
+var CAT=DATA.AD, CARD=DATA.CARD, PROC=DATA.PROC;
+var PERS=CAT.per, AREAS=['宜蘭','花蓮','台東'], GROUPS=['主站','主題／整合站','鄉鎮民宿網','活動節慶','景點旅遊網','其他（美食／租車等）'];
+var BR={'宜蘭':{n:'宜蘭民宿網',u:'http://house.ilantravel.com.tw/'},'花蓮':{n:'花蓮民宿資訊網',u:'http://house.netete.com/'},'台東':{n:'台東民宿網',u:'http://www.travel123.com.tw/'},'其他':{n:'景騰多媒體',u:'http://www.ete.com.tw/'}};
+var AREACODE={'宜蘭':'YL','花蓮':'HL','台東':'TT','其他':'OT'};
+var RULE_M=['本方案優惠僅提供會員客戶進行廣告刊登，不得轉讓非會員使用。','本方案優惠不得與其他優惠共同使用，需同時付款始享有優惠資格。','本方案廣告須於付款後一周內上架完成，如有續約廣告自付款日起開通完成即展延廣告合約。','中途解約依照合約刊登廣告之原價計算費用，計算單位價格為半年，即刊登三個月扣除六個月廣告費、刊登九個月扣除十二個月廣告費，以此類推。','景騰多媒體保有更換專案檔期優惠之權利及最後解釋權。'];
+var CATS=[
+ {id:'cust',t:'客戶'},{id:'web',t:'網站'},{id:'host',t:'主機'},{id:'ad',t:'廣告'},{id:'photo',t:'攝影'},{id:'print',t:'印刷品'},{id:'feat',t:'功能'},{id:'ops',t:'代操／儲值金'},{id:'quote',t:'稅務付款'}];
+var CATNAME={web:'網站建置',host:'主機與附加服務',ad:'廣告刊登',photo:'攝影服務',print:'印刷品與設計',feat:'功能加購',ops:'廣告代操與儲值金',other:'其他項目'};
+var CATORDER=['web','host','ad','photo','print','feat','ops','other'];
+var I=function(id,n,unit,orig,price,note,extra){var o={id:id,n:n,unit:unit||'式',orig:orig,price:price,note:note||''};if(extra)for(var k in extra)o[k]=extra[k];return o;};
+var SEED={
+ web:[{g:'民宿官網',items:[I('w_a','民宿官網 A 版型','式',57000,18000),I('w_a2','民宿官網 A2 版型','式',57000,18000),I('w_b','民宿官網 B 版型','式',69000,24000),I('w_c','民宿官網 C 版型','式',91000,35000),I('w_x','民宿官網 客製化版型','式',0,0,'依需求報價，加入後直接改價')]},
+  {g:'企業網站',items:[I('w_corp','企業形象網站（前台網站設計＋後台系統建置）','式',240000,109888)]}],
+ host:[{g:'主機空間（一年，依地區）',items:[I('h_t3_yl','T3專線虛擬主機空間（宜蘭）','年',8000,8000),I('h_t3','T3專線虛擬主機空間（花蓮、台東）','年',10000,10000)]},{g:'主機空間（半年，所有地區同價）',items:[I('h_t3_6','T3專線虛擬主機空間（半年）','半年',6000,6000)]},
+  {g:'贈送項目（標價值、優惠價 0）',items:[I('h_edit','不限次數照片及文字修改','12個月',12000,0),I('h_url','提供專屬官方網站網址','12個月',1000,0),I('h_town','鄉鎮文字連結曝光','式',18000,0)]}],
+ photo:[{g:'攝影服務',items:[I('p_1','攝影服務 方案一','式',8000,0,'拍攝範圍（樓層／房型間數）請改在名稱註明'),I('p_2','攝影服務 方案二','式',12000,0),I('p_3','攝影服務 方案三','式',20000,0)]}],
+ print:[{g:'設計費',items:[I('d_dm1','DM設計費（單面／不提供原始檔／配合印刷）','款',6000,3000),I('d_dm2','DM設計費（雙面／不提供原始檔／配合印刷）','款',8000,4000),I('d_post','海報設計費（配合印刷）','款',6000,3000),I('d_stk','貼紙設計費（一版）','版',2000,1200,'增加版本款式每款加收修改費 100 元'),I('d_logo','LOGO設計專案（提供原始檔）','式',19800,12800,'歷史成交：原價 16,800–22,800、優惠價 8,800–13,800')]}],
+ feat:[],
+ ops:[
+  {g:'Google 關鍵字行銷規劃（新買）',items:[I('g_3','Google 關鍵字行銷規劃 3個月','專案',18000,12000,'含圖片素材 1 張'),I('g_6','Google 關鍵字行銷規劃 6個月','專案',33000,20888,'含圖片素材 2 張'),I('g_12','Google 關鍵字行銷規劃 12個月','專案',63000,36888,'含圖片素材 2+2 張'),I('g_36','Google 關鍵字行銷規劃 3年','專案',153000,105000,'含圖片素材 6 張')]},
+  {g:'Google 關鍵字行銷規劃（續約）',items:[I('gr_3','Google 關鍵字行銷規劃 續約3個月','專案',18000,9900),I('gr_6','Google 關鍵字行銷規劃 續約6個月','專案',33000,19000,'含圖片素材 2 張'),I('gr_12','Google 關鍵字行銷規劃 續約12個月','專案',63000,36000,'含圖片素材 2 張'),I('gr_36','Google 關鍵字行銷規劃 續約3年','專案',153000,100000,'含圖片素材 6 張')]},
+  {g:'FB 行銷規劃',items:[I('f_3','FB 行銷規劃 3個月（新買）','專案',30000,15000,'含圖片素材 3 張'),I('f_6','FB 行銷規劃 6個月（新買）','專案',57000,23888,'含圖片素材 3+1 張'),I('f_12','FB 行銷規劃 12個月（新買）','專案',111000,42888,'含圖片素材 8+2 張'),I('fr_6','FB 行銷規劃 6個月（續約）','專案',57000,22000,'含圖片素材 3 張'),I('fr_12','FB 行銷規劃 12個月（續約）','專案',111000,38000,'含圖片素材 8 張'),I('f_ig','連動 IG 帳戶','月',1800,500)]},
+  {g:'商家檔案行銷規劃',items:[I('s_set','商家檔案 初次設定','次',12000,8000),I('s_m','商家檔案 代管月租費','月',3600,1200,'代管最低購買 6 個月，12 個月起打 9 折'),I('s_y','商家檔案 代管年租費','年',43200,12960)]},
+  {g:'社群網站圖片設計',items:[I('i_1','社群圖片設計 1 張','式',6000,3000),I('i_5','社群圖片設計 5 張','式',30000,10000),I('i_20','社群圖片設計 20 張','式',120000,30000),I('t_1','圖片設計＋文案 1 組','式',8000,5000),I('t_10','圖片設計＋文案 10 組','式',80000,40000),I('t_20','圖片設計＋文案 20 組','式',160000,70000)]},
+  {g:'廣告儲值金（不計稅）',items:[I('fund_fb','FB 廣告儲值金','元',1,1,'數量填儲值金額；代收手續費可在清單調整',{pass:1}),I('fund_g','Google 廣告儲值金','元',1,1,'數量填儲值金額；代收手續費可在清單調整',{pass:1})]}]
+};
+var area='宜蘭', active=null, plan='常態', cart=[], uid=1, tab='cust', prTab='card', cardFace=0, cardQ='';
+var SITES=JSON.parse(JSON.stringify(CAT.sites));
+function $(i){return document.getElementById(i);}
+function fmt(n){return 'NT$ '+Math.round(n).toLocaleString('en-US');}
+function num(n){return Math.round(n).toLocaleString('en-US');}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function toast(t){var e=$('toast');e.textContent=t;e.style.display='block';setTimeout(function(){e.style.display='none';},1800);}
+function hid(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return Math.abs(h).toString(36);}
+function siteBy(n){return SITES.filter(function(s){return s.n===n;})[0];}
+
+// ===== 共用資料（自訂品項）=====
+var DBDOCS={},pending=false;
+function customs(){return DBDOCS;}
+function rebuild(){
+  SITES=JSON.parse(JSON.stringify(CAT.sites));var cu=customs(),ids=Object.keys(cu);
+  ids.forEach(function(id){var x=cu[id];if(x&&x.t==='site'&&!siteBy(x.name))SITES.push({n:x.name,a:x.area,g:x.group,t:x.tier||'sub',c:0,s:{}});});
+  ids.forEach(function(id){var x=cu[id];if(x&&x.t==='cell'){var s=siteBy(x.site);if(!s)return;s.s[x.slot]=s.s[x.slot]||{};s.s[x.slot][x.per]=[x.normal||0,x.promo||0,1,id,1];}});
+  if(active&&!siteBy(active)&&!pending)active=null;
+}
+function updStat(){$('dbStat').textContent='自訂品項與套餐：存在 Firestore（quoteCustom），團隊共用、所有人同步';}
+function refreshAll(){renderSites();renderMatrix();renderTab(tab);renderPk();updStat();}
+function persist(id,data,msg){
+  store.save(id,data).then(function(){toast(msg||'已儲存（團隊共用）');},function(e){console.error(e);toast('儲存失敗，請確認網路或權限');});
+}
+function removeCustom(id){
+  store.del(id).then(function(){toast('已刪除');},function(e){console.error(e);toast('刪除失敗，請確認網路或權限');});
+}
+// 一般品項：預設＋覆蓋＋自訂
+function groupsOf(cat){
+  var cu=customs(),ov={},extra=[];
+  Object.keys(cu).forEach(function(k){var x=cu[k];if(!x)return;if(x.t==='ov')ov[x.sid]=x;if(x.t==='item'&&x.cat===cat)extra.push(Object.assign({id:k,custom:1},x));});
+  var gs=[];
+  (SEED[cat]||[]).forEach(function(g){
+    var items=[];g.items.forEach(function(it){var o=ov[it.id];if(o&&o.hide)return;var x=Object.assign({},it);if(o){x.n=o.n;x.unit=o.unit;x.orig=o.orig;x.price=o.price;x.note=o.note||'';x.ovId='o_'+it.id;}items.push(x);});
+    gs.push({g:g.g,items:items});
+  });
+  extra.sort(function(a,b){return (a.ts||0)-(b.ts||0);}).forEach(function(x){
+    var g=gs.filter(function(q){return q.g===x.group;})[0];if(!g){g={g:x.group||'自訂',items:[]};gs.push(g);}g.items.push(x);
+  });
+  return gs.filter(function(g){return g.items.length;});
+}
+function findItem(cat,id){var r=null;groupsOf(cat).forEach(function(g){g.items.forEach(function(i){if(i.id===id)r=i;});});return r;}
+
+// ===== 分頁 =====
+function renderNav(){
+  $('nav').innerHTML=CATS.map(function(c){
+    var n=c.id==='cust'||c.id==='quote'?0:cart.filter(function(l){return l.cat===c.id;}).length;
+    return '<button data-t="'+c.id+'" class="'+(c.id===tab?'ic-on':'')+'">'+c.t+(n?'<i>'+n+'</i>':'')+'</button>';
+  }).join('')+'<span style="align-self:center;margin-left:auto;font-size:13px;color:#0f3d5e;font-weight:700">目前地區：'+$('cBrand').value+'</span>';
+}
+function showTab(t){
+  tab=t;CATS.forEach(function(c){$('p_'+c.id).className='ic-pane'+(c.id===t?' ic-show':'');});
+  renderNav();renderTab(t);
+}
+function renderTab(t){
+  if(['web','host','photo','feat','ops'].indexOf(t)>-1)renderGeneric(t,'g_'+t);
+  if(t==='print')renderPrint();
+  if(t==='ad'){renderSites();renderMatrix();}
+}
+$('nav').addEventListener('click',function(e){var b=e.target.closest('button');if(b)showTab(b.getAttribute('data-t'));});
+
+// ===== 一般品項頁 =====
+function itemRow(cat,it){
+  var pr=it.pass?'依金額':(it.orig&&it.orig!==it.price?'<s>'+num(it.orig)+'</s>':'')+(it.price===0&&it.orig?'贈送':num(it.price));
+  return '<div class="ic-item" data-cat="'+cat+'" data-id="'+esc(it.id)+'"><div><b>'+esc(it.n)+'</b><span class="ic-m">'+esc(it.unit||'')+(it.note?'｜'+esc(it.note):'')+(it.custom?'｜<span class="ic-ok">自訂</span>':'')+'</span></div>'
+   +'<div class="ic-pr">'+pr+'</div><div><button class="ic-btn ic-b1 ic-bs" data-act="add">加入</button></div><div><button class="ic-btn ic-b2 ic-bs" data-act="edit" title="編輯／刪除">✎</button></div>'
+   +'<div class="ic-edit" style="display:none" data-ed="'+esc(it.id)+'">'
+   +'<div class="ic-form"><div><label class="ic-f">名稱</label><input type="text" data-f="n" value="'+esc(it.n)+'"></div><div><label class="ic-f">單位</label><input type="text" data-f="unit" value="'+esc(it.unit||'')+'"></div><div><label class="ic-f">原價</label><input type="number" data-f="orig" value="'+it.orig+'"></div><div><label class="ic-f">優惠價</label><input type="number" data-f="price" value="'+it.price+'"></div><div><label class="ic-f">備註</label><input type="text" data-f="note" value="'+esc(it.note||'')+'"></div>'
+   +'<div><button class="ic-btn ic-b1 ic-bs" data-act="saveedit">儲存</button> <button class="ic-btn ic-b2 ic-bs" data-act="del">'+(it.custom?'刪除':'隱藏')+'</button></div></div></div></div>';
+}
+function regionOK(it){var r=$('cBrand').value;if(r==='其他')return true;if(it.n.indexOf('（宜蘭）')>-1)return r==='宜蘭';if(it.n.indexOf('（花蓮、台東）')>-1)return r==='花蓮'||r==='台東';return true;}
+function renderGeneric(cat,host){
+  var gs=groupsOf(cat).map(function(g){return {g:g.g,items:cat==='host'?g.items.filter(regionOK):g.items};}).filter(function(g){return g.items.length;}),h='';
+  gs.forEach(function(g){h+='<div class="ic-gname">'+esc(g.g)+'</div>'+g.items.map(function(it){return itemRow(cat,it);}).join('');});
+  if(!gs.length)h+='<div class="ic-hint">目前沒有項目。</div>';
+  var opts=gs.map(function(g){return '<option>'+esc(g.g)+'</option>';}).join('');
+  h+='<details class="ic-add"><summary>＋ 新增品項（存起來，以後所有人都能選）</summary><div class="ic-form" data-newf="'+cat+'">'
+   +'<div><label class="ic-f">分組</label><input type="text" data-f="group" list="gl_'+cat+'" placeholder="可選或自行輸入"><datalist id="gl_'+cat+'">'+opts+'</datalist></div>'
+   +'<div><label class="ic-f">品項名稱</label><input type="text" data-f="n"></div><div><label class="ic-f">單位</label><input type="text" data-f="unit" placeholder="式"></div>'
+   +'<div><label class="ic-f">原價</label><input type="number" data-f="orig" min="0"></div><div><label class="ic-f">優惠價</label><input type="number" data-f="price" min="0"></div>'
+   +'<div><label class="ic-f">備註</label><input type="text" data-f="note"></div><div><button class="ic-btn ic-b1" data-act="newitem">新增</button></div></div></details>';
+  $(host).innerHTML=h;
+}
+function fv(root,f){var e=root.querySelector('[data-f="'+f+'"]');return e?e.value:'';}
+['g_web','g_host','g_photo','g_feat','g_ops'].forEach(function(hid_){
+  $(hid_).addEventListener('click',function(e){
+    var b=e.target.closest('[data-act]');if(!b)return;var act=b.getAttribute('data-act'),cat=hid_.slice(2);
+    if(act==='newitem'){
+      var f=b.closest('[data-newf]'),n=fv(f,'n').trim();if(!n){toast('請填品項名稱');return;}
+      var o=Number(fv(f,'orig'))||0,p=fv(f,'price')===''?o:(Number(fv(f,'price'))||0);
+      persist('i_'+hid(cat+n+Date.now()),{t:'item',cat:cat,group:fv(f,'group').trim()||'自訂',n:n,unit:fv(f,'unit').trim()||'式',orig:o,price:p,note:fv(f,'note'),ts:Date.now()},'已新增品項');return;
+    }
+    var row=b.closest('.ic-item'),id=row.getAttribute('data-id'),it=findItem(cat,id);
+    if(act==='edit'){var ed=row.querySelector('.ic-edit');ed.style.display=ed.style.display==='none'?'block':'none';return;}
+    if(act==='add'){cart.push(lineFromItem(cat,it));renderCart();toast('已加入：'+it.n);return;}
+    if(act==='saveedit'){
+      var ed2=row.querySelector('.ic-edit'),vals={n:fv(ed2,'n').trim()||it.n,unit:fv(ed2,'unit'),orig:Number(fv(ed2,'orig'))||0,price:Number(fv(ed2,'price'))||0,note:fv(ed2,'note')};
+      if(it.custom){persist(id,Object.assign({t:'item',cat:cat,group:(customs()[id]||{}).group||'自訂',ts:(customs()[id]||{}).ts||Date.now()},vals),'已更新');}
+      else{persist('o_'+id,Object.assign({t:'ov',sid:id},vals),'已更新（覆蓋預設）');}
+      return;
+    }
+    if(act==='del'){
+      if(it.custom)removeCustom(id);else persist('o_'+id,{t:'ov',sid:id,hide:1},'已隱藏');
+    }
+  });
+});
+function lineFromItem(cat,it){
+  var l={id:uid++,cat:cat,n:it.n,unit:it.unit||'式',qty:it.pass?10000:1,orig:it.orig,price:it.price,open:false};
+  if(it.pass){l.pass=1;l.fee=0;}
+  return l;
+}
+
+// ===== 印刷品 =====
+var PRT=[['card','名片（材質×盒數）'],['proc','名片加工'],['design','設計費'],['calc','其他印刷試算']];
+var CALCP=[['DM 500張以下',5],['DM 4000張以下',4],['貼紙 2–5盒',3],['貼紙 10–15盒',2.5],['貼紙 20盒',2.2],['信封 2000以下',2.5],['特殊加工',2.5],['其他印刷',4]];
+function renderPrint(){
+  $('prTabs').innerHTML=PRT.map(function(p){return '<button class="ic-tab'+(p[0]===prTab?' ic-on':'')+'" data-p="'+p[0]+'">'+p[1]+'</button>';}).join('');
+  var h='';
+  if(prTab==='card'){
+    h+='<div style="margin-bottom:10px"><span class="ic-seg" id="faceSeg"><button data-f="0" class="'+(cardFace===0?'ic-on':'')+'">單面</button><button data-f="1" class="'+(cardFace===1?'ic-on':'')+'">雙面</button></span><input type="text" id="cardQ" placeholder="搜尋材質，例如：絲絨、燙金" value="'+esc(cardQ)+'" style="max-width:240px;display:inline-block"></div>';
+    h+='<div style="overflow-x:auto"><table><thead><tr><th class="ic-l">材質</th>'+CARD.boxes.map(function(b){return '<th>'+b+' 盒</th>';}).join('')+'</tr></thead><tbody>';
+    CARD.rows.forEach(function(r,ri){
+      if(cardQ&&(r.n+r.d).indexOf(cardQ)<0)return;
+      h+='<tr><td class="ic-l"><b>'+esc(r.n)+'</b><span class="ic-m" style="display:block;font-size:12px;color:#6b7280">'+(r.g?r.g+'g ':'')+esc(r.d)+'</span></td>';
+      r.p.forEach(function(p,bi){var v=p[cardFace];h+='<td><button class="ic-cell" data-r="'+ri+'" data-b="'+bi+'"'+(v==null?' disabled':'')+'>'+(v==null?'—':num(v))+'</button></td>';});
+      h+='</tr>';
+    });
+    h+='</tbody></table></div><div class="ic-hint">價格取自「名片A專案（純印刷）2023/08」報價表；— 表示該材質／盒數不接。若印刷廠漲價，加入清單後直接改價即可。</div>';
+  }else if(prTab==='proc'){
+    h+='<div style="overflow-x:auto"><table><thead><tr><th class="ic-l">加工</th>'+PROC.boxes.map(function(b){return '<th>'+b+' 盒</th>';}).join('')+'</tr></thead><tbody>';
+    PROC.rows.forEach(function(r,ri){h+='<tr><td class="ic-l"><b>'+esc(r.n)+'</b></td>'+r.p.map(function(v,bi){return '<td><button class="ic-cell" data-pr="'+ri+'" data-b="'+bi+'"'+(v==null?' disabled':'')+'>'+(v==null?'—':num(v))+'</button></td>';}).join('')+'</tr>';});
+    h+='</tbody></table></div><div class="ic-hint">加工對外報價取自舊版名片表（款式 A–D 的面積／紙材對應請依業務判斷，加入後可改名稱）。較新的燙金版費公式在「燙金.打凸」頁，需要的話再接。</div>';
+  }else if(prTab==='design'){h+='<div id="g_design"></div>';}
+  else{
+    h+='<div class="ic-form" id="calcF"><div><label class="ic-f">品項／倍數</label><select data-f="kind">'+CALCP.map(function(c,i){return '<option value="'+i+'">'+c[0]+' ×'+c[1]+'</option>';}).join('')+'</select></div>'
+     +'<div><label class="ic-f">品名規格</label><input type="text" data-f="spec" placeholder="例：DM 雙面 銅版紙150g A4"></div>'
+     +'<div><label class="ic-f">數量</label><input type="number" data-f="qty" value="1" min="0"></div><div><label class="ic-f">單位</label><input type="text" data-f="unit" value="式"></div>'
+     +'<div><label class="ic-f">印刷廠成本（總額）</label><input type="number" data-f="cost" min="0"></div><div><label class="ic-f">倍數</label><input type="number" data-f="mult" step="0.1" value="5"></div>'
+     +'<div><label class="ic-f">含稅 ×1.05</label><select data-f="tax"><option value="1">是</option><option value="0">否</option></select></div></div>'
+     +'<div class="ic-hint">建議報價（可再改）：<b id="calcOut">0</b> 元　<button class="ic-btn ic-b1 ic-bs" id="calcAdd">加入清單</button></div>';
+  }
+  $('prBody').innerHTML=h;
+  if(prTab==='design')renderGeneric('print','g_design');
+}
+$('prTabs').addEventListener('click',function(e){var b=e.target.closest('[data-p]');if(!b)return;prTab=b.getAttribute('data-p');renderPrint();});
+$('prBody').addEventListener('click',function(e){
+  var f=e.target.closest('#faceSeg button');if(f){cardFace=Number(f.getAttribute('data-f'));renderPrint();return;}
+  var c=e.target.closest('.ic-cell');
+  if(c&&!c.disabled){
+    if(c.hasAttribute('data-r')){var r=CARD.rows[c.getAttribute('data-r')],bi=Number(c.getAttribute('data-b')),v=r.p[bi][cardFace];
+      cart.push({id:uid++,cat:'print',n:'名片｜'+r.n+(r.d?'（'+r.d+'）':'')+'｜'+(cardFace?'雙面':'單面'),unit:CARD.boxes[bi]+'盒',qty:1,orig:v,price:v,open:false});renderCart();toast('已加入：'+r.n+' '+CARD.boxes[bi]+'盒');}
+    else if(c.hasAttribute('data-pr')){var pr=PROC.rows[c.getAttribute('data-pr')],pb=Number(c.getAttribute('data-b')),pv=pr.p[pb];
+      cart.push({id:uid++,cat:'print',n:'名片加工｜'+pr.n,unit:PROC.boxes[pb]+'盒',qty:1,orig:pv,price:pv,open:false});renderCart();toast('已加入：'+pr.n);}
+    return;
+  }
+  if(e.target.id==='calcAdd'){
+    var root=$('calcF'),cost=Number(fv(root,'cost'))||0;if(!cost){toast('請填印刷廠成本');return;}
+    var p=calcSuggest(root),spec=fv(root,'spec').trim(),kind=CALCP[Number(fv(root,'kind'))][0];
+    cart.push({id:uid++,cat:'print',n:kind.split(' ')[0]+'印刷｜'+(spec||kind),unit:fv(root,'unit')||'式',qty:Number(fv(root,'qty'))||1,orig:p,price:p,open:false});renderCart();toast('已加入試算品項');
+  }
+});
+$('prBody').addEventListener('input',function(e){
+  if(e.target.id==='cardQ'){cardQ=e.target.value.trim();var pos=e.target.selectionStart;renderPrint();var q=$('cardQ');q.focus();q.setSelectionRange(pos,pos);return;}
+  var root=e.target.closest('#calcF');if(!root)return;
+  if(e.target.getAttribute('data-f')==='kind'){var m=root.querySelector('[data-f="mult"]');m.value=CALCP[Number(e.target.value)][1];}
+  $('calcOut').textContent=num(calcSuggest(root));
+});
+function calcSuggest(root){var c=Number(fv(root,'cost'))||0,m=Number(fv(root,'mult'))||1,t=fv(root,'tax')==='1'?1.05:1;return Math.round(c*m*t);}
+$('prBody').addEventListener('click',function(e){
+  var b=e.target.closest('#g_design [data-act]');if(!b)return;
+  var act=b.getAttribute('data-act'),cat='print';
+  if(act==='newitem'){var f=b.closest('[data-newf]'),n=fv(f,'n').trim();if(!n){toast('請填品項名稱');return;}var o=Number(fv(f,'orig'))||0,p=fv(f,'price')===''?o:(Number(fv(f,'price'))||0);
+    persist('i_'+hid(cat+n+Date.now()),{t:'item',cat:cat,group:fv(f,'group').trim()||'自訂',n:n,unit:fv(f,'unit').trim()||'式',orig:o,price:p,note:fv(f,'note'),ts:Date.now()},'已新增品項');return;}
+  var row=b.closest('.ic-item'),id=row.getAttribute('data-id'),it=findItem(cat,id);
+  if(act==='edit'){var ed=row.querySelector('.ic-edit');ed.style.display=ed.style.display==='none'?'block':'none';}
+  if(act==='add'){cart.push(lineFromItem(cat,it));renderCart();toast('已加入：'+it.n);}
+  if(act==='saveedit'){var e2=row.querySelector('.ic-edit'),vals={n:fv(e2,'n').trim()||it.n,unit:fv(e2,'unit'),orig:Number(fv(e2,'orig'))||0,price:Number(fv(e2,'price'))||0,note:fv(e2,'note')};
+    if(it.custom)persist(id,Object.assign({t:'item',cat:cat,group:(customs()[id]||{}).group||'自訂',ts:(customs()[id]||{}).ts||Date.now()},vals),'已更新');else persist('o_'+id,Object.assign({t:'ov',sid:id},vals),'已更新（覆蓋預設）');}
+  if(act==='del'){if(it.custom)removeCustom(id);else persist('o_'+id,{t:'ov',sid:id,hide:1},'已隱藏');}
+});
+
+// ===== 廣告 =====
+function renderAreaTabs(){var rg=$('cBrand').value,AL=rg==='其他'?AREAS:[rg];if(AL.indexOf(area)<0)area=AL[0];$('areaTabs').innerHTML=AL.map(function(a){return '<button class="ic-tab'+(a===area?' ic-on':'')+'" data-a="'+a+'">'+a+'</button>';}).join('');}
+function renderSites(){
+  renderAreaTabs();
+  var q=$('siteQ').value.trim().toLowerCase(),h='';
+  GROUPS.forEach(function(g){
+    var ss=SITES.filter(function(s){return s.a===area&&s.g===g&&(!q||s.n.toLowerCase().indexOf(q)>-1);});
+    if(!ss.length)return;
+    h+='<div class="ic-gname">'+g+'</div><div class="ic-chips">'+ss.map(function(s){return '<button class="ic-chip'+(active===s.n?' ic-on':'')+'" data-s="'+esc(s.n)+'">'+esc(s.n)+'<small>'+s.c+'</small></button>';}).join('')+'</div>';
+  });
+  $('siteList').innerHTML=h||'<div class="ic-hint">沒有符合的站台</div>';
+}
+function slotsOf(s){
+  var o={};Object.keys(s.s).forEach(function(k){o[k]=s.s[k];});
+  if($('showAll').checked){var t=CAT.tierSlots[s.t]||{};Object.keys(t).forEach(function(k){if(!o[k])o[k]={'一年':t[k]['一年'].slice(),'半年':t[k]['半年'].slice()};});}
+  return o;
+}
+function cellPrice(c,p){if(p==='贈送')return 0;if(p==='專案')return c[1]>0?c[1]:(c[0]>0?c[0]:null);return c[0]>0?c[0]:null;}
+function renderMatrix(){
+  var card=$('matrixCard');
+  if(!active){card.style.display='none';return;}
+  var s=siteBy(active);if(!s){card.style.display='none';return;}card.style.display='block';
+  $('mTitle').textContent='站台：'+s.n;
+  $('planSeg').innerHTML=['常態','專案','贈送'].map(function(p){return '<button data-p="'+p+'" class="'+(p===plan?'ic-on':'')+'">'+({'常態':'常態價','專案':'專案價','贈送':'專案贈送'}[p])+'</button>';}).join('');
+  var sl=slotsOf(s),keys=Object.keys(sl).sort(function(a,b){return (sl[b]['一年']?sl[b]['一年'][2]:0)-(sl[a]['一年']?sl[a]['一年'][2]:0);});
+  var used=PERS.filter(function(p){return keys.some(function(k){return sl[k][p];});});
+  var h='<thead><tr><th class="ic-l">版位</th>'+used.map(function(p){return '<th>'+p+'</th>';}).join('')+'</tr></thead><tbody>';
+  keys.forEach(function(k){
+    h+='<tr><td class="ic-l"><b>'+esc(k)+'</b></td>';
+    used.forEach(function(p){
+      var c=sl[k][p];
+      if(!c){h+='<td><button class="ic-cell" disabled>—</button></td>';return;}
+      var pr=cellPrice(c,plan),lab=pr===null?'—':(plan==='贈送'?'贈送':num(pr));
+      var est=c[4]?'<span class="ic-ok">自</span>':((c[2]===0&&plan!=='贈送'&&pr!==null)?'<span class="ic-est">*</span>':'');
+      h+='<td><button class="ic-cell" data-k="'+esc(k)+'" data-p="'+p+'"'+(pr===null?' disabled':'')+'>'+lab+est+'</button></td>';
+    });
+    h+='</tr>';
+  });
+  $('matrix').innerHTML=h+'</tbody>';
+  var allSlots={};SITES.forEach(function(x){Object.keys(x.s).forEach(function(k){allSlots[k]=1;});});
+  $('slotList').innerHTML=Object.keys(allSlots).map(function(k){return '<option value="'+esc(k)+'">';}).join('');
+  var cu='';keys.forEach(function(k){Object.keys(sl[k]).forEach(function(p){var c=sl[k][p];if(c[4])cu+='<span>'+esc(k)+' '+p+'｜'+num(c[0])+(c[1]?' / 專案 '+num(c[1]):'')+' <button data-del="'+esc(c[3])+'" title="刪除">✕</button></span>';});});
+  $('cuList').innerHTML=cu||'<span class="ic-hint">此站台尚無自訂價格</span>';
+}
+function mkAdLine(site,slot,per,c,pl){
+  var orig=c[0]||0,price=pl==='贈送'?0:(pl==='專案'?(c[1]>0?c[1]:c[0]):c[0]);
+  return {id:uid++,cat:'ad',site:site,slot:slot,per:per,plan:pl,ref:c.slice(0,3),n:site+'｜'+slot,unit:per,qty:1,orig:orig,price:price||0,open:false};
+}
+$('matrix').addEventListener('click',function(e){
+  var b=e.target.closest('.ic-cell');if(!b||b.disabled)return;
+  var s=siteBy(active),sl=slotsOf(s),k=b.getAttribute('data-k'),p=b.getAttribute('data-p');
+  cart.push(mkAdLine(active,k,p,sl[k][p],plan));renderCart();toast('已加入：'+active+' '+k+' '+p);
+});
+$('planSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;plan=b.getAttribute('data-p');renderMatrix();});
+$('showAll').addEventListener('change',renderMatrix);
+$('areaTabs').addEventListener('click',function(e){var b=e.target.closest('.ic-tab');if(!b)return;area=b.getAttribute('data-a');active=null;renderSites();renderMatrix();});
+$('siteList').addEventListener('click',function(e){var b=e.target.closest('.ic-chip');if(!b)return;active=b.getAttribute('data-s');renderSites();renderMatrix();});
+$('siteQ').addEventListener('input',renderSites);
+$('nsSave').onclick=function(){
+  var n=$('nsName').value.trim();if(!n){toast('請輸入站台名稱');return;}if(siteBy(n)){toast('這個站台已存在');return;}
+  pending=true;active=n;persist('s_'+hid(n),{t:'site',name:n,area:area,group:$('nsGroup').value,tier:$('nsTier').value,ts:Date.now()});
+  $('nsName').value='';setTimeout(function(){pending=false;},3000);
+};
+$('ncSave').onclick=function(){
+  if(!active){toast('請先選擇站台');return;}
+  var sl=$('ncSlot').value.trim(),pe=$('ncPer').value,nm=Number($('ncNormal').value)||0,pm=Number($('ncPromo').value)||0;
+  if(!sl||nm<=0){toast('請填版位名稱與常態價');return;}
+  persist('c_'+hid(active+'|'+sl+'|'+pe),{t:'cell',site:active,slot:sl,per:pe,normal:nm,promo:pm,ts:Date.now()});
+  $('ncSlot').value='';$('ncNormal').value='';$('ncPromo').value='';
+};
+$('cuList').addEventListener('click',function(e){var b=e.target.closest('[data-del]');if(b)removeCustom(b.getAttribute('data-del'));});
+
+// ===== 清單 =====
+function lineO(l){return l.pass?l.qty*(l.orig||1):l.orig*l.qty;}
+function lineP(l){return l.pass?Math.round(l.qty*(1+(l.fee||0)/100)):l.price*l.qty;}
+function renderCart(){
+  $('cnt').textContent=cart.length?'（'+cart.length+' 項）':'';
+  $('cartEmpty').style.display=cart.length?'none':'block';
+  var h='';
+  CATORDER.forEach(function(c){
+    var ls=cart.filter(function(l){return l.cat===c;});if(!ls.length)return;
+    var so=0,sp=0;ls.forEach(function(l){so+=lineO(l);sp+=lineP(l);});
+    h+='<div class="ic-chead"><span>'+CATNAME[c]+'</span><span>原價 '+num(so)+'　優惠價 '+num(sp)+'</span></div>';
+    ls.forEach(function(l){h+=lineHtml(l);});
+  });
+  $('cart').innerHTML=h;renderNav();totals();
+}
+function lineHtml(l){
+  var nm;
+  if(l.cat==='ad')nm='<b>'+esc(l.site)+'</b><span class="ic-m">'+esc(l.slot)+'｜'+esc(l.per)+'　<select data-k="plan" style="width:auto;padding:2px 4px;font-size:12px"><option value="常態"'+(l.plan==='常態'?' selected':'')+'>常態價</option><option value="專案"'+(l.plan==='專案'?' selected':'')+'>專案價</option><option value="贈送"'+(l.plan==='贈送'?' selected':'')+'>贈送</option></select></span>';
+  else nm='<input type="text" data-k="n" value="'+esc(l.n)+'" style="font-weight:600"><span class="ic-m">單位：'+esc(l.unit)+(l.pass?'　代收手續費 %：<input type="number" data-k="fee" min="0" value="'+(l.fee||0)+'" style="width:64px;padding:2px 4px;font-size:12px">':'')+'</span>';
+  var h='<div class="ic-line" data-id="'+l.id+'"><div>'+nm+'</div>'
+   +'<input type="number" min="0" data-k="qty" value="'+l.qty+'" title="'+(l.pass?'儲值金額':'數量')+'">'
+   +(l.pass?'<div class="ic-lt" style="grid-column:span 2;font-weight:400;color:#6b7280">儲值金不計稅</div>':'<input type="number" min="0" data-k="orig" value="'+l.orig+'" title="原價（單價）"><input type="number" min="0" data-k="price" value="'+l.price+'" title="優惠價（單價）">')
+   +'<div class="ic-lt">'+num(lineP(l))+'</div><div>'+(l.cat==='ad'&&siteBy(l.site)?'<button class="ic-btn ic-b2 ic-bs" data-act="more">＋站</button> ':'')+'<button class="ic-btn ic-b2 ic-bs" data-act="del">✕</button></div>';
+  if(l.open){
+    var st0=siteBy(l.site),opts=!st0?[]:SITES.filter(function(s){return s.n!==l.site&&s.a===st0.a&&s.s[l.slot]&&s.s[l.slot][l.per];});
+    h+='<div class="ic-more"><div class="ic-hint" style="margin:0 0 6px">同版位「'+esc(l.slot)+' '+esc(l.per)+'」也加入這些站台：</div>'
+     +(opts.length?opts.map(function(s){return '<label><input type="checkbox" data-add="'+esc(s.n)+'"> '+esc(s.n)+'</label>';}).join('')+'<div style="margin-top:6px"><button class="ic-btn ic-b1 ic-bs" data-act="addmore">加入勾選的站台</button></div>':'<span class="ic-hint">沒有其他站台有這個版位。</span>')+'</div>';
+  }
+  return h+'</div>';
+}
+$('cart').addEventListener('input',function(e){
+  var r=e.target.closest('.ic-line');if(!r)return;var l=cart.filter(function(x){return x.id==r.getAttribute('data-id');})[0],k=e.target.getAttribute('data-k');if(!k)return;
+  if(k==='plan'){l.plan=e.target.value;l.price=l.plan==='贈送'?0:(l.plan==='專案'?(l.ref[1]>0?l.ref[1]:l.ref[0]):l.ref[0]);renderCart();}
+  else if(k==='n'){l.n=e.target.value;}
+  else{l[k]=Math.max(0,Number(e.target.value)||0);r.querySelector('.ic-lt').textContent=num(lineP(l));totals();}
+});
+$('cart').addEventListener('change',function(e){if(e.target.getAttribute('data-k')&&e.target.getAttribute('data-k')!=='n')renderCart();});
+$('cart').addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]');if(!b)return;var r=b.closest('.ic-line'),id=r.getAttribute('data-id'),i=cart.findIndex(function(x){return x.id==id;}),l=cart[i],a=b.getAttribute('data-act');
+  if(a==='del'){cart.splice(i,1);renderCart();}
+  if(a==='more'){l.open=!l.open;renderCart();}
+  if(a==='addmore'){var n=0;r.querySelectorAll('[data-add]:checked').forEach(function(c){var s=siteBy(c.getAttribute('data-add'));cart.push(mkAdLine(s.n,l.slot,l.per,s.s[l.slot][l.per],l.plan));n++;});l.open=false;renderCart();if(n)toast('已加入 '+n+' 個站台');}
+});
+$('oiAdd').onclick=function(){
+  var n=$('oiName').value.trim();if(!n){toast('請填項目名稱');return;}
+  var o=Number($('oiOrig').value)||0,p=$('oiPrice').value===''?o:(Number($('oiPrice').value)||0);
+  cart.push({id:uid++,cat:'other',n:n,unit:$('oiUnit').value.trim()||'式',qty:Number($('oiQty').value)||1,orig:o,price:p,open:false});
+  renderCart();['oiName','oiUnit','oiOrig','oiPrice'].forEach(function(i){$(i).value='';});$('oiQty').value=1;toast('已加入');
+};
+$('bClear').onclick=function(){cart=[];renderCart();$('sheet').className='ic-sheet';};
+
+// ===== 套餐 =====
+function pkgs(){var cu=customs(),r=[];Object.keys(cu).forEach(function(k){if(cu[k]&&cu[k].t==='pkg')r.push(Object.assign({id:k},cu[k]));});return r;}
+function renderPk(){
+  var p=pkgs();$('pkList').innerHTML=p.length?p.map(function(x){return '<span>'+esc(x.name)+'（'+x.lines.length+'項）<button data-pk="'+esc(x.id)+'" style="color:#0f3d5e">套用</button><button data-pd="'+esc(x.id)+'" title="刪除">✕</button></span>';}).join(''):'<span class="ic-hint">尚無套餐。先把項目加到清單，再取個名字存起來。</span>';
+}
+$('pkSave').onclick=function(){
+  var n=$('pkName').value.trim();if(!n){toast('請輸入套餐名稱');return;}if(!cart.length){toast('清單是空的');return;}
+  var ls=cart.map(function(l){var o=JSON.parse(JSON.stringify(l));delete o.id;delete o.open;return o;});
+  persist('k_'+hid(n),{t:'pkg',name:n,lines:ls,ts:Date.now()},'已存成套餐');$('pkName').value='';
+};
+$('pkList').addEventListener('click',function(e){
+  var a=e.target.closest('[data-pk]'),d=e.target.closest('[data-pd]');
+  if(a){var p=customs()[a.getAttribute('data-pk')];if(p){p.lines.forEach(function(l){var o=JSON.parse(JSON.stringify(l));o.id=uid++;o.open=false;cart.push(o);});renderCart();toast('已套用：'+p.name);}}
+  if(d)removeCustom(d.getAttribute('data-pd'));
+});
+
+// ===== 合計 =====
+function calc(){
+  var o=0,p=0,pass=0,cats={};
+  cart.forEach(function(l){var lo=lineO(l),lp=lineP(l);o+=lo;if(l.pass)pass+=lp;else p+=lp;cats[l.cat]=cats[l.cat]||[0,0];cats[l.cat][0]+=lo;cats[l.cat][1]+=lp;});
+  var disc=Math.max(0,Number($('cDisc').value)||0),base=Math.max(0,p-disc),tax=$('cTax').value==='1'?Math.round(base*0.05):0;
+  var auto=base+tax+pass,ov=$('cOverride').value,fin=ov!==''?Number(ov):auto;
+  return {orig:o,sub:p,disc:disc,tax:tax,pass:pass,auto:auto,final:fin,cats:cats};
+}
+function totals(){var t=calc(),ext=$('cTax').value==='1';$('tOrig').textContent=' '+fmt(t.orig)+(ext?'｜未稅 '+fmt(t.sub-t.disc)+' ＋稅 '+fmt(t.tax)+(t.pass?' ＋儲值金 '+fmt(t.pass):''):'');$('tTotal').textContent=(ext?'專案價（含 5% 稅）':'專案價（稅內含）')+fmt(t.final);}
+['cDisc','cTax','cOverride'].forEach(function(i){$(i).addEventListener('input',totals);});
+
+// ===== 報價單 =====
+function minguo(d){var x=new Date(d);return '民國 '+(x.getFullYear()-1911)+' 年 '+(x.getMonth()+1)+' 月 '+x.getDate()+' 日';}
+var curNo='';
+function docCats(){return $('cDoc').value==='adpkg'?['host','ad']:CATORDER;}
+function title(){var b=BR[$('cBrand').value];return $('cDoc').value==='adpkg'?b.n+'－'+$('cType').value+'廣告優惠專案':'景騰多媒體報價單';}
+function payText(t){
+  var m=$('cPay').value,dep=Number($('cDeposit').value)||0,f=t.final;
+  if(m==='0')return '付款方式：簽約後一次付清 '+num(f)+' 元。';
+  if(m==='1')return '付款方式：\n定金 '+num(dep)+' 元（簽約時）\n尾款 '+num(Math.max(0,f-dep))+' 元（完成驗收時）';
+  var mid=Math.round(f*(Number($('cMid').value)||0)/100);
+  return '付款方式：\n定金 '+num(dep)+' 元（簽約時）\n中期款 '+num(mid)+' 元（'+(Number($('cMid').value)||0)+'%）\n尾款 '+num(Math.max(0,f-dep-mid))+' 元（完成驗收時）';
+}
+async function generate(){
+  if(!cart.length){toast('請先選擇項目');return;}
+  var cats=docCats(),ls=cart.filter(function(l){return cats.indexOf(l.cat)>-1;});
+  if(!ls.length){toast('這個文件類型沒有符合的項目');return;}
+  var t=calc(),b=BR[$('cBrand').value],adpkg=$('cDoc').value==='adpkg';
+  var n;try{n=await store.nextSeq();}catch(e){console.error(e);toast('取得單號失敗，請確認網路或權限');return;}
+  curNo='Q'+($('cDate').value||'').replace(/-/g,'').slice(2)+'-'+AREACODE[$('cBrand').value]+'-'+String(n).padStart(3,'0');
+  $('sTitle').textContent=title();
+  $('sDue').textContent='即日起至 '+minguo($('cDue').value)+' 付款即享優惠';
+  $('sMeta').innerHTML='<div>客戶：'+esc($('cName').value||'—')+'</div><div>報價單號：'+curNo+'</div><div>聯絡人：'+esc($('cContact').value||'—')+(($('cTel').value)?'　電話：'+esc($('cTel').value):'')+'</div><div>承辦業務：'+esc($('cSales').value||'—')+'</div><div>報價日期：'+$('cDate').value+'</div><div>優惠截止：'+$('cDue').value+'</div>';
+  var h='',hasAd=false;
+  cats.forEach(function(c){
+    var cl=ls.filter(function(l){return l.cat===c;});if(!cl.length)return;if(c==='ad')hasAd=true;
+    var so=0,sp=0;cl.forEach(function(l){so+=lineO(l);sp+=lineP(l);});
+    h+='<tr><td class="ic-cat" colspan="5">'+CATNAME[c]+'</td></tr>';
+    cl.forEach(function(l){
+      var nm=l.cat==='ad'?esc(l.site)+'｜'+esc(l.slot)+'｜'+esc(l.per):esc(l.n)+(l.unit&&l.unit!=='式'?'（'+esc(l.unit)+'）':'');
+      if(l.pass)h+='<tr><td class="ic-l">'+nm+(l.fee?'（含代收手續費 '+l.fee+'%）':'')+'</td><td class="ic-r">—</td><td class="ic-r">—</td><td class="ic-r">金額</td><td class="ic-r">'+num(lineP(l))+'</td></tr>';
+      else h+='<tr><td class="ic-l">'+nm+'</td><td class="ic-r">'+(l.orig?num(l.orig):'—')+'</td><td class="ic-r">'+(l.price===0&&l.orig?'贈送':num(l.price))+'</td><td class="ic-r">'+l.qty+'</td><td class="ic-r">'+(l.price===0&&l.orig?'贈送':num(l.price*l.qty))+'</td></tr>';
+    });
+    h+='<tr><td colspan="3" class="ic-l" style="color:#6b7280">小計</td><td class="ic-r" style="color:#6b7280">原價 '+num(so)+'</td><td class="ic-r"><b>'+num(sp)+'</b></td></tr>';
+  });
+  $('sBody').innerHTML=h;
+  var s='<div>原價（總價值）</div><div>'+num(t.orig)+' 元</div>';
+  if(t.disc)s+='<div>額外折讓</div><div>- '+num(t.disc)+' 元</div>';
+  if($('cTax').value==='1')s+='<div>營業稅 5%（以上項目金額為未稅價）</div><div>'+num(t.tax)+' 元</div>';else s+='<div style="color:#6b7280">以上金額皆為含稅價</div><div></div>';
+  if(t.pass)s+='<div>儲值金（不計稅）</div><div>'+num(t.pass)+' 元</div>';
+  s+='<div style="font-size:18px;color:#0f3d5e"><b>專案優惠價（含稅）</b></div><div style="font-size:18px;color:#0f3d5e">'+num(t.final)+' 元</div>';
+  $('sSum').innerHTML=s;
+  $('sPay').textContent=adpkg?'':payText(t);$('sPay').style.display=adpkg?'none':'block';
+  var rules='備註與條款\n'+$('cNote').value;
+  if(hasAd){var mem=$('cType').value==='會員';rules+='\n\n廣告刊登說明\n'+(mem?RULE_M:RULE_M.filter(function(x,i){return i!==0;})).map(function(r,i){return (i+1)+'. '+r;}).join('\n');}
+  $('sRules').textContent=rules;
+  $('sSign').innerHTML='確認簽章：　　　　　　　　　　　中華民國　'+(new Date().getFullYear()-1911)+'　年　　月　　日<br>景騰多媒體股份有限公司（統編 24285548）'+(b.u?' ／ '+b.u:'')+'<br>電話：03-9565626 / 03-9560407 ／ 傳真：03-9572464 ／ 地址：宜蘭縣羅東鎮倉前路3號 ／ E-Mail：ete@ete.com.tw';
+  store.saveQuote({no:curNo,customer:$('cName').value,contact:$('cContact').value,tel:$('cTel').value,sales:$('cSales').value,region:$('cBrand').value,custType:$('cType').value,docType:$('cDoc').value,tax:$('cTax').value==='1'?'excl':'incl',date:$('cDate').value,due:$('cDue').value,discount:Number($('cDisc').value)||0,total:t.final,lines:JSON.stringify(ls),totals:JSON.stringify(t)});
+  $('sheet').className='ic-sheet ic-show';$('sheet').scrollIntoView&&$('sheet').scrollIntoView({behavior:'smooth'});
+}
+function textVer(){
+  var cats=docCats(),t=calc(),s='【'+title()+'】'+curNo+'\n客戶：'+($('cName').value||'—')+'　聯絡人：'+($('cContact').value||'—')+'\n付款優惠截止：'+minguo($('cDue').value)+'\n';
+  cats.forEach(function(c){
+    var cl=cart.filter(function(l){return l.cat===c;});if(!cl.length)return;
+    s+='\n■ '+CATNAME[c]+'\n';
+    cl.forEach(function(l){
+      var nm=l.cat==='ad'?l.site+'｜'+l.slot+' '+l.per:l.n;
+      if(l.pass)s+='・'+nm+'：'+num(lineP(l))+' 元\n';
+      else s+='・'+nm+(l.qty!==1?' x'+l.qty+(l.unit&&l.unit!=='式'?l.unit:''):'')+'｜'+(l.price===0&&l.orig?'贈送（價值'+num(l.orig)+'）':(l.orig&&l.orig!==l.price?'原價'+num(l.orig)+'→':'')+num(l.price*l.qty)+' 元')+'\n';
+    });
+  });
+  s+='\n－－－－－－－－\n原價 '+num(t.orig)+' 元\n';
+  if(t.tax)s+='營業稅 5%（以上項目為未稅價）：'+num(t.tax)+' 元\n';else s+='（以上皆為含稅價）\n';
+  if(t.pass)s+='儲值金 '+num(t.pass)+' 元（不計稅）\n';
+  s+='專案優惠價 '+num(t.final)+' 元';
+  if($('cDoc').value!=='adpkg')s+='\n\n'+payText(t);
+  return s;
+}
+$('bGen').onclick=generate;
+$('bLine').onclick=function(){var a=document.createElement('a');a.href='https://line.me/R/msg/text/?'+encodeURIComponent(textVer());a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();};
+$('bCopy').onclick=function(){var x=textVer();function fb(){var q=document.createElement('textarea');q.value=x;document.body.appendChild(q);q.select();try{document.execCommand('copy');toast('已複製');}catch(e){toast('複製失敗');}q.remove();}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(x).then(function(){toast('已複製');},fb);}else fb();};
+$('bPrint').onclick=function(){window.print();};
+
+$('ncPer').innerHTML=PERS.map(function(p){return '<option>'+p+'</option>';}).join('');
+store.onCustom(function(docs){DBDOCS=docs;rebuild();refreshAll();},function(e){console.error(e);toast('自訂資料讀取失敗');});
+rebuild();
+var d0=new Date(),d1=new Date();d1.setDate(d1.getDate()+7);
+$('cDate').value=d0.toISOString().slice(0,10);$('cDue').value=d1.toISOString().slice(0,10);
+$('cBrand').addEventListener('change',function(){if($('cBrand').value!=='其他')area=$('cBrand').value;active=null;refreshAll();renderNav();});
+renderNav();renderCart();renderPk();updStat();
+};
+</script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, doc, setDoc, deleteDoc, addDoc, onSnapshot, runTransaction, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
+  authDomain: "gantt-marketing.firebaseapp.com",
+  projectId: "gantt-marketing",
+  storageBucket: "gantt-marketing.firebasestorage.app",
+  messagingSenderId: "966398251503",
+  appId: "1:966398251503:web:d6a2173863f9ca1cfd261a"
+};
+const ALLOWED_EMAILS = [
+  "webview168@gmail.com","mimo.jsm@gmail.com","am578222@gmail.com",
+  "amy.ete@gmail.com","annie907120@gmail.com","bellsugar@gmail.com",
+  "maggie80405@gmail.com","miemie686@gmail.com","s0912656315@gmail.com",
+  "teresaho0901@gmail.com","a7733421@gmail.com","vivi7733421@gmail.com"
+];
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+let started = false;
+
+// Firestore：quoteCustom（自訂品項／覆蓋／套餐／自訂站台與價格）、quoteMeta/counter（單號流水號）、quotes（歷史報價）
+function makeStore(user){
+  return {
+    save: (id, data) => setDoc(doc(db, 'quoteCustom', id), JSON.parse(JSON.stringify(data))),
+    del: (id) => deleteDoc(doc(db, 'quoteCustom', id)),
+    onCustom: (ok, err) => onSnapshot(collection(db, 'quoteCustom'), (s) => {
+      const o = {}; s.docs.forEach((d) => { o[d.id] = d.data(); }); ok(o);
+    }, err),
+    nextSeq: () => runTransaction(db, async (tx) => {
+      const ref = doc(db, 'quoteMeta', 'counter');
+      const snap = await tx.get(ref);
+      const n = (snap.exists() ? snap.data().n : 0) + 1;
+      tx.set(ref, { n });
+      return n;
+    }),
+    saveQuote: (rec) => addDoc(collection(db, 'quotes'), { ...rec, createdBy: user.email, createdAt: serverTimestamp() }).catch((e) => console.error(e))
+  };
+}
+
+onAuthStateChanged(auth, (user) => {
+  if (user && ALLOWED_EMAILS.includes(user.email)) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-name').textContent = user.displayName || user.email;
+    if (user.photoURL) document.getElementById('user-avatar').src = user.photoURL;
+    if (!started) { started = true; window.startQuote(makeStore(user)); }
+  } else if (user) {
+    signOut(auth).finally(() => location.replace('home.html'));
+  } else {
+    location.replace('home.html');
+  }
+});
+
+window.doSignOut = () => signOut(auth);
+</script>
+</body>
+</html>
