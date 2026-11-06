@@ -98,6 +98,9 @@ html,body{margin:0;padding:0;background:#f3f5f8;}
 .ic-ad .ic-meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin:10px 0;font-size:14px;}
 .ic-ad .ic-sheet th{background:#0f3d5e;color:#ffffff;}
 .ic-ad .ic-sheet td.ic-r,.ic-ad .ic-sheet th.ic-r{text-align:right;}
+.ic-ad .ic-sheet td.ic-dtl{text-align:left;font-size:12px;color:#4b5563;background:#fafbfc;line-height:1.6;padding:8px 10px;}
+.ic-ad .ic-drow{display:grid;grid-template-columns:200px 1fr 40px;gap:6px;margin-bottom:6px;align-items:start;}
+.ic-ad .ic-drow textarea{min-height:38px;}
 .ic-ad .ic-sheet td.ic-cat{background:#eef3f8;font-weight:700;color:#0f3d5e;text-align:left;}
 .ic-ad .ic-sum{margin-top:12px;margin-left:auto;max-width:420px;display:grid;grid-template-columns:1fr auto;gap:4px 14px;font-size:15px;}
 .ic-ad .ic-sum div:nth-child(even){text-align:right;font-weight:600;}
@@ -105,6 +108,9 @@ html,body{margin:0;padding:0;background:#f3f5f8;}
 .ic-ad .ic-sign{margin-top:14px;font-size:13px;border:1px solid #cfd6df;border-radius:6px;padding:10px;}
 .ic-ad .ic-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111827;color:#ffffff;padding:8px 16px;border-radius:20px;font-size:14px;display:none;z-index:20;}
 @media (max-width:760px){
+.ic-ad .ic-drow{grid-template-columns:1fr 40px;}
+.ic-ad .ic-drow input{grid-column:1 / 2;}
+.ic-ad .ic-drow textarea{grid-column:1 / 2;}
 .ic-ad .ic-line{grid-template-columns:1fr 1fr 1fr;}
 .ic-ad .ic-line > div:first-child{grid-column:1 / 4;}
 .ic-ad .ic-item{grid-template-columns:1fr 100px 70px 32px;}
@@ -166,7 +172,7 @@ html,body{background:#ffffff;}
   <div class="ic-pane" id="p_web"><div class="ic-card"><h2>網站版型</h2><div id="g_web"></div></div></div>
   <div class="ic-pane" id="p_host"><div class="ic-card"><h2>主機與附加服務</h2><div id="g_host"></div></div></div>
   <div class="ic-pane" id="p_photo"><div class="ic-card"><h2>攝影服務</h2><div id="g_photo"></div></div></div>
-  <div class="ic-pane" id="p_feat"><div class="ic-card"><h2>功能加購</h2><div class="ic-hint">尚無預設項目，請用下方「新增品項」建立，之後所有人都能直接點選。</div><div id="g_feat"></div></div></div>
+  <div class="ic-pane" id="p_feat"><div class="ic-card"><h2>功能加購</h2><div class="ic-hint">項目取自 CRM「增加功能」紀錄；價格為 0 的請加入清單後直接填價（改價後也可用「編輯」存成預設價）。找不到的可用下方「新增品項」建立。</div><div id="g_feat"></div></div></div>
   <div class="ic-pane" id="p_ops"><div class="ic-card"><h2>廣告代操與儲值金</h2><div id="g_ops"></div></div></div>
 
   <div class="ic-pane" id="p_print">
@@ -295,14 +301,44 @@ var CATS=[
 var CATNAME={web:'網站建置',host:'主機與附加服務',ad:'廣告刊登',photo:'攝影服務',print:'印刷品與設計',feat:'功能加購',ops:'廣告代操與儲值金',other:'其他項目'};
 var CATORDER=['web','host','ad','photo','print','feat','ops','other'];
 var I=function(id,n,unit,orig,price,note,extra){var o={id:id,n:n,unit:unit||'式',orig:orig,price:price,note:note||''};if(extra)for(var k in extra)o[k]=extra[k];return o;};
+
+var WEBD=(function(){
+  var T=function(n,d){return {n:n,d:d};};
+  var SIZE=function(u){return T('網站設計版面尺寸','提供RWD響應式互動技術進行網站設計，網頁標準尺寸1920*1080。'+(u?'\n程式及結構依照範本製作：'+u:''));};
+  var NEWS=T('最新消息(新版)','前台頁面以文章標題預覽，點選後進入內文。\n提供後台登入編輯器，可上架文章，嵌入連結、圖片、影片等資訊。');
+  var INTRO=T('簡介(靜態)','圖片搭配文字說明，呈現靜態版面設計，強調民宿特色與風格展現。');
+  var ROOMA=T('房型介紹 1頁*?組（每組4張照片）','以客房、衛浴及相關設施多角度展示，搭配房價表、房內設施說明。\n二人房　間 / 四人房　間 / 六人房　間');
+  var RULES=T('訂房須知','文字搭配圖示說明，以頁籤設計展示住宿須知、匯款資訊、貼心服務等資訊。');
+  var HOT=T('熱門節慶(程式)／景點導覽(程式)','景騰多媒體提供多元景點資訊，系統主動更新熱門旅遊、景點資訊，有效擴充網站關鍵字優化。');
+  var CONTACT=T('聯絡資訊','每頁最下方以文字完整條列民宿聯絡資訊，方便瀏覽者與您取得聯絡。');
+  var MAP=T('交通資訊','嵌入Google Map地圖程式，手機用戶可自動跳轉導航模式。');
+  var BADGE=T('合格標章','陳列民宿相關標章：合法民宿、好客民宿、國旅卡...等，可擴充。');
+  var SOCIAL=T('FB、LINE、CALL','提供快捷按鈕連結社群軟體及快速分享按鈕，方便瀏覽者快速與您取得聯絡。');
+  var NAV6=T('首頁導覽選單*6顆','快速導覽選單，幫助使用者快速選取需求頁面並點選進入頁面瀏覽。');
+  var ROOMNAV=T('客房導覽頁','商品展示目錄的設計方式，讓遊客更快速選擇需求房型/風格。');
+  var ROOMDYN=T('房型介紹(動態) ?頁*4小圖','以客房、衛浴及相關設施多角度大圖輪播展示，搭配房價表、房內設施說明。\n二人房　間 / 四人房　間 / 六人房　間');
+  return {
+    a:[SIZE('https://elbnb.com/24JanWA/'),T('首頁(靜態)','選用照片一張固定右側邊，展示民宿特色及LOGO。\n左側下滑導覽頁面，快速進入：最新消息、簡介、客房、須知。'),NEWS,INTRO,ROOMA,RULES,HOT,CONTACT,MAP,BADGE,SOCIAL],
+    a2:[SIZE('https://elbnb.com/24JanWA2/'),T('首頁(靜態)','首頁一張大圖設計，展示民宿特色及LOGO。\n下滑導覽頁面，快速進入：最新消息、簡介、客房、須知。'),NEWS,INTRO,ROOMA,RULES,HOT,CONTACT,MAP,BADGE,SOCIAL],
+    b:[SIZE('https://elbnb.com/24JanWB/'),T('首頁形象設計(靜態)','採用滿版設計展示民宿特色，創造延伸視覺感受。'),NEWS,T('民宿簡介(靜態)','圖片搭配文字說明，呈現靜態版面設計，強調民宿特色與風格展現。\n※設有一組動態2小圖輪播格，可加價擴充照片數，增加展示空間。'),T('房型介紹 1頁 ?組*4圖','以客房、衛浴及相關設施多角度大圖輪播展示，搭配房價表、房內設施說明。\n二人房　間 / 四人房　間 / 六人房　間'),RULES,HOT,CONTACT,MAP,BADGE,SOCIAL],
+    c:[SIZE('https://elbnb.com/24JanWC/'),T('首頁形象設計（4大圖＋4小圖）','採用動畫輪播設計增加展示元素，滿版面創造延伸視覺感受。'),NEWS,SOCIAL,NAV6,T('民宿簡介','圖片搭配文字說明，呈現靜態版面設計，強調民宿特色與風格展現。\n※設有一組動態6圖輪播格，可加價擴充照片數，增加展示空間。'),ROOMNAV,ROOMDYN,RULES,T('交通資訊','提供交通指引、大眾運輸的文字資訊，嵌入Google Map地圖程式，手機用戶可自動跳轉導航模式。'),HOT,CONTACT,BADGE],
+    x:[T('網站設計版面尺寸','提供RWD響應式互動技術進行網站設計，網頁標準尺寸1920*1080。\n主選單設計一律採用隱藏式選單(MENU)。'),T('首頁形象動態*4圖','採用動畫輪播設計增加展示元素，滿版畫面創造延伸視覺感受。'),T('首頁導覽選單*4~6顆','快速導覽選單，幫助使用者快速選取需求頁面並點選進入頁面瀏覽。'),NEWS,T('浮動按鈕(程式)','提供快捷按鈕連結社群軟體，方便瀏覽者快速與您取得聯絡。\n電腦畫面為浮動式選單，手機畫面為底部固定選單。按鈕包含：FB、LINE、CALL。'),INTRO,ROOMNAV,ROOMDYN,T('訂房須知','文字搭配圖示說明，頁籤展示：住宿須知、匯款資訊、貼心服務。'),MAP,CONTACT,BADGE,HOT,T('最新消息(圖文版)','前台頁面以圖片加文章標題預覽，點選後進入內文。\n提供後台登入編輯器，可上架文章，嵌入連結、圖片、影片等資訊。'),T('相片寫真','前台頁面陳列相簿，點選後進入照片區，圖片點擊可放大瀏覽。\n提供後台登入系統，可新增相簿、加入照片(文字僅限標題)。')],
+    corp:[T('前台｜網站設計尺寸','提供RWD響應式互動技術進行網站設計，網頁標準尺寸1920*1080。'),T('前台｜首頁設計','採用四張動畫圖片輪播設計增加展示元素，滿版面創造延伸視覺感受。'),T('前台｜Line浮動式按鈕','提供全頁式快捷按鈕連結社群軟體，方便瀏覽者快速與您取得聯絡。'),T('前台｜公司簡介','以靜態圖片搭配文字說明，呈現版面設計，強調企業專業與形象。'),T('前台｜產品購物車','後端程式提供客人購物之資料庫系統。\n上架產品圖片(六圖)/產品內文編輯/產品編號/規格/原價/特價/數量/加入購物車。'),T('前台｜主目錄(產品導覽頁)','依產品分類呈現明細（請依客戶產品調整）。'),T('前台｜付款資訊','信用卡金流串接：提供金流信用卡串接設定。\n匯款資訊：提供ATM轉帳明細，供客戶付款之用。'),T('前台｜購物須知','以靜圖文說明，呈現訂購須知之注意事項。'),T('前台｜聯絡我們','提供商家資訊與嵌入Google Map地圖程式，以便客戶搜詢。'),T('前台｜最新消息','後端程式發布最新消息或優惠活動，提供第一手最新資訊。'),T('前台｜訂單查詢','提供至宅配系統之訂單查詢網址連結。'),T('前台｜FB/LINE/CALL按鈕','提供快捷按鈕連結社群軟體，方便瀏覽者快速與您取得聯絡。'),T('前台｜社群分享按鈕','提供快速分享按鈕，方便瀏覽者分享您的網站給他的朋友。'),T('後台｜最新消息','系統提供後端帳密。使用者可依照編輯器撰寫文章，嵌入連結、影片、圖片等資訊。'),T('後台｜產品購物車','系統提供後端帳密。產品品項可設定庫存。\n付款條件：匯款／信用卡金流串接／貨到付款串接。'),T('後台｜訂單列表','顯示填單記錄內容；可設定付款YES&NO／取消訂單(可封存或刪除)；訂單明細內容，商家可重發mail確認信、取消訂單。')]
+  };
+})();
 var SEED={
- web:[{g:'民宿官網',items:[I('w_a','民宿官網 A 版型','式',57000,18000),I('w_a2','民宿官網 A2 版型','式',57000,18000),I('w_b','民宿官網 B 版型','式',69000,24000),I('w_c','民宿官網 C 版型','式',91000,35000),I('w_x','民宿官網 客製化版型','式',0,0,'依需求報價，加入後直接改價')]},
-  {g:'企業網站',items:[I('w_corp','企業形象網站（前台網站設計＋後台系統建置）','式',240000,109888)]}],
+ web:[{g:'民宿官網',items:[I('w_a','民宿官網 A 版型','式',57000,18000,'',{detail:WEBD.a}),I('w_a2','民宿官網 A2 版型','式',57000,18000,'',{detail:WEBD.a2}),I('w_b','民宿官網 B 版型','式',69000,24000,'',{detail:WEBD.b}),I('w_c','民宿官網 C 版型','式',91000,35000,'',{detail:WEBD.c}),I('w_x','民宿官網 客製化版型','式',0,0,'依需求報價，加入後直接改價；明細可自由增刪',{detail:WEBD.x})]},
+  {g:'企業網站',items:[I('w_corp','企業形象網站（前台網站設計＋後台系統建置）','式',240000,109888,'',{detail:WEBD.corp})]}],
  host:[{g:'主機空間（一年，依地區）',items:[I('h_t3_yl','T3專線虛擬主機空間（宜蘭）','年',8000,8000),I('h_t3','T3專線虛擬主機空間（花蓮、台東）','年',10000,10000)]},{g:'主機空間（半年，所有地區同價）',items:[I('h_t3_6','T3專線虛擬主機空間（半年）','半年',6000,6000)]},
   {g:'贈送項目（標價值、優惠價 0）',items:[I('h_edit','不限次數照片及文字修改','12個月',12000,0),I('h_url','提供專屬官方網站網址','12個月',1000,0),I('h_town','鄉鎮文字連結曝光','式',18000,0)]}],
  photo:[{g:'攝影服務',items:[I('p_1','攝影服務 方案一','式',8000,0,'拍攝範圍（樓層／房型間數）請改在名稱註明'),I('p_2','攝影服務 方案二','式',12000,0),I('p_3','攝影服務 方案三','式',20000,0)]}],
  print:[{g:'設計費',items:[I('d_dm1','DM設計費（單面／不提供原始檔／配合印刷）','款',6000,3000),I('d_dm2','DM設計費（雙面／不提供原始檔／配合印刷）','款',8000,4000),I('d_post','海報設計費（配合印刷）','款',6000,3000),I('d_stk','貼紙設計費（一版）','版',2000,1200,'增加版本款式每款加收修改費 100 元'),I('d_logo','LOGO設計專案（提供原始檔）','式',19800,12800,'歷史成交：原價 16,800–22,800、優惠價 8,800–13,800')]}],
- feat:[],
+ feat:[
+  {g:'獨立網址與光碟',items:[I('x_d1','獨立網址 1年','年',0,0,'價格請加入清單後填寫'),I('x_d2','獨立網址 2年','年',0,0,'價格請加入清單後填寫'),I('x_d3','獨立網址 3年','年',0,0,'價格請加入清單後填寫'),I('x_d5','獨立網址 5年','式',3400,3400,'CRM 備註：5年 3,400 元'),I('x_d10','獨立網址 10年','式',4800,4800,'CRM 備註：10年 4,800 元'),I('x_dset','網址設定費','次',0,0,'價格請加入清單後填寫'),I('x_cd','燒光碟（網站）','片',0,0,'價格請加入清單後填寫')]},
+  {g:'增加頁面與程式',items:[I('x_ps','增加頁面（靜態）','頁',0,0,'價格請加入清單後填寫'),I('x_pd','增加頁面（動態）','頁',0,0,'價格請加入清單後填寫'),I('x_gf','增加程式（Google 表單）','式',0,0,'價格請加入清單後填寫'),I('x_od','增加程式（訂購單下載）','式',0,0,'價格請加入清單後填寫'),I('x_ph','增加程式（相片牆）','式',0,0,'價格請加入清單後填寫'),I('x_nw','增加程式（News 圖文版）','式',0,0,'價格請加入清單後填寫'),I('x_bk','增加程式（嵌入訂房查詢欄位）','式',0,0,'價格請加入清單後填寫'),I('x_ct','增加程式（購物車）','式',0,0,'價格請加入清單後填寫'),I('x_pay','購物車金流設定','式',0,0,'價格請加入清單後填寫'),I('x_rm','增加客房小圖','式',0,0,'價格請加入清單後填寫'),I('x_an','網站動畫升級','式',0,0,'價格請加入清單後填寫')]},
+  {g:'按鈕',items:[I('x_bf','增加全頁式按鈕（訂房）','式',0,0,'價格請加入清單後填寫'),I('x_bb','增加浮動式按鈕（訂房）','式',0,0,'價格請加入清單後填寫'),I('x_bl','增加浮動式按鈕（LINE）','式',0,0,'價格請加入清單後填寫'),I('x_bg','增加浮動式按鈕組（FB／LINE／電話）','式',0,0,'價格請加入清單後填寫')]},
+  {g:'拍攝與影片',items:[I('x_sh','出機拍照','次',0,0,'價格請加入清單後填寫'),I('x_sh2','二次出機拍照','次',0,0,'價格請加入清單後填寫'),I('x_biz','商業攝影','式',0,0,'價格請加入清單後填寫'),I('x_sv','短影音剪輯','支',0,0,'價格請加入清單後填寫'),I('x_vd','影片剪輯','支',0,0,'價格請加入清單後填寫')]},
+  {g:'其他服務',items:[I('x_line','Line 官方帳號設定','式',0,0,'價格請加入清單後填寫'),I('x_yh','代申請奇摩關鍵字','式',0,0,'價格請加入清單後填寫'),I('x_op','代操洽談','式',0,0,'價格請加入清單後填寫')]}],
  ops:[
   {g:'Google 關鍵字行銷規劃（新買）',items:[I('g_3','Google 關鍵字行銷規劃 3個月','專案',18000,12000,'含圖片素材 1 張'),I('g_6','Google 關鍵字行銷規劃 6個月','專案',33000,20888,'含圖片素材 2 張'),I('g_12','Google 關鍵字行銷規劃 12個月','專案',63000,36888,'含圖片素材 2+2 張'),I('g_36','Google 關鍵字行銷規劃 3年','專案',153000,105000,'含圖片素材 6 張')]},
   {g:'Google 關鍵字行銷規劃（續約）',items:[I('gr_3','Google 關鍵字行銷規劃 續約3個月','專案',18000,9900),I('gr_6','Google 關鍵字行銷規劃 續約6個月','專案',33000,19000,'含圖片素材 2 張'),I('gr_12','Google 關鍵字行銷規劃 續約12個月','專案',63000,36000,'含圖片素材 2 張'),I('gr_36','Google 關鍵字行銷規劃 續約3年','專案',153000,100000,'含圖片素材 6 張')]},
@@ -420,6 +456,7 @@ function fv(root,f){var e=root.querySelector('[data-f="'+f+'"]');return e?e.valu
 function lineFromItem(cat,it){
   var l={id:uid++,cat:cat,n:it.n,unit:it.unit||'式',qty:it.pass?10000:1,orig:it.orig,price:it.price,open:false};
   if(it.pass){l.pass=1;l.fee=0;}
+  if(it.detail)l.detail=JSON.parse(JSON.stringify(it.detail));
   return l;
 }
 
@@ -586,15 +623,22 @@ function lineHtml(l){
   var h='<div class="ic-line" data-id="'+l.id+'"><div>'+nm+'</div>'
    +'<input type="number" min="0" data-k="qty" value="'+l.qty+'" title="'+(l.pass?'儲值金額':'數量')+'">'
    +(l.pass?'<div class="ic-lt" style="grid-column:span 2;font-weight:400;color:#6b7280">儲值金不計稅</div>':'<input type="number" min="0" data-k="orig" value="'+l.orig+'" title="原價（單價）"><input type="number" min="0" data-k="price" value="'+l.price+'" title="優惠價（單價）">')
-   +'<div class="ic-lt">'+num(lineP(l))+'</div><div>'+(l.cat==='ad'&&siteBy(l.site)?'<button class="ic-btn ic-b2 ic-bs" data-act="more">＋站</button> ':'')+'<button class="ic-btn ic-b2 ic-bs" data-act="del">✕</button></div>';
+   +'<div class="ic-lt">'+num(lineP(l))+'</div><div>'+(l.cat==='ad'&&siteBy(l.site)?'<button class="ic-btn ic-b2 ic-bs" data-act="more">＋站</button> ':'')+(l.detail?'<button class="ic-btn ic-b2 ic-bs" data-act="dtoggle">明細 '+l.detail.length+'</button> ':'')+'<button class="ic-btn ic-b2 ic-bs" data-act="del">✕</button></div>';
   if(l.open){
     var st0=siteBy(l.site),opts=!st0?[]:SITES.filter(function(s){return s.n!==l.site&&s.a===st0.a&&s.s[l.slot]&&s.s[l.slot][l.per];});
     h+='<div class="ic-more"><div class="ic-hint" style="margin:0 0 6px">同版位「'+esc(l.slot)+' '+esc(l.per)+'」也加入這些站台：</div>'
      +(opts.length?opts.map(function(s){return '<label><input type="checkbox" data-add="'+esc(s.n)+'"> '+esc(s.n)+'</label>';}).join('')+'<div style="margin-top:6px"><button class="ic-btn ic-b1 ic-bs" data-act="addmore">加入勾選的站台</button></div>':'<span class="ic-hint">沒有其他站台有這個版位。</span>')+'</div>';
   }
+  if(l.detail&&l.dopen){
+    h+='<div class="ic-more"><div class="ic-hint" style="margin:0 0 6px">網站架構明細（只顯示在報價單上，不影響價格；可修改、新增、刪除）</div>'
+     +l.detail.map(function(d,i){return '<div class="ic-drow" data-di="'+i+'"><input type="text" data-dk="n" value="'+esc(d.n)+'" placeholder="項目"><textarea data-dk="d" rows="2" placeholder="說明">'+esc(d.d)+'</textarea><button class="ic-btn ic-b2 ic-bs" data-act="ddel" data-di="'+i+'">✕</button></div>';}).join('')
+     +'<button class="ic-btn ic-b1 ic-bs" data-act="dadd">＋ 新增明細</button></div>';
+  }
   return h+'</div>';
 }
 $('cart').addEventListener('input',function(e){
+  var dk=e.target.getAttribute('data-dk');
+  if(dk){var lr=e.target.closest('.ic-line'),dr=e.target.closest('.ic-drow');if(!lr||!dr)return;var ll=cart.filter(function(x){return x.id==lr.getAttribute('data-id');})[0];if(ll&&ll.detail)ll.detail[Number(dr.getAttribute('data-di'))][dk]=e.target.value;return;}
   var r=e.target.closest('.ic-line');if(!r)return;var l=cart.filter(function(x){return x.id==r.getAttribute('data-id');})[0],k=e.target.getAttribute('data-k');if(!k)return;
   if(k==='plan'){l.plan=e.target.value;l.price=l.plan==='贈送'?0:(l.plan==='專案'?(l.ref[1]>0?l.ref[1]:l.ref[0]):l.ref[0]);renderCart();}
   else if(k==='n'){l.n=e.target.value;}
@@ -605,6 +649,9 @@ $('cart').addEventListener('click',function(e){
   var b=e.target.closest('[data-act]');if(!b)return;var r=b.closest('.ic-line'),id=r.getAttribute('data-id'),i=cart.findIndex(function(x){return x.id==id;}),l=cart[i],a=b.getAttribute('data-act');
   if(a==='del'){cart.splice(i,1);renderCart();}
   if(a==='more'){l.open=!l.open;renderCart();}
+  if(a==='dtoggle'){l.dopen=!l.dopen;renderCart();}
+  if(a==='dadd'){l.detail.push({n:'',d:''});renderCart();}
+  if(a==='ddel'){l.detail.splice(Number(b.getAttribute('data-di')),1);renderCart();}
   if(a==='addmore'){var n=0;r.querySelectorAll('[data-add]:checked').forEach(function(c){var s=siteBy(c.getAttribute('data-add'));cart.push(mkAdLine(s.n,l.slot,l.per,s.s[l.slot][l.per],l.plan));n++;});l.open=false;renderCart();if(n)toast('已加入 '+n+' 個站台');}
 });
 $('oiAdd').onclick=function(){
@@ -622,12 +669,12 @@ function renderPk(){
 }
 $('pkSave').onclick=function(){
   var n=$('pkName').value.trim();if(!n){toast('請輸入套餐名稱');return;}if(!cart.length){toast('清單是空的');return;}
-  var ls=cart.map(function(l){var o=JSON.parse(JSON.stringify(l));delete o.id;delete o.open;return o;});
+  var ls=cart.map(function(l){var o=JSON.parse(JSON.stringify(l));delete o.id;delete o.open;delete o.dopen;return o;});
   persist('k_'+hid(n),{t:'pkg',name:n,lines:ls,ts:Date.now()},'已存成套餐');$('pkName').value='';
 };
 $('pkList').addEventListener('click',function(e){
   var a=e.target.closest('[data-pk]'),d=e.target.closest('[data-pd]');
-  if(a){var p=customs()[a.getAttribute('data-pk')];if(p){p.lines.forEach(function(l){var o=JSON.parse(JSON.stringify(l));o.id=uid++;o.open=false;cart.push(o);});renderCart();toast('已套用：'+p.name);}}
+  if(a){var p=customs()[a.getAttribute('data-pk')];if(p){p.lines.forEach(function(l){var o=JSON.parse(JSON.stringify(l));o.id=uid++;o.open=false;o.dopen=false;cart.push(o);});renderCart();toast('已套用：'+p.name);}}
   if(d)removeCustom(d.getAttribute('data-pd'));
 });
 
@@ -654,6 +701,10 @@ function payText(t){
   var mid=Math.round(f*(Number($('cMid').value)||0)/100);
   return '付款方式：\n定金 '+num(dep)+' 元（簽約時）\n中期款 '+num(mid)+' 元（'+(Number($('cMid').value)||0)+'%）\n尾款 '+num(Math.max(0,f-dep-mid))+' 元（完成驗收時）';
 }
+function detailRow(l){
+  var ds=(l.detail||[]).filter(function(d){return d.n||d.d;});if(!ds.length)return '';
+  return '<tr><td colspan="5" class="ic-dtl">'+ds.map(function(d){return '<div><b>'+esc(d.n)+'</b>'+(d.d?'：'+esc(d.d).replace(/\n/g,'<br>'):'')+'</div>';}).join('')+'</td></tr>';
+}
 async function generate(){
   if(!cart.length){toast('請先選擇項目');return;}
   var cats=docCats(),ls=cart.filter(function(l){return cats.indexOf(l.cat)>-1;});
@@ -672,7 +723,7 @@ async function generate(){
     cl.forEach(function(l){
       var nm=l.cat==='ad'?esc(l.site)+'｜'+esc(l.slot)+'｜'+esc(l.per):esc(l.n)+(l.unit&&l.unit!=='式'?'（'+esc(l.unit)+'）':'');
       if(l.pass)h+='<tr><td class="ic-l">'+nm+(l.fee?'（含代收手續費 '+l.fee+'%）':'')+'</td><td class="ic-r">—</td><td class="ic-r">—</td><td class="ic-r">金額</td><td class="ic-r">'+num(lineP(l))+'</td></tr>';
-      else h+='<tr><td class="ic-l">'+nm+'</td><td class="ic-r">'+(l.orig?num(l.orig):'—')+'</td><td class="ic-r">'+(l.price===0&&l.orig?'贈送':num(l.price))+'</td><td class="ic-r">'+l.qty+'</td><td class="ic-r">'+(l.price===0&&l.orig?'贈送':num(l.price*l.qty))+'</td></tr>';
+      else h+='<tr><td class="ic-l">'+nm+'</td><td class="ic-r">'+(l.orig?num(l.orig):'—')+'</td><td class="ic-r">'+(l.price===0&&l.orig?'贈送':num(l.price))+'</td><td class="ic-r">'+l.qty+'</td><td class="ic-r">'+(l.price===0&&l.orig?'贈送':num(l.price*l.qty))+'</td></tr>'+detailRow(l);
     });
     h+='<tr><td colspan="3" class="ic-l" style="color:#6b7280">小計</td><td class="ic-r" style="color:#6b7280">原價 '+num(so)+'</td><td class="ic-r"><b>'+num(sp)+'</b></td></tr>';
   });
@@ -699,7 +750,7 @@ function textVer(){
     cl.forEach(function(l){
       var nm=l.cat==='ad'?l.site+'｜'+l.slot+' '+l.per:l.n;
       if(l.pass)s+='・'+nm+'：'+num(lineP(l))+' 元\n';
-      else s+='・'+nm+(l.qty!==1?' x'+l.qty+(l.unit&&l.unit!=='式'?l.unit:''):'')+'｜'+(l.price===0&&l.orig?'贈送（價值'+num(l.orig)+'）':(l.orig&&l.orig!==l.price?'原價'+num(l.orig)+'→':'')+num(l.price*l.qty)+' 元')+'\n';
+      else s+='・'+nm+(l.qty!==1?' x'+l.qty+(l.unit&&l.unit!=='式'?l.unit:''):'')+'｜'+(l.price===0&&l.orig?'贈送（價值'+num(l.orig)+'）':(l.orig&&l.orig!==l.price?'原價'+num(l.orig)+'→':'')+num(l.price*l.qty)+' 元')+'\n'+(l.detail&&l.detail.length?'　明細：'+l.detail.map(function(d){return d.n;}).filter(Boolean).join('、')+'\n':'');
     });
   });
   s+='\n－－－－－－－－\n原價 '+num(t.orig)+' 元\n';
