@@ -384,7 +384,11 @@ function groupsOf(cat){
     gs.push({g:g.g,items:items});
   });
   extra.sort(function(a,b){return (a.ts||0)-(b.ts||0);}).forEach(function(x){
-    var g=gs.filter(function(q){return q.g===x.group;})[0];if(!g){g={g:x.group||'自訂',items:[]};gs.push(g);}g.items.push(x);
+    var g=null,idx=-1;
+    if(x.after){gs.forEach(function(q){q.items.forEach(function(it,i){if(it.id===x.after){g=q;idx=i;}});});}
+    if(!g)g=gs.filter(function(q){return q.g===x.group;})[0];
+    if(!g){g={g:x.group||'自訂',items:[]};gs.push(g);}
+    if(idx>=0)g.items.splice(idx+1,0,x);else g.items.push(x);
   });
   return gs.filter(function(g){return g.items.length;});
 }
@@ -409,47 +413,75 @@ function renderTab(t){
 $('nav').addEventListener('click',function(e){var b=e.target.closest('button');if(b)showTab(b.getAttribute('data-t'));});
 
 // ===== 一般品項頁 =====
-function itemRow(cat,it){
+var itemQ={};
+function groupNameOf(cat,id){var r='';groupsOf(cat).forEach(function(g){g.items.forEach(function(i){if(i.id===id)r=g.g;});});return r;}
+function itemGroup(cat,f){var a=fv(f,'after');if(a){var g=groupNameOf(cat,a);if(g)return g;}return fv(f,'group').trim()||'自訂';}
+function persistCustomEdit(id,cat,vals,after){
+  var cur=customs()[id]||{},d=Object.assign({},cur,{t:'item',cat:cat},vals);
+  if(!d.group)d.group='自訂';if(!d.ts)d.ts=Date.now();
+  if(after&&after!==id){d.after=after;var g=groupNameOf(cat,after);if(g)d.group=g;}
+  persist(id,d,'已更新');
+}
+function applyItemQ(hostEl){
+  if(!hostEl)return;var qi=hostEl.querySelector('[data-q]');if(!qi)return;var q=qi.value.trim().toLowerCase(),curG=null,cnt=0;
+  function flush(){if(curG)curG.style.display=(!q||cnt>0)?'':'none';}
+  [].slice.call(hostEl.children).forEach(function(el){
+    if(el.classList.contains('ic-gname')){flush();curG=el;cnt=0;}
+    else if(el.classList.contains('ic-item')){var hit=!q||(el.getAttribute('data-s')||'').indexOf(q)>-1;el.style.display=hit?'':'none';if(hit)cnt++;}
+  });flush();
+}
+function itemRow(cat,it,mopts,gname){
   var pr=it.pass?'依金額':(it.orig&&it.orig!==it.price?'<s>'+num(it.orig)+'</s>':'')+(it.price===0&&it.orig?'贈送':num(it.price));
-  return '<div class="ic-item" data-cat="'+cat+'" data-id="'+esc(it.id)+'"><div><b>'+esc(it.n)+'</b><span class="ic-m">'+esc(it.unit||'')+(it.note?'｜'+esc(it.note):'')+(it.custom?'｜<span class="ic-ok">自訂</span>':'')+'</span></div>'
+  var sx=esc(((it.n||'')+' '+(it.unit||'')+' '+(it.note||'')+' '+(gname||'')).toLowerCase());
+  return '<div class="ic-item" data-cat="'+cat+'" data-id="'+esc(it.id)+'" data-s="'+sx+'"><div><b>'+esc(it.n)+'</b><span class="ic-m">'+esc(it.unit||'')+(it.note?'｜'+esc(it.note):'')+(it.custom?'｜<span class="ic-ok">自訂</span>':'')+'</span></div>'
    +'<div class="ic-pr">'+pr+'</div><div><button class="ic-btn ic-b1 ic-bs" data-act="add">加入</button></div><div><button class="ic-btn ic-b2 ic-bs" data-act="edit" title="編輯／刪除">✎</button></div>'
    +'<div class="ic-edit" style="display:none" data-ed="'+esc(it.id)+'">'
    +'<div class="ic-form"><div><label class="ic-f">名稱</label><input type="text" data-f="n" value="'+esc(it.n)+'"></div><div><label class="ic-f">單位</label><input type="text" data-f="unit" value="'+esc(it.unit||'')+'"></div><div><label class="ic-f">原價</label><input type="number" data-f="orig" value="'+it.orig+'"></div><div><label class="ic-f">優惠價</label><input type="number" data-f="price" value="'+it.price+'"></div><div><label class="ic-f">備註</label><input type="text" data-f="note" value="'+esc(it.note||'')+'"></div>'
-   +'<div><button class="ic-btn ic-b1 ic-bs" data-act="saveedit">儲存</button> <button class="ic-btn ic-b2 ic-bs" data-act="del">'+(it.custom?'刪除':'隱藏')+'</button></div></div></div></div>';
+   +(it.custom?'<div><label class="ic-f">移到哪一項之後</label><select data-f="after"><option value="">（位置不變）</option>'+mopts+'</select></div>':'')
+   +'<div><button class="ic-btn ic-b1 ic-bs" data-act="saveedit">儲存</button> <button class="ic-btn ic-b2 ic-bs" data-act="del" title="'+(it.custom?'刪除這個自訂品項':'刪除這個預設品項（之後可在本頁最下方「已刪除的預設項目」還原）')+'">刪除</button>'+(it.ovId?' <button class="ic-btn ic-b2 ic-bs" data-act="reset" title="取消改過的名稱／價格，回到預設">還原預設</button>':'')+'</div></div></div></div>';
 }
 function regionOK(it){var r=$('cBrand').value;if(r==='其他')return true;if(it.n.indexOf('（宜蘭）')>-1)return r==='宜蘭';if(it.n.indexOf('（花蓮、台東）')>-1)return r==='花蓮'||r==='台東';return true;}
 function renderGeneric(cat,host){
   var gs=groupsOf(cat).map(function(g){return {g:g.g,items:cat==='host'?g.items.filter(regionOK):g.items};}).filter(function(g){return g.items.length;}),h='';
-  gs.forEach(function(g){h+='<div class="ic-gname">'+esc(g.g)+'</div>'+g.items.map(function(it){return itemRow(cat,it);}).join('');});
+  var mopts='';gs.forEach(function(g){g.items.forEach(function(it){mopts+='<option value="'+esc(it.id)+'">'+esc(g.g)+'｜'+esc(it.n)+'</option>';});});
+  h+='<input type="text" class="ic-q" data-q="'+cat+'" placeholder="🔍 搜尋品項（名稱、備註、分組）" value="'+esc(itemQ[cat]||'')+'" style="max-width:360px;margin-bottom:6px">';
+  gs.forEach(function(g){h+='<div class="ic-gname">'+esc(g.g)+'</div>'+g.items.map(function(it){return itemRow(cat,it,mopts,g.g);}).join('');});
   if(!gs.length)h+='<div class="ic-hint">目前沒有項目。</div>';
   var opts=gs.map(function(g){return '<option>'+esc(g.g)+'</option>';}).join('');
+  var cu=customs(),gone=[];(SEED[cat]||[]).forEach(function(g){g.items.forEach(function(it){var o=cu['o_'+it.id];if(o&&o.t==='ov'&&o.hide)gone.push({id:it.id,n:it.n,g:g.g});});});
+  if(gone.length)h+='<details class="ic-add"><summary>已刪除的預設項目（'+gone.length+'）— 點「還原」可找回</summary>'+gone.map(function(x){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px dashed #e5e9ef"><span>'+esc(x.g)+'｜'+esc(x.n)+'</span><button class="ic-btn ic-b2 ic-bs" data-act="restore" data-rid="'+esc(x.id)+'">還原</button></div>';}).join('')+'</details>';
   h+='<details class="ic-add"><summary>＋ 新增品項（存起來，以後所有人都能選）</summary><div class="ic-form" data-newf="'+cat+'">'
    +'<div><label class="ic-f">分組</label><input type="text" data-f="group" list="gl_'+cat+'" placeholder="可選或自行輸入"><datalist id="gl_'+cat+'">'+opts+'</datalist></div>'
    +'<div><label class="ic-f">品項名稱</label><input type="text" data-f="n"></div><div><label class="ic-f">單位</label><input type="text" data-f="unit" placeholder="式"></div>'
    +'<div><label class="ic-f">原價</label><input type="number" data-f="orig" min="0"></div><div><label class="ic-f">優惠價</label><input type="number" data-f="price" min="0"></div>'
-   +'<div><label class="ic-f">備註</label><input type="text" data-f="note"></div><div><button class="ic-btn ic-b1" data-act="newitem">新增</button></div></div></details>';
-  $(host).innerHTML=h;
+   +'<div><label class="ic-f">備註</label><input type="text" data-f="note"></div>'
+   +'<div><label class="ic-f">放在哪一項之後（可不選）</label><select data-f="after"><option value="">（放在分組最後）</option>'+mopts+'</select></div>'
+   +'<div><button class="ic-btn ic-b1" data-act="newitem">新增</button></div></div></details>';
+  $(host).innerHTML=h;applyItemQ($(host));
 }
 function fv(root,f){var e=root.querySelector('[data-f="'+f+'"]');return e?e.value:'';}
+$('icApp').addEventListener('input',function(e){var q=e.target.getAttribute&&e.target.getAttribute('data-q');if(!q)return;itemQ[q]=e.target.value;applyItemQ(e.target.parentNode);});
 ['g_web','g_host','g_photo','g_feat','g_ops'].forEach(function(hid_){
   $(hid_).addEventListener('click',function(e){
     var b=e.target.closest('[data-act]');if(!b)return;var act=b.getAttribute('data-act'),cat=hid_.slice(2);
+    if(act==='restore'){removeCustom('o_'+b.getAttribute('data-rid'));return;}
     if(act==='newitem'){
       var f=b.closest('[data-newf]'),n=fv(f,'n').trim();if(!n){toast('請填品項名稱');return;}
       var o=Number(fv(f,'orig'))||0,p=fv(f,'price')===''?o:(Number(fv(f,'price'))||0);
-      persist('i_'+hid(cat+n+Date.now()),{t:'item',cat:cat,group:fv(f,'group').trim()||'自訂',n:n,unit:fv(f,'unit').trim()||'式',orig:o,price:p,note:fv(f,'note'),ts:Date.now()},'已新增品項');return;
+      persist('i_'+hid(cat+n+Date.now()),{t:'item',cat:cat,group:itemGroup(cat,f),after:fv(f,'after')||'',n:n,unit:fv(f,'unit').trim()||'式',orig:o,price:p,note:fv(f,'note'),ts:Date.now()},'已新增品項');return;
     }
     var row=b.closest('.ic-item'),id=row.getAttribute('data-id'),it=findItem(cat,id);
     if(act==='edit'){var ed=row.querySelector('.ic-edit');ed.style.display=ed.style.display==='none'?'block':'none';return;}
+    if(act==='reset'){removeCustom(it.ovId);return;}
     if(act==='add'){cart.push(lineFromItem(cat,it));renderCart();toast('已加入：'+it.n);return;}
     if(act==='saveedit'){
       var ed2=row.querySelector('.ic-edit'),vals={n:fv(ed2,'n').trim()||it.n,unit:fv(ed2,'unit'),orig:Number(fv(ed2,'orig'))||0,price:Number(fv(ed2,'price'))||0,note:fv(ed2,'note')};
-      if(it.custom){persist(id,Object.assign({t:'item',cat:cat,group:(customs()[id]||{}).group||'自訂',ts:(customs()[id]||{}).ts||Date.now()},vals),'已更新');}
+      if(it.custom){persistCustomEdit(id,cat,vals,fv(ed2,'after'));}
       else{persist('o_'+id,Object.assign({t:'ov',sid:id},vals),'已更新（覆蓋預設）');}
       return;
     }
     if(act==='del'){
-      if(it.custom)removeCustom(id);else persist('o_'+id,{t:'ov',sid:id,hide:1},'已隱藏');
+      if(it.custom)removeCustom(id);else persist('o_'+id,{t:'ov',sid:id,hide:1},'已刪除（可在本頁最下方「已刪除的預設項目」還原）');
     }
   });
 });
@@ -519,14 +551,16 @@ function calcSuggest(root){var c=Number(fv(root,'cost'))||0,m=Number(fv(root,'mu
 $('prBody').addEventListener('click',function(e){
   var b=e.target.closest('#g_design [data-act]');if(!b)return;
   var act=b.getAttribute('data-act'),cat='print';
+  if(act==='restore'){removeCustom('o_'+b.getAttribute('data-rid'));return;}
   if(act==='newitem'){var f=b.closest('[data-newf]'),n=fv(f,'n').trim();if(!n){toast('請填品項名稱');return;}var o=Number(fv(f,'orig'))||0,p=fv(f,'price')===''?o:(Number(fv(f,'price'))||0);
-    persist('i_'+hid(cat+n+Date.now()),{t:'item',cat:cat,group:fv(f,'group').trim()||'自訂',n:n,unit:fv(f,'unit').trim()||'式',orig:o,price:p,note:fv(f,'note'),ts:Date.now()},'已新增品項');return;}
+    persist('i_'+hid(cat+n+Date.now()),{t:'item',cat:cat,group:itemGroup(cat,f),after:fv(f,'after')||'',n:n,unit:fv(f,'unit').trim()||'式',orig:o,price:p,note:fv(f,'note'),ts:Date.now()},'已新增品項');return;}
   var row=b.closest('.ic-item'),id=row.getAttribute('data-id'),it=findItem(cat,id);
   if(act==='edit'){var ed=row.querySelector('.ic-edit');ed.style.display=ed.style.display==='none'?'block':'none';}
+  if(act==='reset')removeCustom(it.ovId);
   if(act==='add'){cart.push(lineFromItem(cat,it));renderCart();toast('已加入：'+it.n);}
   if(act==='saveedit'){var e2=row.querySelector('.ic-edit'),vals={n:fv(e2,'n').trim()||it.n,unit:fv(e2,'unit'),orig:Number(fv(e2,'orig'))||0,price:Number(fv(e2,'price'))||0,note:fv(e2,'note')};
-    if(it.custom)persist(id,Object.assign({t:'item',cat:cat,group:(customs()[id]||{}).group||'自訂',ts:(customs()[id]||{}).ts||Date.now()},vals),'已更新');else persist('o_'+id,Object.assign({t:'ov',sid:id},vals),'已更新（覆蓋預設）');}
-  if(act==='del'){if(it.custom)removeCustom(id);else persist('o_'+id,{t:'ov',sid:id,hide:1},'已隱藏');}
+    if(it.custom)persistCustomEdit(id,cat,vals,fv(e2,'after'));else persist('o_'+id,Object.assign({t:'ov',sid:id},vals),'已更新（覆蓋預設）');}
+  if(act==='del'){if(it.custom)removeCustom(id);else persist('o_'+id,{t:'ov',sid:id,hide:1},'已刪除（可在本頁最下方「已刪除的預設項目」還原）');}
 });
 
 // ===== 廣告 =====
