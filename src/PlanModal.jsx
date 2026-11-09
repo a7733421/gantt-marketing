@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { genPlan, guessIndustry, INDUSTRIES, planEnd } from "./planner";
+import { imgInfo, IMG_ASOF } from "./images";
 
 const lbl = { fontSize: 13, color: "#b08040", letterSpacing: 1, display: "block", marginBottom: 5, fontWeight: 700 };
 const inp = { width: "100%", background: "#faf7f4", border: "1.5px solid #e8d8c4", borderRadius: 8, padding: "9px 12px", color: "#1a1208", fontSize: 14, boxSizing: "border-box" };
@@ -12,12 +13,20 @@ const md = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
 
 export default function PlanModal({ client, onClose, onApply }) {
   const [o, setO] = useState({
-    start: client.start || todayIso(), months: 12, perWeek: 1, weekday: 4,
+    start: todayIso(), months: 12, perWeek: 1, weekday: 4,
     industry: guessIndustry(client.name), adMode: client.adManaged ? "monthly" : "none",
-    adPlatform: "FB", adDays: 14, clear: true,
+    adPlatform: "FB", adDays: 14, clear: true, imgMax: null,
   });
   const set = (k, v) => setO(x => ({ ...x, [k]: v }));
-  const plan = useMemo(() => (o.start ? genPlan(o) : { events: [], ads: [], from: "", to: "" }), [o]);
+  const info = imgInfo(client);
+  const asOf = client.imgAsOf || IMG_ASOF;
+  const rangeEnd = o.start ? planEnd(o.start, o.months) : "";
+  // 若選擇清除舊的計畫，那些計畫中的製圖會退回圖數
+  const refund = o.clear && o.start ? (client.events || []).filter(e => e.planned && e.img && e.date > asOf && e.date >= o.start && e.date <= rangeEnd).length : 0;
+  const available = info ? Math.max(0, info.remaining + refund) : 0;
+  const festCount = useMemo(() => (o.start ? genPlan({ ...o, imgMax: 0 }).festCount : 0), [o]);
+  const imgCount = o.imgMax == null ? Math.min(festCount, available) : Math.min(o.imgMax, festCount, available);
+  const plan = useMemo(() => (o.start ? genPlan({ ...o, imgMax: imgCount }) : { events: [], ads: [], from: "", to: "" }), [o, imgCount]);
   const existing = (client.events || []).filter(e => e.planned && e.date >= plan.from && e.date <= plan.to).length
     + (client.ads || []).filter(a => a.planned && a.start >= plan.from && a.start <= plan.to).length;
 
@@ -41,7 +50,7 @@ export default function PlanModal({ client, onClose, onApply }) {
         )}
         <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
           <div style={{ flex: 1 }}>
-            <label style={lbl}>開始日（付款日）</label>
+            <label style={lbl}>開始日</label>
             <input type="date" value={o.start} onChange={e => set("start", e.target.value)} style={inp} />
           </div>
           <div style={{ flex: 1 }}>
@@ -91,6 +100,23 @@ export default function PlanModal({ client, onClose, onApply }) {
             </div>
           </div>
         )}
+
+        <label style={lbl}>🖼 製圖（會扣圖數）</label>
+        <div style={{ background: "#faf7f4", border: "1.5px solid #e8d8c4", borderRadius: 10, padding: "10px 12px", marginBottom: 14, fontSize: 13 }}>
+          {info == null ? (
+            <div style={{ color: "#6b5540" }}>此客戶尚未設定圖數，貼文不會標示製圖。（可先到客戶列的「🖼」設定後再產生）</div>
+          ) : (
+            <>
+              <div style={{ marginBottom: 6 }}>目前剩 <b>{info.remaining}</b> 張{refund > 0 ? `（清除舊計畫後退回 ${refund} 張，共 ${available} 張可用）` : ""}；期間內有 <b>{festCount}</b> 篇節慶／優惠貼文通常需要製圖。</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span>排入需製圖貼文</span>
+                <input type="number" min={0} max={Math.min(festCount, available)} value={imgCount} onChange={e => set("imgMax", Math.max(0, +e.target.value || 0))} style={{ ...inp, width: 80, padding: "5px 8px" }} />
+                <span>張 → 排入後剩 <b style={{ color: available - imgCount <= 0 ? "#ef4444" : "#1a1208" }}>{info.remaining + refund - imgCount}</b> 張</span>
+              </div>
+              {festCount > available && <div style={{ color: "#f59e0b", marginTop: 6, fontWeight: 700 }}>圖數不夠排滿所有節慶貼文，其餘改用不需製圖的版本；需要時可先向客戶加購。</div>}
+            </>
+          )}
+        </div>
 
         <label style={{ fontSize: 13, color: "#4a3728", display: "flex", alignItems: "center", gap: 6, marginBottom: 14, cursor: "pointer" }}>
           <input type="checkbox" checked={o.clear} onChange={e => set("clear", e.target.checked)} />

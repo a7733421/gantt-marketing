@@ -64,13 +64,17 @@ export function genPlan(o) {
   fest.forEach(f => {
     const cand = slots.filter(s => !s.title && s.date < f.date && (toDate(f.date) - toDate(s.date)) / 86400000 <= 9);
     const s = cand[cand.length - 1];
-    if (s) s.title = ind.festival.replace("{f}", f.name);
+    if (s) { s.title = ind.festival.replace("{f}", f.name); s.fest = true; }
   });
   let k = 0;
   const events = slots.map((s, i) => ({
     id: `p${stamp}_${i}`, type: "post", date: s.date, planned: 1,
-    title: s.title || ind.topics[k++ % ind.topics.length],
+    title: s.title || ind.topics[k++ % ind.topics.length], _f: !!s.fest,
   }));
+  // 節慶／優惠貼文通常需要製圖：依圖數餘額，由近到遠標示「需製圖」（會扣圖數）
+  const festCount = events.filter(e => e._f).length;
+  let imgLeft = Math.max(0, o.imgMax || 0);
+  events.forEach(e => { if (e._f && imgLeft > 0) { e.img = 1; imgLeft--; } delete e._f; });
 
   // 廣告檔期
   const ads = [];
@@ -86,5 +90,5 @@ export function genPlan(o) {
       else pushAd(addDays(f.date, -adDays) < start ? start : addDays(f.date, -adDays), f.date);
     });
   }
-  return { events, ads, from: start, to: end };
+  return { events, ads, from: start, to: end, festCount };
 }

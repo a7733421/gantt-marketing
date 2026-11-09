@@ -3,6 +3,8 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import seed from "./clientsSeed.json";
 import PlanModal from "./PlanModal";
 import ProfileModal from "./ProfileModal";
+import ImageModal from "./ImageModal";
+import { imgInfo, migrateClients, IMG_ASOF } from "./images";
 
 // ===== 客戶排程視圖：每個客戶一個泳道（貼文 + 廣告）=====
 const OWNER_OPTIONS = ["丁郁澐","許綾讌","李靜憶","黃如杏","劉舜薇","楊蜜恬","何玉如","吳彥琳","林宜慧","經理","副理"];
@@ -56,7 +58,12 @@ export default function ClientView({ db, user, onSwitch }) {
     (async () => {
       try {
         const snap = await getDoc(doc(db, "gantt", "clients"));
-        if (snap.exists() && snap.data().clients) setClients(JSON.parse(snap.data().clients));
+        if (snap.exists() && snap.data().clients) {
+          // 舊資料沒有圖數欄位時，自動帶入 Excel 的圖數並存檔一次
+          const { list, changed } = migrateClients(JSON.parse(snap.data().clients));
+          setClients(list);
+          if (changed) persist(list);
+        }
       } catch (e) { console.error(e); setMsgErr(true); setMsg("讀取失敗"); }
       setLoaded(true);
     })();
@@ -89,7 +96,12 @@ export default function ClientView({ db, user, onSwitch }) {
   const isSuspended = (c) => {
     const e = (c.events || []).filter(x => (x.type === "suspend" || x.type === "resume") && x.date <= today)
       .sort((a, b) => a.date.localeCompare(b.date) || (a.type === "suspend" ? -1 : 1));
-    return e.length > 0 && e[e.length - 1].type === "suspend";
+    if (e.length === 0 || e[e.length - 1].type !== "suspend") return false;
+    // 停權後若已有實際發布的貼文或上架的廣告，視為已恢復（避免忘記登記「恢復」）
+    const d = e[e.length - 1].date;
+    const recovered = (c.events || []).some(x => x.type === "post" && !x.planned && x.date > d && x.date <= today)
+      || (c.ads || []).some(a => !a.planned && a.start > d && a.start <= today);
+    return !recovered;
   };
 
   const visible = clients.filter(c => {
@@ -116,7 +128,7 @@ export default function ClientView({ db, user, onSwitch }) {
     const { planAfter, ...c } = c0;
     const exists = clients.some(x => x.id === c.id);
     const id = exists ? c.id : "c" + Date.now();
-    persist(exists ? clients.map(x => x.id === c.id ? c : x) : [...clients, { ...c, id, events: [], ads: [] }]);
+    persist(exists ? clients.map(x => x.id === c.id ? c : x) : [...clients, { ...c, id, events: [], ads: [], imgBase: c.imgBase ?? 0, imgAsOf: todayIso(), imgLedger: [] }]);
     return id;
   };
   const applyPlan = (cid, plan, start) => updateClient(cid, c => ({
@@ -125,7 +137,7 @@ export default function ClientView({ db, user, onSwitch }) {
     ads: [...(plan.clear ? c.ads.filter(a => !(a.planned && a.start >= plan.from && a.start <= plan.to)) : c.ads), ...plan.ads],
   }));
   const deleteClient = (id) => persist(clients.filter(c => c.id !== id));
-  const importSeed = () => persist(seed);
+  const importSeed = () => persist(migrateClients(seed).list);
 
   if (!loaded) return <div style={{ padding: 60, textAlign: "center", color: "#b08040" }}>載入中⋯</div>;
 
@@ -137,14 +149,23 @@ export default function ClientView({ db, user, onSwitch }) {
     else setModal({ kind: "ad", cid: c.id, ad: { platform: "FB", start: date, end: null, reason: "off" }, isNew: true });
   };
 
+  const lowImg = active.filter(c => { const i = imgInfo(c); return i && i.remaining <= 2; });
   const tiles = [
     { label: "🏢 進行中客戶", value: active.length, accent: "#1a1208" },
     { label: "⏰ 30 天內到期", value: soon.length, accent: "#f59e0b" },
     { label: "⛔ 目前停權中", value: suspended.length, accent: "#ef4444" },
     { label: "📣 廣告進行中", value: adsRunning, accent: "#4f8ef7" },
+    { label: "🖼 圖數不足（剩 2 張內）", value: lowImg.length, accent: "#a855f7" },
     { label: `📝 ${month + 1} 月貼文（目前篩選）`, value: monthPosts, accent: "#ec4899" },
   ];
 
+  const imgBadge = (c) => {
+    const i = imgInfo(c);
+    const open = () => setModal({ kind: "images", cid: c.id });
+    if (!i) return <span onClick={open} title="設定圖數" style={{ ...badge("#94a3b8"), cursor: "pointer" }}>🖼 圖數未設定</span>;
+    const r = i.remaining, col = r <= 0 ? "#ef4444" : r <= 2 ? "#f59e0b" : "#94a3b8";
+    return <span onClick={open} title="圖數明細（點擊查看／加購）" style={{ ...badge(col, r <= 2), cursor: "pointer" }}>🖼 剩 {r} 張</span>;
+  };
   const expiryBadge = (c) => {
     if (c.ended) return <span style={badge("#94a3b8")}>已結案 {md(c.ended)}</span>;
     if (!c.expiry) return null;
@@ -260,6 +281,7 @@ export default function ClientView({ db, user, onSwitch }) {
                     </div>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4, alignItems: "center" }}>
                       {expiryBadge(c)}
+                      {imgBadge(c)}
                       <span style={{ fontSize: 11, color: "#b08040" }}>本月 {nPost} 篇</span>
                     </div>
                     {(c.profile?.tags || []).length > 0 && (
@@ -323,8 +345,9 @@ export default function ClientView({ db, user, onSwitch }) {
         </div>
       )}
 
-      {modal && modal.kind === "event" && <EventModal modal={modal} onClose={() => setModal(null)} onSave={ev => { saveEvent(modal.cid, ev); setModal(null); }} onDelete={() => { deleteEvent(modal.cid, modal.ev.id); setModal(null); }} />}
+      {modal && modal.kind === "event" && <EventModal modal={modal} client={clients.find(c => c.id === modal.cid)} onClose={() => setModal(null)} onSave={ev => { saveEvent(modal.cid, ev); setModal(null); }} onDelete={() => { deleteEvent(modal.cid, modal.ev.id); setModal(null); }} />}
       {modal && modal.kind === "ad" && <AdModal modal={modal} onClose={() => setModal(null)} onSave={ad => { saveAd(modal.cid, ad); setModal(null); }} onDelete={() => { deleteAd(modal.cid, modal.ad.id); setModal(null); }} />}
+      {modal && modal.kind === "images" && clients.find(c => c.id === modal.cid) && <ImageModal client={clients.find(c => c.id === modal.cid)} onClose={() => setModal(null)} onSave={patch => { updateClient(modal.cid, c => ({ ...c, ...patch })); setModal(null); }} />}
       {modal && modal.kind === "profile" && clients.find(c => c.id === modal.cid) && <ProfileModal client={clients.find(c => c.id === modal.cid)} onClose={() => setModal(null)} onSave={p => { updateClient(modal.cid, c => ({ ...c, profile: p })); setModal(null); }} />}
       {modal && modal.kind === "plan" && clients.find(c => c.id === modal.cid) && <PlanModal client={clients.find(c => c.id === modal.cid)} onClose={() => setModal(null)} onApply={(plan, start) => { applyPlan(modal.cid, plan, start); setModal(null); }} />}
       {modal && modal.kind === "client" && <ClientModal modal={modal} onClose={() => setModal(null)} onSave={c => { const id = saveClient(c); setModal(c.planAfter ? { kind: "plan", cid: id } : null); }} onDelete={() => { if (window.confirm("確定刪除這個客戶與所有排程？")) { deleteClient(modal.c.id); setModal(null); } }} />}
@@ -358,8 +381,13 @@ function Buttons({ onSave, onDelete, onClose, canDelete }) {
   );
 }
 
-function EventModal({ modal, onClose, onSave, onDelete }) {
+function EventModal({ modal, client, onClose, onSave, onDelete }) {
   const [ev, setEv] = useState(modal.ev);
+  const info = imgInfo(client);
+  const asOf = (client && client.imgAsOf) || IMG_ASOF;
+  const wasCounted = !!(modal.ev.img && !modal.isNew && modal.ev.date > asOf);
+  const nowCounted = !!(ev.img && ev.date > asOf);
+  const after = info ? info.remaining + (wasCounted ? 1 : 0) - (nowCounted ? 1 : 0) : null;
   return (
     <Shell title={modal.isNew ? "＋ 新增項目" : "✏️ 編輯項目"} onClose={onClose}>
       <label style={lbl}>類型</label>
@@ -374,9 +402,14 @@ function EventModal({ modal, onClose, onSave, onDelete }) {
       <input value={ev.title} onChange={e => setEv({ ...ev, title: e.target.value })} placeholder="例：父親節活動" style={{ ...inp, marginBottom: 14 }} />
       {ev.type === "post" && (
         <label style={{ fontSize: 13, color: "#4a3728", display: "flex", alignItems: "center", gap: 6, marginBottom: 14, cursor: "pointer" }}>
-          <input type="checkbox" checked={!!ev.img} onChange={e => setEv({ ...ev, img: e.target.checked ? 1 : 0 })} /> 需要製圖
+          <input type="checkbox" checked={!!ev.img} onChange={e => setEv({ ...ev, img: e.target.checked ? 1 : 0 })} /> 需要製圖（會扣 1 張圖數）
         </label>
       )}
+      {ev.type === "post" && ev.img ? (
+        <div style={{ fontSize: 12, marginTop: -8, marginBottom: 14, color: after != null && after < 0 ? "#ef4444" : "#6b5540", fontWeight: after != null && after < 0 ? 800 : 400 }}>
+          {info == null ? "此客戶尚未設定圖數（點客戶列的「🖼」設定）" : ev.date <= asOf ? `此日期在圖數基準日（${asOf.slice(5).replace("-", "/")}）之前，已含在基準內，不會再扣` : after < 0 ? `⚠️ 扣圖後會變成 ${after} 張，圖數不足，請先向客戶加購` : `扣圖後剩 ${after} 張`}
+        </div>
+      ) : null}
       {(ev.type === "post" || ev.type === "note") && (
         <label style={{ fontSize: 13, color: "#4a3728", display: "flex", alignItems: "center", gap: 6, marginBottom: 14, cursor: "pointer" }}>
           <input type="checkbox" checked={!!ev.planned} onChange={e => setEv({ ...ev, planned: e.target.checked ? 1 : 0 })} /> 計畫中（尚未發布；發布後請取消勾選）
@@ -439,8 +472,12 @@ function ClientModal({ modal, onClose, onSave, onDelete }) {
         <div style={{ flex: 1 }}><label style={lbl}>合約到期日</label><input type="date" value={c.expiry || ""} onChange={e => setC({ ...c, expiry: e.target.value || null })} style={inp} /></div>
         <div style={{ flex: 1 }}><label style={lbl}>結案／退出日</label><input type="date" value={c.ended || ""} onChange={e => setC({ ...c, ended: e.target.value || null })} style={inp} /></div>
       </div>
-      <label style={lbl}>付款／合約開始日</label>
-      <input type="date" value={c.start || ""} onChange={e => setC({ ...c, start: e.target.value || null })} style={{ ...inp, marginBottom: 14 }} />
+      {modal.isNew && (
+        <>
+          <label style={lbl}>圖數（張）— 客戶方案內含的製圖張數</label>
+          <input type="number" min={0} value={c.imgBase ?? ""} onChange={e => setC({ ...c, imgBase: e.target.value === "" ? null : +e.target.value })} placeholder="例：10（之後可在 🖼 加購或調整）" style={{ ...inp, marginBottom: 14 }} />
+        </>
+      )}
       {modal.isNew && (
         <label style={{ fontSize: 13, color: "#4a3728", display: "flex", alignItems: "center", gap: 6, marginBottom: 14, cursor: "pointer", fontWeight: 700 }}>
           <input type="checkbox" checked={!!c.planAfter} onChange={e => setC({ ...c, planAfter: e.target.checked })} /> 儲存後立即規畫一整年的貼文與廣告
