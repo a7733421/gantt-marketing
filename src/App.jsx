@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
+import ClientView from "./ClientView";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCCh5iJrxM3wRX3hp9iRLLq2RrFuAV_Zh4",
@@ -75,6 +76,8 @@ const inp = { width:"100%", background:"#faf7f4", border:"1.5px solid #e8d8c4", 
 
 export default function GanttMarketing() {
   const today = getToday();
+  const [viewMode, setViewMode]   = useState(() => { try { return localStorage.getItem("ganttViewMode") || "clients"; } catch(e) { return "clients"; } });
+  const changeViewMode = (m) => { setViewMode(m); try { localStorage.setItem("ganttViewMode", m); } catch(e) {} };
   const [viewYear, setViewYear]   = useState(today.year);
   const [viewMonth, setViewMonth] = useState(today.month);
   const [tasks, setTasks]         = useState(defaultTasks);
@@ -163,7 +166,7 @@ export default function GanttMarketing() {
 
   useEffect(() => {
     const handler = (e) => {
-      if (showModal || previewImg) return;
+      if (showModal || previewImg || viewMode !== "tasks") return;
       if (e.key === "ArrowLeft")  prevMonth();
       if (e.key === "ArrowRight") nextMonth();
     };
@@ -251,17 +254,20 @@ export default function GanttMarketing() {
           <span style={{color:"#3a2a18"}}>|</span>
           <span style={{color:"#f59e0b",fontWeight:900,letterSpacing:3,fontSize:14,textTransform:"uppercase"}}>Team Gantt</span>
           <span style={{color:"#3a2a18"}}>|</span>
-          <span style={{color:"#e8dcc8",fontSize:15}}>工作進度追蹤</span>
+          {[["clients","客戶排程"],["tasks","工作進度追蹤"]].map(([k,l])=>(
+            <button key={k} onClick={()=>changeViewMode(k)} style={{background:viewMode===k?"#f59e0b":"transparent",color:viewMode===k?"#1a1208":"#e8dcc8",border:viewMode===k?"1.5px solid #f59e0b":"1.5px solid #3a2a18",borderRadius:20,padding:"5px 16px",cursor:"pointer",fontSize:14,fontWeight:viewMode===k?800:500}}>{l}</button>
+          ))}
         </div>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           {saveMsg && <span style={{fontSize:13,color:saveErr?"#ef4444":"#22c55e",fontWeight:700}}>{saveMsg}</span>}
-          <button onClick={openAdd} style={{background:"#f59e0b",color:"#1a1208",border:"none",borderRadius:6,padding:"8px 18px",cursor:"pointer",fontWeight:800,fontSize:14}}>＋ 新增任務</button>
+          {viewMode==="tasks" && <button onClick={openAdd} style={{background:"#f59e0b",color:"#1a1208",border:"none",borderRadius:6,padding:"8px 18px",cursor:"pointer",fontWeight:800,fontSize:14}}>＋ 新增任務</button>}
           <span title={user.email} style={{color:"#b08040",fontSize:12,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</span>
           <button onClick={doLogout} style={{background:"transparent",color:"#b08040",border:"1px solid #3a2a18",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12}}>登出</button>
         </div>
       </div>
 
-      <div style={{padding:"20px 24px"}}>
+      {viewMode==="clients" && <ClientView db={db} user={user}/>}
+      {viewMode==="tasks" && <div style={{padding:"20px 24px"}}>
         <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
           {[
             {label:"⚠️ 超時案件", value:tasks.filter(t=>isOverdue(t,today)).length, accent:"#ef4444", click:()=>setShowOverdue(true)},
@@ -436,7 +442,7 @@ export default function GanttMarketing() {
             );
           })}
         </div>
-      </div>
+      </div>}
 
       {previewImg&&(
         <div onClick={()=>setPreviewImg(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out"}}>
