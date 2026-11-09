@@ -98,7 +98,13 @@ html,body{margin:0;padding:0;background:#f3f5f8;}
 .ic-ad .ic-meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin:10px 0;font-size:14px;}
 .ic-ad .ic-sheet th{background:#0f3d5e;color:#ffffff;}
 .ic-ad .ic-sheet td.ic-r,.ic-ad .ic-sheet th.ic-r{text-align:right;}
-.ic-ad .ic-sheet td.ic-dtl{text-align:left;font-size:12px;color:#4b5563;background:#fafbfc;line-height:1.6;padding:8px 10px;}
+.ic-ad .ic-sheet td.ic-dtl{text-align:left;background:#ffffff;padding:6px 8px 12px;border-bottom:1px solid #e5e9ef;}
+.ic-ad .ic-sheet .ic-dcap{font-size:13px;font-weight:700;color:#0f3d5e;margin:2px 0 6px;}
+.ic-ad .ic-sheet table.ic-dt{width:100%;border-collapse:collapse;font-size:12px;margin:0;}
+.ic-ad .ic-sheet table.ic-dt th{background:#eef3f8;color:#0f3d5e;text-align:left;padding:5px 8px;border:1px solid #d5dce6;font-weight:700;}
+.ic-ad .ic-sheet table.ic-dt td{text-align:left;vertical-align:top;padding:5px 8px;border:1px solid #d5dce6;line-height:1.6;color:#374151;}
+.ic-ad .ic-sheet table.ic-dt td.ic-dn{width:27%;font-weight:700;color:#0f3d5e;}
+.ic-ad .ic-sheet table.ic-dt tr{page-break-inside:avoid;}
 .ic-ad .ic-drow{display:grid;grid-template-columns:200px 1fr 40px;gap:6px;margin-bottom:6px;align-items:start;}
 .ic-ad .ic-drow textarea{min-height:38px;}
 .ic-ad .ic-sheet td.ic-cat{background:#eef3f8;font-weight:700;color:#0f3d5e;text-align:left;}
@@ -169,7 +175,19 @@ html,body{background:#ffffff;}
     </div>
   </div>
 
-  <div class="ic-pane" id="p_web"><div class="ic-card"><h2>網站版型</h2><div id="g_web"></div></div></div>
+  <div class="ic-pane" id="p_web"><div class="ic-card"><h2>網站版型</h2><div id="g_web"></div></div>
+  <div class="ic-card" id="estCard"><h2>客製化網站估價輔助（僅供參考）</h2>
+    <div class="ic-hint" style="margin:0 0 8px">依歷史 107 份客製化報價單（2021～2026）統計出的粗略參考，不是報價規則；最後價格請自行決定。</div>
+    <div class="ic-grid">
+      <div><label class="ic-f">架構項目數（首頁、簡介、最新消息…每列算 1）</label><input type="number" id="eItems" min="0" value="14"></div>
+      <div><label class="ic-f">總頁數（靜態＋動態）</label><input type="number" id="ePages" min="0" value="5"></div>
+      <div><label class="ic-f">圖片數（輪播圖、小圖）</label><input type="number" id="eImgs" min="0" value="4"></div>
+      <div><label class="ic-f">影片（支）</label><input type="number" id="eVid" min="0" value="0"></div>
+      <div><label class="ic-f">客戶預算（可空白）</label><input type="number" id="eBudget" min="0"></div>
+    </div>
+    <div style="margin-top:8px"><button class="ic-btn ic-b2 ic-bs" id="eFill">從已選的客製化明細帶入</button> <button class="ic-btn ic-b1 ic-bs" id="eApply">把建議價填入清單</button></div>
+    <div id="estOut" style="margin-top:10px"></div>
+  </div></div>
   <div class="ic-pane" id="p_host"><div class="ic-card"><h2>主機與附加服務</h2><div id="g_host"></div></div></div>
   <div class="ic-pane" id="p_photo"><div class="ic-card"><h2>攝影服務</h2><div id="g_photo"></div></div></div>
   <div class="ic-pane" id="p_feat"><div class="ic-card"><h2>功能加購</h2><div class="ic-hint">項目取自 CRM「增加功能」紀錄；價格為 0 的請加入清單後直接填價（改價後也可用「編輯」存成預設價）。找不到的可用下方「新增品項」建立。</div><div id="g_feat"></div></div></div>
@@ -460,6 +478,42 @@ function renderGeneric(cat,host){
   $(host).innerHTML=h;applyItemQ($(host));
 }
 function fv(root,f){var e=root.querySelector('[data-f="'+f+'"]');return e?e.value:'';}
+
+var EST={o:[53672,2746,1501,482,8467],p:[22269,1027,927,235,3080],st:{"p10":36000,"p25":41500,"p50":45000,"p75":50000,"p90":59500},mae:6058,maeO:10750,n:107};
+var HIST=[["BUT但設計",2022,116000,44888,15,0,0,0,1],["Penny美容美體工作室",2021,90000,38888,10,0,0,0,1],["喬美花店",2021,90000,25000,13,0,0,0,1],["喬美花店",2021,85000,20000,12,0,0,0,1],["喬美花店",2022,85000,20000,12,0,0,0,1],["壹貳娛樂",2021,138000,58888,14,0,0,0,2],["宗硯建設有限公司",2022,136000,49888,14,0,0,0,2],["巨靈霸股份有限公司",2021,48000,18888,14,0,0,0,0],["巨靈霸股份有限公司",2022,48000,18888,14,0,0,0,0],["旺旺食品商行",2021,155000,77000,14,0,0,0,1],["曜宇開發建設有限公司",2022,114000,44888,14,0,0,0,2],["東昇國際企業",2021,85000,36000,10,0,0,0,0],["永大茶業",2021,102000,43888,14,0,0,0,1],["泰勛建設",2021,104000,45000,13,0,0,0,3],["漢昇防水工程行",2021,48000,17000,8,0,0,0,1],["無穹旅行社有限公司",2021,82000,30000,11,0,0,0,2],["藍星熱泵",2021,106000,45888,11,0,0,0,1],["豫呈建設有限公司",2021,98000,35000,13,0,0,0,1],["酆鉅開發建設有限公司",2021,114000,44888,14,0,0,0,2],["高登廚房設計",2021,158000,68888,16,0,4,0,2],["點石建設",2021,104000,43888,10,0,0,0,0],["龍鳳湯品專賣",2021,49000,12888,10,3,0,0,1],["玩行旅（大安分館）",2022,114000,48000,14,6,6,1,1],["玩行旅（西門分館）",2024,114000,59000,15,5,8,2,1],["玩行旅（西門分館）",2026,138000,65000,15,9,8,2,1],["華源美麗灣民宿",2021,106000,52000,13,5,4,1,1],["四季逗",2021,99000,42000,12,5,4,1,1],["綠島雙發飯店",2022,99000,46000,12,5,4,1,1],["金暉大飯店",2025,112000,43500,15,6,8,2,1],["木子民宿",2022,104000,43000,13,2,4,1,1],["木子民宿",2024,108000,43500,13,6,9,2,1],["彩泉海景民宿-",2021,90000,38000,11,5,4,1,0],["水也上居民宿",2025,108000,40000,14,5,8,2,1],["夜門工坊(六隻魚)",2022,134000,55000,15,8,8,2,1],["吳哥會館民宿",2023,114000,46000,15,2,12,2,1],["星空蛙鳴民宿",2024,128000,47000,15,5,8,2,1],["熙之光屋",2024,111000,40000,14,5,8,2,1],["星然Villa民宿",2026,152000,64000,20,13,10,2,4],["我們這一家",2024,113000,53000,16,4,16,3,1],["池塘邊邊",2022,105000,40000,14,4,4,1,1],["好室一庒",2025,118000,47000,17,5,18,2,2],["好室一庒",2025,124000,49000,17,6,18,2,2],["好室一庒",2026,118000,37500,15,6,10,3,1],["麗筑民宿",2022,112000,48000,13,6,4,3,0],["霽月Villa",2024,114000,46000,13,7,8,2,1],["哈庫納馬塔塔民宿",2026,112000,44000,28,7,8,2,2],["喜妃house民宿",2026,98000,40000,12,5,10,2,1],["小禾民宿",2026,124000,47500,16,8,8,2,1],["Hen輕鬆民宿",2022,104000,42000,12,4,4,1,1],["Hen輕鬆民宿",2022,107000,47000,12,4,4,1,1],["Hen輕鬆民宿",2022,95000,40000,11,4,4,1,0],["山也未央",2023,102000,42000,12,5,4,1,1],["山也未央",2023,104000,43000,13,5,4,1,1],["灣月乘河民宿",2026,128000,49000,16,8,8,2,1],["灣月乘河民宿",2026,128000,55000,16,8,8,2,1],["好好透光莊園Villa",2025,148000,61000,21,5,10,2,1],["好好透光莊園Villa",2026,148000,61000,21,5,6,1,3],["游山丸水民宿",2022,121000,55000,15,10,9,2,1],["游山丸水民宿",2022,126000,59500,15,10,10,2,1],["天下居汽車旅館",2022,106000,42000,13,4,4,1,1],["天下居汽車旅館",2022,106000,42000,13,3,6,1,1],["龍潭湖居",2024,122000,55000,15,6,24,3,1],["M2民宿",2021,90000,40000,12,5,4,1,1],["礁溪樸宿",2023,102000,42000,12,5,4,1,1],["礁溪樸宿",2023,110000,45000,13,5,4,1,1],["三星田點FullHouse",2021,90000,40000,12,5,6,1,1],["吳老闆民宿",2026,118000,46000,15,2,16,2,1],["好好沐溫泉MoonVilla",2026,116000,47000,15,2,24,2,1],["小葉院子民宿",2025,127000,44000,16,7,8,2,1],["小葉院子民宿",2025,133000,45000,17,7,8,2,1],["櫻戀河畔民宿",2026,108000,41500,14,6,8,2,1],["鹿兒島民宿",2026,122000,43500,15,6,8,2,1],["品雲岫",2024,149000,68000,19,4,25,3,1],["夏禾會館",2023,99000,40000,12,4,4,1,1],["竹間民宿",2025,103000,40000,15,5,8,2,1],["竹間民宿",2025,106000,44000,15,7,8,2,1],["竹間民宿",2025,110000,45000,16,7,8,2,1],["竹間民宿",2025,112000,45000,16,7,8,2,1],["路斯農莊",2023,124000,50000,13,8,4,1,1],["自然風28行館",2024,126000,49000,16,7,12,3,1],["自然風28行館",2024,126000,57000,16,7,12,3,1],["綠苑民宿",2024,90000,40000,14,5,9,2,1],["綠苑民宿",2024,94000,44000,15,5,12,3,1],["植意間夢境民宿",2021,108000,48000,12,6,4,1,1],["玉蘭函館民宿",2023,158000,63000,16,11,4,0,1],["鸚鵡民宿",2022,131000,55000,18,5,5,1,1],["鴝花甜點民宿",2023,114000,47000,15,4,4,1,1],["鴝花甜點民宿",2023,128000,52000,17,6,4,0,1],["超平價渡假別墅",2024,122000,57500,17,9,12,2,1],["亮VILLA",2026,154000,61000,18,4,24,4,2],["水晶旅館有限公司",2024,106000,42000,14,4,10,2,1],["野居渡假民宿",2023,128000,50000,13,9,4,1,1],["幸福旅人",2021,99000,40000,12,4,4,3,1],["和你民宿",2023,108000,44000,12,6,4,1,1],["清和山房民宿",2022,111500,47500,13,5,4,1,1],["瞰海民宿",2022,114000,52000,13,4,0,0,1],["七星燈塔",2021,99000,50000,12,5,4,1,1],["光粼民宿",2022,90000,40000,11,5,4,1,0],["雲山水民宿逸翠軒會館",2024,133000,49000,14,5,19,3,1],["番山岳玲民宿",2024,102000,42000,13,5,8,2,1],["快樂狗民宿",2022,102000,44000,12,7,4,1,0],["逗點親子民宿",2024,103000,40000,15,3,24,2,1],["號薇庭民宿",2022,124000,52000,14,8,4,1,1],["號薇庭民宿",2022,122000,59000,14,6,10,2,1],["桐顏桐雨渡假山莊",2022,116000,50000,14,6,4,1,2],["觀雲田莊民宿",2024,115000,48000,15,7,8,2,1],["馨藝庭園民宿",2024,140000,59000,16,0,0,0,1]];
+function estVals(){return [Number($('eItems').value)||0,Number($('ePages').value)||0,Number($('eImgs').value)||0,Number($('eVid').value)||0];}
+function estCalc(b,v){return Math.round(b[0]+b[1]*v[0]+b[2]*v[1]+b[3]*v[2]+b[4]*v[3]);}
+function r500(n){return Math.round(n/500)*500;}
+function estNow(){var v=estVals(),po=Math.max(r500(estCalc(EST.p,v)),0),oo=Math.max(r500(estCalc(EST.o,v)),0);return {v:v,po:po,oo:oo};}
+function calcEst(){
+  var e=estNow(),v=e.v,lo=Math.max(e.po-EST.mae,0),hi=e.po+EST.mae,bud=Number($('eBudget').value)||0,h='';
+  h+='<div style="font-size:12px;color:#6b7280">建議（粗估）</div>';
+  h+='<div style="font-size:22px;font-weight:700;color:#0f3d5e">優惠價約 '+fmt(e.po)+' <span style="font-size:13px;font-weight:400;color:#6b7280">（參考範圍 '+num(lo)+'～'+num(hi)+'）</span></div>';
+  h+='<div style="font-size:14px;margin:2px 0 6px">原價約 '+fmt(e.oo)+'<span style="color:#6b7280;font-size:12px">（誤差約 ±'+num(EST.maeO)+'）</span></div>';
+  h+='<div class="ic-hint" style="margin:0 0 6px">歷史客製化優惠價：中位 '+num(EST.st.p50)+'，一半的案子落在 '+num(EST.st.p25)+'～'+num(EST.st.p75)+'，九成落在 '+num(EST.st.p10)+'～'+num(EST.st.p90)+'。</div>';
+  if(bud>0){
+    var msg=bud<lo?'<span style="color:#b91c1c">預算低於參考範圍，可能需要減少項目、頁數或影片，或改用 A／B／C 版型。</span>':(bud>hi?'<span style="color:#0f7b4f">預算高於參考範圍，有加項空間。</span>':'<span style="color:#0f7b4f">預算落在參考範圍內 ✓</span>');
+    h+='<div style="margin:0 0 6px">客戶預算 '+fmt(bud)+'：'+msg+'</div>';
+  }
+  var sc=HIST.map(function(x){var d=Math.abs(x[4]-v[0])/3+Math.abs(x[8]-v[3])*1.5+(x[5]>0?Math.abs(x[5]-v[1])/4:0.5);return {x:x,d:d};}).sort(function(a,b){return a.d-b.d;}).slice(0,5);
+  h+='<div style="font-size:13px;font-weight:700;color:#0f3d5e;margin-top:8px">相似的歷史案例</div><div style="overflow-x:auto"><table><thead><tr><th class="ic-l">客戶</th><th>年份</th><th>項目</th><th>頁</th><th>圖</th><th>影片</th><th>原價</th><th>優惠價</th></tr></thead><tbody>'
+   +sc.map(function(o){var x=o.x;return '<tr><td class="ic-l">'+esc(x[0])+'</td><td>'+x[1]+'</td><td>'+x[4]+'</td><td>'+(x[5]||'—')+'</td><td>'+(x[6]||'—')+'</td><td>'+(x[8]||'—')+'</td><td>'+num(x[2])+'</td><td><b>'+num(x[3])+'</b></td></tr>';}).join('')+'</tbody></table></div>';
+  h+='<div class="ic-hint">模型只能解釋約四成的價差（優惠價平均誤差約 '+num(EST.mae)+' 元），其餘取決於客戶預算、議價與是否搭配廣告案；頁數、圖數在舊報價單常無法讀出（顯示 —）。</div>';
+  $('estOut').innerHTML=h;
+}
+function customLine(){var r=null;cart.forEach(function(l){if(l.cat==='web'&&l.detail&&/客製化/.test(l.n))r=l;});if(!r)cart.forEach(function(l){if(l.cat==='web'&&l.detail&&!r)r=l;});return r;}
+$('eFill').onclick=function(){
+  var l=customLine();if(!l){toast('清單裡沒有網站明細，請先在上方加入「客製化版型」');return;}
+  var ds=l.detail.filter(function(d){return d.n||d.d;}),tx=ds.map(function(d){return (d.n||'')+' '+(d.d||'');}),pages=0,imgs=0,vid=0;
+  tx.forEach(function(t){(t.match(/(\d+)\s*頁/g)||[]).forEach(function(m){pages+=parseInt(m,10);});(t.match(/(\d+)\s*(?:大|小)?圖/g)||[]).forEach(function(m){imgs+=parseInt(m,10);});if(/影片/.test(t))vid++;});
+  $('eItems').value=ds.length;$('ePages').value=pages;$('eImgs').value=imgs;$('eVid').value=vid;calcEst();toast('已依明細帶入（頁數、圖數若不對可自行修改）');
+};
+$('eApply').onclick=function(){
+  var e=estNow(),l=customLine();
+  if(!l){var it=findItem('web','w_x');if(!it){toast('找不到客製化版型品項');return;}l=lineFromItem('web',it);cart.push(l);}
+  l.orig=e.oo;l.price=e.po;renderCart();toast('已填入：原價 '+num(e.oo)+'、優惠價 '+num(e.po)+'（可在清單直接修改）');
+};
+$('estCard').addEventListener('input',calcEst);
 $('icApp').addEventListener('input',function(e){var q=e.target.getAttribute&&e.target.getAttribute('data-q');if(!q)return;itemQ[q]=e.target.value;applyItemQ(e.target.parentNode);});
 ['g_web','g_host','g_photo','g_feat','g_ops'].forEach(function(hid_){
   $(hid_).addEventListener('click',function(e){
@@ -737,7 +791,9 @@ function payText(t){
 }
 function detailRow(l){
   var ds=(l.detail||[]).filter(function(d){return d.n||d.d;});if(!ds.length)return '';
-  return '<tr><td colspan="5" class="ic-dtl">'+ds.map(function(d){return '<div><b>'+esc(d.n)+'</b>'+(d.d?'：'+esc(d.d).replace(/\n/g,'<br>'):'')+'</div>';}).join('')+'</td></tr>';
+  return '<tr><td colspan="5" class="ic-dtl"><div class="ic-dcap">【'+esc(l.n)+'－建置及後台說明】'+(l.orig?'總價值 '+num(l.orig)+' 元　':'')+'優惠價 '+num(l.price)+' 元</div><table class="ic-dt"><thead><tr><th>架構表</th><th>說明</th></tr></thead><tbody>'
+   +ds.map(function(d){return '<tr><td class="ic-dn">'+esc(d.n)+'</td><td class="ic-dd">'+esc(d.d).replace(/\n/g,'<br>')+'</td></tr>';}).join('')
+   +'</tbody></table></td></tr>';
 }
 async function generate(){
   if(!cart.length){toast('請先選擇項目');return;}
@@ -806,7 +862,7 @@ rebuild();
 var d0=new Date(),d1=new Date();d1.setDate(d1.getDate()+7);
 $('cDate').value=d0.toISOString().slice(0,10);$('cDue').value=d1.toISOString().slice(0,10);
 $('cBrand').addEventListener('change',function(){if($('cBrand').value!=='其他')area=$('cBrand').value;active=null;refreshAll();renderNav();});
-renderNav();renderCart();renderPk();updStat();
+renderNav();renderCart();renderPk();updStat();calcEst();
 };
 </script>
 
