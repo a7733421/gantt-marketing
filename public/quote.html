@@ -105,8 +105,10 @@ html,body{margin:0;padding:0;background:#f3f5f8;}
 .ic-ad .ic-sheet table.ic-dt td{text-align:left;vertical-align:top;padding:5px 8px;border:1px solid #d5dce6;line-height:1.6;color:#374151;}
 .ic-ad .ic-sheet table.ic-dt td.ic-dn{width:27%;font-weight:700;color:#0f3d5e;}
 .ic-ad .ic-sheet table.ic-dt tr{page-break-inside:avoid;}
-.ic-ad .ic-drow{display:grid;grid-template-columns:200px 1fr 40px;gap:6px;margin-bottom:6px;align-items:start;}
+.ic-ad .ic-drow{display:grid;grid-template-columns:200px 1fr auto 40px;gap:6px;margin-bottom:6px;align-items:start;}
 .ic-ad .ic-drow textarea{min-height:38px;}
+.ic-ad .ic-mv{display:flex;flex-direction:column;gap:4px;}
+.ic-ad .ic-mv button[disabled]{opacity:.35;cursor:not-allowed;}
 .ic-ad .ic-sheet td.ic-cat{background:#eef3f8;font-weight:700;color:#0f3d5e;text-align:left;}
 .ic-ad .ic-sum{margin-top:12px;margin-left:auto;max-width:420px;display:grid;grid-template-columns:1fr auto;gap:4px 14px;font-size:15px;}
 .ic-ad .ic-sum div:nth-child(even){text-align:right;font-weight:600;}
@@ -114,7 +116,7 @@ html,body{margin:0;padding:0;background:#f3f5f8;}
 .ic-ad .ic-sign{margin-top:14px;font-size:13px;border:1px solid #cfd6df;border-radius:6px;padding:10px;}
 .ic-ad .ic-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111827;color:#ffffff;padding:8px 16px;border-radius:20px;font-size:14px;display:none;z-index:20;}
 @media (max-width:760px){
-.ic-ad .ic-drow{grid-template-columns:1fr 40px;}
+.ic-ad .ic-drow{grid-template-columns:1fr auto 40px;}
 .ic-ad .ic-drow input{grid-column:1 / 2;}
 .ic-ad .ic-drow textarea{grid-column:1 / 2;}
 .ic-ad .ic-line{grid-template-columns:1fr 1fr 1fr;}
@@ -547,7 +549,7 @@ function addAddon(it){
 function delAddon(l,i){
   var ad=l.addons[i];if(!ad)return;
   l.orig-=ad.orig;l.price-=ad.price;
-  if(ad.rep){if(l.detail[ad.rep.i]&&l.detail[ad.rep.i].from===ad.n)l.detail[ad.rep.i]=ad.rep.old;}
+  if(ad.rep){for(var rk=0;rk<l.detail.length;rk++){if(l.detail[rk].from===ad.n){l.detail[rk]=ad.rep.old;break;}}}
   else if(ad.row){for(var k=l.detail.length-1;k>=0;k--){if(l.detail[k].from===ad.n){l.detail.splice(k,1);break;}}}
   l.addons.splice(i,1);renderCart();toast('已移除加購：'+ad.n);
 }
@@ -770,7 +772,7 @@ function lineHtml(l){
   if(l.addons&&l.addons.length){h+='<div class="ic-more"><span class="ic-m" style="display:inline">含加購（價格已併入上方金額）：</span> '+l.addons.map(function(a,i){return '<button class="ic-btn ic-b2 ic-bs" data-act="adel" data-ai="'+i+'" title="移除這個加購">✕ '+esc(a.n)+' +'+num(a.price)+'</button>';}).join(' ')+'</div>';}
   if(l.detail&&l.dopen){
     h+='<div class="ic-more"><div class="ic-hint" style="margin:0 0 6px">網站架構明細（只顯示在報價單上，不影響價格；可修改、新增、刪除）</div>'
-     +l.detail.map(function(d,i){return '<div class="ic-drow" data-di="'+i+'"><input type="text" data-dk="n" value="'+esc(d.n)+'" placeholder="項目"><textarea data-dk="d" rows="2" placeholder="說明">'+esc(d.d)+'</textarea><button class="ic-btn ic-b2 ic-bs" data-act="ddel" data-di="'+i+'">✕</button></div>';}).join('')
+     +l.detail.map(function(d,i){return '<div class="ic-drow" data-di="'+i+'"><input type="text" data-dk="n" value="'+esc(d.n)+'" placeholder="項目"><textarea data-dk="d" rows="2" placeholder="說明">'+esc(d.d)+'</textarea><div class="ic-mv"><button class="ic-btn ic-b2 ic-bs" data-act="dup" data-di="'+i+'" title="往上移"'+(i===0?' disabled':'')+'>▲</button><button class="ic-btn ic-b2 ic-bs" data-act="ddown" data-di="'+i+'" title="往下移"'+(i===l.detail.length-1?' disabled':'')+'>▼</button></div><button class="ic-btn ic-b2 ic-bs" data-act="ddel" data-di="'+i+'" title="刪除這一列">✕</button></div>';}).join('')
      +'<select data-pick="1" style="width:auto;max-width:100%;margin-right:6px">'+pickOpts(l)+'</select><button class="ic-btn ic-b2 ic-bs" data-act="dadd">＋ 空白列（自行輸入）</button></div>';
   }
   return h+'</div>';
@@ -792,6 +794,7 @@ $('cart').addEventListener('click',function(e){
   if(a==='adel'){delAddon(l,Number(b.getAttribute('data-ai')));}
   if(a==='dadd'){l.detail.push({n:'',d:''});renderCart();}
   if(a==='ddel'){l.detail.splice(Number(b.getAttribute('data-di')),1);renderCart();}
+  if(a==='dup'||a==='ddown'){var di=Number(b.getAttribute('data-di')),dj=a==='dup'?di-1:di+1;if(dj>=0&&dj<l.detail.length){var dt=l.detail[di];l.detail[di]=l.detail[dj];l.detail[dj]=dt;renderCart();}}
   if(a==='addmore'){var n=0;r.querySelectorAll('[data-add]:checked').forEach(function(c){var s=siteBy(c.getAttribute('data-add'));cart.push(mkAdLine(s.n,l.slot,l.per,s.s[l.slot][l.per],l.plan));n++;});l.open=false;renderCart();if(n)toast('已加入 '+n+' 個站台');}
 });
 $('oiAdd').onclick=function(){
