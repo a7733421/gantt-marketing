@@ -47,6 +47,7 @@ export default function ClientView({ db, user, onSwitch }) {
   const [owner, setOwner] = useState("全部");
   const [q, setQ] = useState("");
   const [showEnded, setShowEnded] = useState(false);
+  const [tile, setTile] = useState(null); // 點上方統計卡片時，只顯示對應的客戶
   const [cellW, setCellW] = useState(36);
   const [modal, setModal] = useState(null); // {kind:'event'|'ad'|'client', ...}
 
@@ -104,7 +105,17 @@ export default function ClientView({ db, user, onSwitch }) {
     return !recovered;
   };
 
+  const hasRunningAd = c => (c.ads || []).some(a => a.start <= today && (!a.end || a.end >= today));
+  const preds = {
+    active: c => !c.ended,
+    soon: c => !c.ended && c.expiry && diffDays(today, c.expiry) <= 30,
+    suspended: c => !c.ended && isSuspended(c),
+    ads: c => !c.ended && hasRunningAd(c),
+    lowImg: c => { const i = imgInfo(c); return !c.ended && i && i.remaining <= 2; },
+    posts: c => (c.events || []).some(e => e.type === "post" && e.date.startsWith(ym)),
+  };
   const visible = clients.filter(c => {
+    if (tile && preds[tile] && !preds[tile](c)) return false;
     if (!showEnded && c.ended) return false;
     if (owner !== "全部" && !(c.owners || []).includes(owner)) return false;
     if (q && !c.name.includes(q)) return false;
@@ -151,12 +162,12 @@ export default function ClientView({ db, user, onSwitch }) {
 
   const lowImg = active.filter(c => { const i = imgInfo(c); return i && i.remaining <= 2; });
   const tiles = [
-    { label: "🏢 進行中客戶", value: active.length, accent: "#1a1208" },
-    { label: "⏰ 30 天內到期", value: soon.length, accent: "#f59e0b" },
-    { label: "⛔ 目前停權中", value: suspended.length, accent: "#ef4444" },
-    { label: "📣 廣告進行中", value: adsRunning, accent: "#4f8ef7" },
-    { label: "🖼 圖數不足（剩 2 張內）", value: lowImg.length, accent: "#a855f7" },
-    { label: `📝 ${month + 1} 月貼文（目前篩選）`, value: monthPosts, accent: "#ec4899" },
+    { key: "active", label: "🏢 進行中客戶", value: active.length, accent: "#1a1208" },
+    { key: "soon", label: "⏰ 30 天內到期", value: soon.length, accent: "#f59e0b" },
+    { key: "suspended", label: "⛔ 目前停權中", value: suspended.length, accent: "#ef4444" },
+    { key: "ads", label: "📣 廣告進行中", value: adsRunning, accent: "#4f8ef7" },
+    { key: "lowImg", label: "🖼 圖數不足（剩 2 張內）", value: lowImg.length, accent: "#a855f7" },
+    { key: "posts", label: `📝 ${month + 1} 月貼文（目前篩選）`, value: monthPosts, accent: "#ec4899" },
   ];
 
   const imgBadge = (c) => {
@@ -179,9 +190,12 @@ export default function ClientView({ db, user, onSwitch }) {
     <div style={{ padding: "20px 24px" }}>
       <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
         {tiles.map(s => (
-          <div key={s.label} style={{ background: "#fff", border: "1px solid #e8d8c4", borderRadius: 10, padding: "12px 18px", flex: 1, minWidth: 120, borderTop: `3px solid ${s.accent}` }}>
+          <div key={s.key}
+            onClick={() => { if (tile === s.key) setTile(null); else { setTile(s.key); setOwner("全部"); setQ(""); } }}
+            style={{ background: tile === s.key ? "#fffaf0" : "#fff", border: "1px solid #e8d8c4", borderRadius: 10, padding: "12px 18px", flex: 1, minWidth: 120, borderTop: `3px solid ${s.accent}`, cursor: "pointer", boxShadow: tile === s.key ? `0 0 0 2px ${s.accent}` : "none" }}>
             <div style={{ fontSize: 11, color: "#b08040", marginBottom: 3 }}>{s.label}</div>
             <div style={{ fontSize: 24, fontWeight: 900, color: s.accent }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: tile === s.key ? s.accent : "#b08040", marginTop: 2, fontWeight: tile === s.key ? 800 : 400 }}>{tile === s.key ? "✓ 篩選中（再點取消）" : "點擊查看 →"}</div>
           </div>
         ))}
       </div>
