@@ -107,6 +107,14 @@ tr:hover td{background:var(--surface2)}
 .tag-ok{background:var(--green-dim);color:var(--green);font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap}
 .tag-full{background:var(--red-dim);color:var(--red);font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap}
 
+.tag-off{background:var(--surface2);color:var(--text3);font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap;display:inline-block}
+.ins-cell{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.resigned-section{margin-top:2rem}
+.resigned-section .table-wrap{border-color:#d9dbe1}
+.resigned-section tr td{color:var(--text2)}
+.modal select{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:14px;color:var(--text);font-family:'Inter',sans-serif;outline:none}
+.modal .sec-label{font-size:12px;font-weight:700;color:var(--text2);margin-top:1.25rem;padding-top:.875rem;border-top:1px solid var(--border)}
+
 /* Edit modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(26,18,8,.55);z-index:50;display:none;align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
@@ -166,6 +174,12 @@ tr:hover td{background:var(--surface2)}
       <div id="alert-list"></div>
     </div>
 
+    <!-- 離職尚未退保提醒 (管理員看) -->
+    <div class="alert-bar" id="insure-bar">
+      <div class="alert-title">🚨 離職同仁尚未完成退保</div>
+      <div id="insure-list"></div>
+    </div>
+
     <!-- 生日提醒 (管理員看) -->
     <div class="bday-bar" id="bday-bar">
       <div class="bday-title">🌟 本月壽星</div>
@@ -198,11 +212,36 @@ tr:hover td{background:var(--surface2)}
               <th>請領狀態</th>
               <th>出遊期間</th>
               <th>發放月份</th>
+              <th>勞健保／團保</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="admin-tbody"></tbody>
         </table>
+      </div>
+
+      <!-- 已離職同仁 -->
+      <div class="resigned-section" id="resigned-section" style="display:none">
+        <div class="section-header">
+          <span class="section-title">已離職同仁</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>到職日</th>
+                <th>離職日</th>
+                <th>在職年資</th>
+                <th>離職原因／備註</th>
+                <th>勞健保</th>
+                <th>團保</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="resigned-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -225,6 +264,30 @@ tr:hover td{background:var(--surface2)}
     <input id="m-bday" type="date">
     <label>Email（Google 帳號）</label>
     <input id="m-email" type="email" placeholder="xxx@gmail.com">
+
+    <div class="sec-label">離職</div>
+    <label>離職日（在職請留空）</label>
+    <input id="m-resign" type="date">
+    <label>離職原因／備註（選填）</label>
+    <input id="m-resign-note" type="text" placeholder="例：個人規劃">
+
+    <div class="sec-label">勞健保／團保維護</div>
+    <label>勞健保狀態</label>
+    <select id="m-lh-status">
+      <option value="in">加保中</option>
+      <option value="out">已退保</option>
+      <option value="none">未加保／不適用</option>
+    </select>
+    <label>勞健保退保日（已退保時填）</label>
+    <input id="m-lh-date" type="date">
+    <label>團保狀態</label>
+    <select id="m-grp-status">
+      <option value="in">加保中</option>
+      <option value="out">已退保</option>
+      <option value="none">未加保／不適用</option>
+    </select>
+    <label>團保退保日（已退保時填）</label>
+    <input id="m-grp-date" type="date">
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEmployee()">儲存</button>
       <button class="btn-cancel" onclick="closeModal()">取消</button>
@@ -530,14 +593,18 @@ function render() {
   const isAdmin = ADMIN_EMAILS.includes(currentUser.email);
   const myEmployee = employees.find(e => e.email === currentUser.email);
 
-  // 生日提醒（管理員看全員，員工看自己）
-  renderBirthdayBar(isAdmin ? employees : (myEmployee ? [myEmployee] : []), isAdmin);
+  const activeEmps = employees.filter(e => !e.resignDate);
+
+  // 生日提醒（管理員看全員在職，員工看自己）
+  renderBirthdayBar(isAdmin ? activeEmps : (myEmployee && !myEmployee.resignDate ? [myEmployee] : []), isAdmin);
 
   // 特休警示（管理員才看）
-  if (isAdmin) renderAlertBar();
+  if (isAdmin) { renderAlertBar(); renderInsureBar(); }
 
   // 個人卡片
-  if (myEmployee) renderMyCard(myEmployee);
+  if (myEmployee && myEmployee.resignDate && !isAdmin) {
+    document.getElementById('my-section').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text3)">您已於 ${myEmployee.resignDate.replace(/-/g,'/')} 離職</div>`;
+  } else if (myEmployee && !myEmployee.resignDate) renderMyCard(myEmployee);
   else if (!isAdmin) {
     document.getElementById('my-section').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text3)">查無您的員工資料，請聯絡 HR</div>`;
   }
@@ -546,7 +613,58 @@ function render() {
   if (isAdmin) {
     document.getElementById('admin-section').style.display = 'block';
     renderAdminTable();
+    renderResignedTable();
   }
+}
+
+// ── 勞健保／團保 ──
+function insTag(label, st, date, resigned) {
+  st = st || 'in';
+  const d = date ? ' ' + date.replace(/-/g, '/') : '';
+  if (st === 'in') return resigned
+    ? `<span class="tag-full">${label} 尚未退保</span>`
+    : `<span class="tag-ok">${label} 加保中</span>`;
+  if (st === 'out') return `<span class="tag-off">${label} 已退保${d}</span>`;
+  return `<span class="tag-off">${label} 未加保</span>`;
+}
+
+function tenureText(startDate, endDate) {
+  if (!startDate) return '—';
+  const s = new Date(startDate), t = new Date(endDate);
+  let months = (t.getFullYear() - s.getFullYear()) * 12 + (t.getMonth() - s.getMonth());
+  if (t.getDate() < s.getDate()) months--;
+  if (months < 0) months = 0;
+  const y = Math.floor(months / 12), m = months % 12;
+  return y > 0 ? `${y}年${m}個月` : `${m}個月`;
+}
+
+function renderInsureBar() {
+  const bar = document.getElementById('insure-bar');
+  const list = employees.filter(e => e.resignDate && ((e.lhStatus || 'in') === 'in' || (e.grpStatus || 'in') === 'in'));
+  if (!list.length) { bar.classList.remove('show'); return; }
+  bar.classList.add('show');
+  document.getElementById('insure-list').innerHTML = list.map(e => {
+    const miss = [];
+    if ((e.lhStatus || 'in') === 'in') miss.push('勞健保');
+    if ((e.grpStatus || 'in') === 'in') miss.push('團保');
+    return `<div class="alert-item">🚨 <strong>${e.name}</strong> 已於 ${e.resignDate.replace(/-/g,'/')} 離職 — <strong>${miss.join('、')}</strong> 尚未退保</div>`;
+  }).join('');
+}
+
+function renderResignedTable() {
+  const list = employees.filter(e => e.resignDate)
+    .sort((a, b) => b.resignDate.localeCompare(a.resignDate));
+  document.getElementById('resigned-section').style.display = list.length ? 'block' : 'none';
+  document.getElementById('resigned-tbody').innerHTML = list.map(e => `<tr>
+    <td><strong>${e.name}</strong><div style="font-size:11px;color:var(--text3)">${e.title||''}</div></td>
+    <td style="font-size:13px">${e.startDate ? e.startDate.replace(/-/g,'/') : '—'}</td>
+    <td style="font-size:13px">${e.resignDate.replace(/-/g,'/')}</td>
+    <td style="font-size:13px">${tenureText(e.startDate, e.resignDate)}</td>
+    <td style="font-size:13px">${e.resignNote || '—'}</td>
+    <td>${insTag('勞健保', e.lhStatus, e.lhDate, true)}</td>
+    <td>${insTag('團保', e.grpStatus, e.grpDate, true)}</td>
+    <td><button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button></td>
+  </tr>`).join('');
 }
 
 function renderBirthdayBar(list, isAdmin) {
@@ -564,7 +682,7 @@ function renderBirthdayBar(list, isAdmin) {
 
 function renderAlertBar() {
   const warns = employees.filter(e => {
-    if (!e.startDate) return false;
+    if (!e.startDate || e.resignDate) return false;
     const { quota, daysToAnniv, periodKey } = calcAnnualLeave(e.startDate);
     const used = getUsedDaysForPeriod(e, periodKey);
     const remaining = quota - used;
@@ -676,11 +794,11 @@ function renderMyCard(emp) {
 
 function renderAdminTable() {
   const tbody = document.getElementById('admin-tbody');
-  tbody.innerHTML = employees.map(e => {
+  tbody.innerHTML = employees.filter(e => !e.resignDate).map(e => {
     if (!e.startDate) {
       return `<tr>
         <td><strong>${e.name}</strong> <span class="badge badge-admin">管理員</span></td>
-        <td colspan="12" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
+        <td colspan="13" style="color:var(--text3)">— 管理員帳號，無到職日 —</td>
         <td></td>
       </tr>`;
     }
@@ -804,6 +922,7 @@ function renderAdminTable() {
       <td>${tripCell}</td>
       <td>${tripDateCell}</td>
       <td>${paidCell}</td>
+      <td><div class="ins-cell">${insTag('勞健保', e.lhStatus, e.lhDate, false)}${insTag('團保', e.grpStatus, e.grpDate, false)}</div></td>
       <td><button class="edit-btn" onclick="openEditModal('${e.id}')">編輯</button></td>
     </tr>`;
   }).join('');
@@ -941,13 +1060,21 @@ window.openEditModal = (id) => {
   document.getElementById('m-start').value = e.startDate || '';
   document.getElementById('m-bday').value = e.birthday || '';
   document.getElementById('m-email').value = e.email || '';
+  document.getElementById('m-resign').value = e.resignDate || '';
+  document.getElementById('m-resign-note').value = e.resignNote || '';
+  document.getElementById('m-lh-status').value = e.lhStatus || 'in';
+  document.getElementById('m-lh-date').value = e.lhDate || '';
+  document.getElementById('m-grp-status').value = e.grpStatus || 'in';
+  document.getElementById('m-grp-date').value = e.grpDate || '';
   document.getElementById('modal').classList.add('show');
 };
 
 window.openAddModal = () => {
   editingId = null;
   document.getElementById('modal-title-text').textContent = '新增員工';
-  ['m-name','m-title','m-start','m-bday','m-email'].forEach(id => document.getElementById(id).value='');
+  ['m-name','m-title','m-start','m-bday','m-email','m-resign','m-resign-note','m-lh-date','m-grp-date'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('m-lh-status').value = 'in';
+  document.getElementById('m-grp-status').value = 'in';
   document.getElementById('modal').classList.add('show');
 };
 
@@ -962,7 +1089,16 @@ window.saveEmployee = async () => {
     startDate: document.getElementById('m-start').value,
     birthday: document.getElementById('m-bday').value,
     email: document.getElementById('m-email').value.trim(),
+    resignDate: document.getElementById('m-resign').value,
+    resignNote: document.getElementById('m-resign-note').value.trim(),
+    lhStatus: document.getElementById('m-lh-status').value,
+    lhDate: document.getElementById('m-lh-date').value,
+    grpStatus: document.getElementById('m-grp-status').value,
+    grpDate: document.getElementById('m-grp-date').value,
   };
+  if (data.resignDate && data.startDate && data.resignDate < data.startDate) { showToast('離職日不能早於到職日'); return; }
+  if (data.lhStatus !== 'out') data.lhDate = '';
+  if (data.grpStatus !== 'out') data.grpDate = '';
   let savedId = editingId;
   if (editingId) {
     const idx = employees.findIndex(e => e.id === editingId);
@@ -1052,7 +1188,7 @@ window.editLeaveRecord = (idx) => {
   document.getElementById('lv-date').value = r.date || '';
   document.getElementById('lv-days').value = r.days || '';
   document.getElementById('lv-note').value = r.note || '';
-  document.getElementById('lv-period').value = r.period || (emp.startDate && r.date ? getPeriodKey(emp.startDate, r.date) : '');
+  document.getElementById('lv-period').value = r.period || (e.startDate && r.date ? getPeriodKey(e.startDate, r.date) : '');
   document.getElementById('leave-save-btn').textContent = '儲存修改';
   document.getElementById('leave-form-title').textContent = '✏️ 修改紀錄';
 };

@@ -464,11 +464,11 @@ async function loadLeaves() {
 // ── 申請假單 ──
 function initAgentSelect() {
   const opts='<option value="">-- 選擇代理人 --</option>'+
-    employees.filter(e=>e.email!==currentUser.email&&e.startDate)
+    employees.filter(e=>e.email!==currentUser.email&&e.startDate&&!e.resignDate)
       .map(e=>`<option value="${e.email}">${e.name}</option>`).join('');
   document.getElementById('f-agent').innerHTML=opts;
   document.getElementById('f-agent2').innerHTML='<option value="">（不需要）</option>'+
-    employees.filter(e=>e.email!==currentUser.email&&e.startDate)
+    employees.filter(e=>e.email!==currentUser.email&&e.startDate&&!e.resignDate)
       .map(e=>`<option value="${e.email}">${e.name}</option>`).join('');
 }
 
@@ -646,7 +646,7 @@ window.agentDecline = async (id, isA1) => {
 function initCalPersonFilter() {
   const sel=document.getElementById('cal-person');
   sel.innerHTML='<option value="">所有人員</option>'+
-    employees.filter(e=>e.startDate).map(e=>`<option value="${e.email}">${e.name}</option>`).join('');
+    employees.filter(e=>e.startDate&&!e.resignDate).map(e=>`<option value="${e.email}">${e.name}</option>`).join('');
 }
 
 function renderCalendar() {
