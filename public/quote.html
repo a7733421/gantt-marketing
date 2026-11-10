@@ -105,8 +105,13 @@ html,body{margin:0;padding:0;background:#f3f5f8;}
 .ic-ad .ic-sheet table.ic-dt td{text-align:left;vertical-align:top;padding:5px 8px;border:1px solid #d5dce6;line-height:1.6;color:#374151;}
 .ic-ad .ic-sheet table.ic-dt td.ic-dn{width:27%;font-weight:700;color:#0f3d5e;}
 .ic-ad .ic-sheet table.ic-dt tr{page-break-inside:avoid;}
-.ic-ad .ic-drow{display:grid;grid-template-columns:200px 1fr auto 40px;gap:6px;margin-bottom:6px;align-items:start;}
+.ic-ad .ic-drow{display:grid;grid-template-columns:28px 200px 1fr auto 40px;gap:6px;margin-bottom:6px;align-items:start;}
 .ic-ad .ic-drow textarea{min-height:38px;}
+.ic-ad .ic-hd{cursor:grab;user-select:none;text-align:center;font-size:20px;line-height:1;color:#6b7280;padding-top:8px;}
+.ic-ad .ic-hd:hover{color:#0f3d5e;}
+.ic-ad .ic-drow.ic-dragging{opacity:.4;}
+.ic-ad .ic-drow.ic-over-top{box-shadow:0 -3px 0 #f5a623;}
+.ic-ad .ic-drow.ic-over-bottom{box-shadow:0 3px 0 #f5a623;}
 .ic-ad .ic-mv{display:flex;flex-direction:column;gap:4px;}
 .ic-ad .ic-mv button[disabled]{opacity:.35;cursor:not-allowed;}
 .ic-ad .ic-sheet td.ic-cat{background:#eef3f8;font-weight:700;color:#0f3d5e;text-align:left;}
@@ -116,9 +121,9 @@ html,body{margin:0;padding:0;background:#f3f5f8;}
 .ic-ad .ic-sign{margin-top:14px;font-size:13px;border:1px solid #cfd6df;border-radius:6px;padding:10px;}
 .ic-ad .ic-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111827;color:#ffffff;padding:8px 16px;border-radius:20px;font-size:14px;display:none;z-index:20;}
 @media (max-width:760px){
-.ic-ad .ic-drow{grid-template-columns:1fr auto 40px;}
-.ic-ad .ic-drow input{grid-column:1 / 2;}
-.ic-ad .ic-drow textarea{grid-column:1 / 2;}
+.ic-ad .ic-drow{grid-template-columns:28px 1fr auto 40px;}
+.ic-ad .ic-drow input{grid-column:2 / 3;}
+.ic-ad .ic-drow textarea{grid-column:2 / 3;}
 .ic-ad .ic-line{grid-template-columns:1fr 1fr 1fr;}
 .ic-ad .ic-line > div:first-child{grid-column:1 / 4;}
 .ic-ad .ic-item{grid-template-columns:1fr 100px 70px 32px;}
@@ -317,8 +322,8 @@ var BR={'宜蘭':{n:'宜蘭民宿網',u:'http://house.ilantravel.com.tw/'},'花�
 var AREACODE={'宜蘭':'YL','花蓮':'HL','台東':'TT','其他':'OT'};
 var RULE_M=['本方案優惠僅提供會員客戶進行廣告刊登，不得轉讓非會員使用。','本方案優惠不得與其他優惠共同使用，需同時付款始享有優惠資格。','本方案廣告須於付款後一周內上架完成，如有續約廣告自付款日起開通完成即展延廣告合約。','中途解約依照合約刊登廣告之原價計算費用，計算單位價格為半年，即刊登三個月扣除六個月廣告費、刊登九個月扣除十二個月廣告費，以此類推。','景騰多媒體保有更換專案檔期優惠之權利及最後解釋權。'];
 var CATS=[
- {id:'cust',t:'客戶'},{id:'web',t:'網站'},{id:'host',t:'主機'},{id:'ad',t:'廣告'},{id:'photo',t:'攝影'},{id:'print',t:'印刷品'},{id:'feat',t:'功能'},{id:'ops',t:'代操／儲值金'},{id:'quote',t:'稅務付款'}];
-var CATNAME={web:'網站建置',host:'主機與附加服務',ad:'廣告刊登',photo:'攝影服務',print:'印刷品與設計',feat:'功能加購',ops:'廣告代操與儲值金',other:'其他項目'};
+ {id:'cust',t:'客戶'},{id:'web',t:'網站'},{id:'host',t:'主機'},{id:'ad',t:'廣告'},{id:'photo',t:'攝影影音'},{id:'print',t:'印刷品'},{id:'feat',t:'功能'},{id:'ops',t:'代操／儲值金'},{id:'quote',t:'稅務付款'}];
+var CATNAME={web:'網站建置',host:'主機與附加服務',ad:'廣告刊登',photo:'攝影與影音行銷',print:'印刷品與設計',feat:'功能加購',ops:'廣告代操與儲值金',other:'其他項目'};
 var CATORDER=['web','host','ad','photo','print','feat','ops','other'];
 var I=function(id,n,unit,orig,price,note,extra){var o={id:id,n:n,unit:unit||'式',orig:orig,price:price,note:note||''};if(extra)for(var k in extra)o[k]=extra[k];return o;};
 
@@ -351,7 +356,15 @@ var SEED={
   {g:'企業網站',items:[I('w_corp','企業形象網站（前台網站設計＋後台系統建置）','式',240000,109888,'',{detail:WEBD.corp})]}],
  host:[{g:'主機空間（一年，依地區）',items:[I('h_t3_yl','T3專線虛擬主機空間（宜蘭）','年',8000,8000),I('h_t3','T3專線虛擬主機空間（花蓮、台東）','年',10000,10000)]},{g:'主機空間（半年，所有地區同價）',items:[I('h_t3_6','T3專線虛擬主機空間（半年）','半年',6000,6000)]},
   {g:'贈送項目（標價值、優惠價 0）',items:[I('h_edit','不限次數照片及文字修改','12個月',12000,0),I('h_url','提供專屬官方網站網址','12個月',1000,0),I('h_town','鄉鎮文字連結曝光','式',18000,0)]}],
- photo:[{g:'攝影服務',items:[I('p_1','攝影服務 方案一','式',8000,0,'拍攝範圍（樓層／房型間數）請改在名稱註明'),I('p_2','攝影服務 方案二','式',12000,0),I('p_3','攝影服務 方案三','式',20000,0)]}],
+ photo:[{g:'攝影服務',items:[I('p_1','攝影服務 方案一','式',8000,0,'拍攝範圍（樓層／房型間數）請改在名稱註明'),I('p_2','攝影服務 方案二','式',12000,0),I('p_3','攝影服務 方案三','式',20000,0)]},
+  {g:"網站合約會員特惠包（單買價為原價）",items:[I("m_pk1","① 照片＋短影音包","式",20100,16800,"限網站合約會員｜商業攝影（含原始檔）＋AI 短影片 2 支｜省 3,300"),I("m_pk2","② 社群影音包（主推）","式",43600,23800,"限網站合約會員｜錄影 3 小時＋空拍（贈送）＋AI 短影片 2 支｜省 19,800"),I("m_pk3","③ 全方位形象包","式",78100,43800,"限網站合約會員｜商業攝影＋錄影 6 小時＋空拍（贈送）＋AI 短影片 2 支＋形象片｜省 34,300")]},
+  {g:"拍攝單項",items:[I("m_s0","攝影方案（5 間房精修照片，含浮水印）","式",2500,2500,"會員專屬 $2,500 起"),I("m_s1","商業攝影（5 間房精修照片＋初修原始檔）","式",12500,12500,"一般客戶適用 $12,500 起"),I("m_s2","錄影 3 小時（含 60 秒影片 1 支）","式",18000,18000,""),I("m_s3","錄影 6 小時（含 60 秒影片 1 支）","式",32000,32000,""),I("m_s4","空拍（照片 15～30 張＋60 秒影片 1 支）","式",24000,24000,"搭攝影加購 $18,000；搭錄影免費贈送"),I("m_s5","空拍（搭配商業攝影加購價）","式",24000,18000,""),I("m_s6","空拍（搭配錄影，贈送）","式",24000,0,"空拍畫面剪入錄影片，不另附空拍影片"),I("m_s7","形象片 1～3 分鐘（完整民宿故事）","式",8000,8000,"$8,000 起，適合官網"),I("m_s8","多尺寸改版（直式 9:16／橫式 16:9）","式",1000,1000,"+$1,000～3,000，依內容調整價格"),I("m_s9","車馬費（花蓮）","式",1000,1000,"花蓮 +$1,000～2,000；宜蘭免收"),I("m_s10","車馬費（台東）","式",1500,1500,"台東 +$1,500～3,000；宜蘭免收")]},
+  {g:"短影音剪輯（60 秒／支）AI 版",items:[I("m_va1","短影音 AI 版 單支（專案價）","支",7600,3800,"AI 動態＋旁白＋字幕｜原價 $7,600"),I("m_va2","短影音 AI 版 會員續約 6 折（限 2 支）","支",7600,2280,"限網站合約會員續約加購，限 2 支"),I("m_va3","短影音 AI 版 搭配拍攝 8 折","支",7600,3080,"選購攝影、錄影或空拍時加購"),I("m_va4","短影音 AI 版 預購 8 支 7 折（最划算）","組",30400,21440,"每支 $2,680；12 個月內使用；合約會員加贈 1 支（共 9 支）")]},
+  {g:"短影音剪輯（60 秒／支）純素材版",items:[I("m_vb1","短影音 純素材版 單支（專案價）","支",6000,2500,"剪接＋音樂＋轉場｜原價 $6,000"),I("m_vb2","短影音 純素材版 會員續約 6 折（限 2 支）","支",6000,1580,"限網站合約會員續約加購，限 2 支"),I("m_vb3","短影音 純素材版 搭配拍攝 8 折","支",6000,2080,"選購攝影、錄影或空拍時加購"),I("m_vb4","短影音 純素材版 預購 8 支 7 折（最划算）","組",20000,14240,"每支 $1,780；12 個月內使用；合約會員加贈 1 支（共 9 支）")]},
+  {g:"旅遊攻略曝光 方案一（固定篇數；需搭配 8 支影片套組）",items:[I("m_p11","攻略曝光 方案一 10 篇（入門）","式",15580,15580,"新撰 8＋嵌入 2；期限 12 個月"),I("m_p12","攻略曝光 方案一 30 篇（進階）","式",37580,37580,"新撰 10＋嵌入 20；期限 12 個月"),I("m_p13","攻略曝光 方案一 50 篇（完整）","式",57780,57780,"新撰 15＋嵌入 35；期限 18 個月")]},
+  {g:"旅遊攻略曝光 方案二（固定期間；含攻略頁固定版位）",items:[I("m_p21","攻略曝光 方案二 3 個月","式",22180,22180,"共 12 篇（新撰 8＋嵌入 4）"),I("m_p22","攻略曝光 方案二 6 個月","式",40180,40180,"共 24 篇（新撰 12＋嵌入 12）"),I("m_p23","攻略曝光 方案二 12 個月（最划算）","式",68280,68280,"共 44 篇（新撰 12＋嵌入 32）")]},
+  {g:"旅遊攻略曝光 方案三（旺季主打曝光）／方案四（新聞）",items:[I("m_p31","攻略曝光 方案三 30 天（至少 4 篇）一般檔期","式",19280,19280,"檔期文章不限篇數，含企業故事影片 1 支；需提前 30 天預約"),I("m_p32","攻略曝光 方案三 30 天（至少 4 篇）暑假檔期","式",23180,23180,"同上"),I("m_p33","攻略曝光 方案三 60 天（至少 6 篇）一般檔期","式",28180,28180,"同上"),I("m_p34","攻略曝光 方案三 60 天（至少 6 篇）暑假檔期","式",33880,33880,"同上"),I("m_p41","新聞 20 家聯播 純文章新聞","則",32880,32880,"撰稿＋20 家聯播；依各媒體審核刊登，以保證露出家數為準"),I("m_p42","新聞 20 家聯播 影音新聞","則",55880,55880,"撰稿＋影音＋20 家聯播；以保證露出家數為準")]},
+  {g:"單篇攻略嵌入版位（每篇最多 6 家，到期可優先續約）",items:[I("m_e1","一般攻略嵌入 3 個月","篇",680,680,""),I("m_e2","一般攻略嵌入 6 個月","篇",1280,1280,""),I("m_e3","一般攻略嵌入 12 個月","篇",1680,1680,""),I("m_e4","熱門攻略（前 10%）嵌入 3 個月","篇",980,980,""),I("m_e5","熱門攻略（前 10%）嵌入 6 個月","篇",1880,1880,""),I("m_e6","熱門攻略（前 10%）嵌入 12 個月","篇",2380,2380,"")]}],
  print:[{g:'設計費',items:[I('d_dm1','DM設計費（單面／不提供原始檔／配合印刷）','款',6000,3000),I('d_dm2','DM設計費（雙面／不提供原始檔／配合印刷）','款',8000,4000),I('d_post','海報設計費（配合印刷）','款',6000,3000),I('d_stk','貼紙設計費（一版）','版',2000,1200,'增加版本款式每款加收修改費 100 元'),I('d_logo','LOGO設計專案（提供原始檔）','式',19800,12800,'歷史成交：原價 16,800–22,800、優惠價 8,800–13,800')]}],
  feat:[
   {g:"加購區 1,000 元（任選，上限 3 張）",items:[I("a1_intro","A 簡介（靜態）",'式',2000,1000,"",{"addon":1,"row":{"n":"簡介(靜態)","d":"圖片搭配文字說明，呈現靜態版面設計，強調民宿特色與風格展現。"},"keys":["簡介"]}),I("a1_room","A 客房 1 組＋拍照",'式',2000,1000,"含拍攝",{"addon":1,"row":{"n":"房型介紹（加購 1 組）","d":"增加客房 1 組（4 張照片），含拍攝，搭配房價表、房內設施說明。"},"keys":["房型"]}),I("a1_tab","加頁籤一組",'式',2000,1000,"",{"addon":1,"row":{"n":"頁籤（加購 1 組）","d":"訂房須知等頁面增加頁籤一組。"},"keys":["頁籤","須知"]}),I("a1_map","獨立地圖頁",'式',2000,1000,"",{"addon":1,"row":{"n":"交通資訊（獨立地圖頁）","d":"以獨立頁面嵌入Google Map地圖程式，手機用戶可自動跳轉導航模式。"},"keys":["地圖頁"]}),I("a1_float","浮動按鈕",'式',2000,1000,"",{"addon":1,"row":{"n":"浮動按鈕","d":"提供快捷按鈕連結社群軟體，方便瀏覽者快速與您取得聯絡。"},"keys":["浮動按鈕","FB、LINE"]}),I("a1_btn","嵌入按鈕程式（可擴充）",'式',2000,1000,"",{"addon":1,"row":{"n":"按鈕程式（嵌入）","d":"嵌入按鈕程式，可依需求擴充。"},"keys":["按鈕程式"]}),I("a1_pop","首頁彈跳視窗",'式',2000,1000,"",{"addon":1,"row":{"n":"首頁彈跳視窗","d":"首頁開啟時彈出視窗，展示公告或活動資訊。"},"keys":["彈跳"]})]},
@@ -523,6 +536,31 @@ function pickOpts(l){
   });
   return h+(g?'</optgroup>':'');
 }
+var dragFrom=null;
+function dragClear(){document.querySelectorAll('#cart .ic-drow').forEach(function(r){r.classList.remove('ic-dragging','ic-over-top','ic-over-bottom');r.removeAttribute('draggable');});}
+$('cart').addEventListener('mousedown',function(e){var hd=e.target.closest&&e.target.closest('.ic-hd');if(hd)hd.closest('.ic-drow').setAttribute('draggable','true');});
+$('cart').addEventListener('mouseup',function(){document.querySelectorAll('#cart .ic-drow[draggable]').forEach(function(r){r.removeAttribute('draggable');});});
+$('cart').addEventListener('dragstart',function(e){
+  var r=e.target.closest&&e.target.closest('.ic-drow');if(!r)return;
+  dragFrom=Number(r.getAttribute('data-di'));r.classList.add('ic-dragging');
+  if(e.dataTransfer){e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',String(dragFrom));}catch(x){}}
+});
+$('cart').addEventListener('dragover',function(e){
+  var r=e.target.closest&&e.target.closest('.ic-drow');if(dragFrom===null||!r)return;
+  e.preventDefault();if(e.dataTransfer)e.dataTransfer.dropEffect='move';
+  var b=r.getBoundingClientRect(),after=e.clientY>b.top+b.height/2;
+  document.querySelectorAll('#cart .ic-over-top,#cart .ic-over-bottom').forEach(function(x){x.classList.remove('ic-over-top','ic-over-bottom');});
+  r.classList.add(after?'ic-over-bottom':'ic-over-top');
+});
+$('cart').addEventListener('drop',function(e){
+  var r=e.target.closest&&e.target.closest('.ic-drow'),lr=e.target.closest&&e.target.closest('.ic-line');
+  if(dragFrom===null||!r||!lr)return;e.preventDefault();
+  var l=cart.filter(function(x){return x.id==lr.getAttribute('data-id');})[0];if(!l||!l.detail){dragClear();dragFrom=null;return;}
+  var b=r.getBoundingClientRect(),to=Number(r.getAttribute('data-di'))+(e.clientY>b.top+b.height/2?1:0),from=dragFrom;
+  var it=l.detail.splice(from,1)[0];if(from<to)to--;l.detail.splice(to,0,it);
+  dragFrom=null;renderCart();
+});
+$('cart').addEventListener('dragend',function(){dragFrom=null;dragClear();});
 $('cart').addEventListener('change',function(e){
   var t=e.target;if(!t.getAttribute||!t.getAttribute('data-pick')||t.value==='')return;
   var lr=t.closest('.ic-line'),l=lr&&cart.filter(function(x){return x.id==lr.getAttribute('data-id');})[0],r=rowLib()[Number(t.value)];
@@ -772,7 +810,7 @@ function lineHtml(l){
   if(l.addons&&l.addons.length){h+='<div class="ic-more"><span class="ic-m" style="display:inline">含加購（價格已併入上方金額）：</span> '+l.addons.map(function(a,i){return '<button class="ic-btn ic-b2 ic-bs" data-act="adel" data-ai="'+i+'" title="移除這個加購">✕ '+esc(a.n)+' +'+num(a.price)+'</button>';}).join(' ')+'</div>';}
   if(l.detail&&l.dopen){
     h+='<div class="ic-more"><div class="ic-hint" style="margin:0 0 6px">網站架構明細（只顯示在報價單上，不影響價格；可修改、新增、刪除）</div>'
-     +l.detail.map(function(d,i){return '<div class="ic-drow" data-di="'+i+'"><input type="text" data-dk="n" value="'+esc(d.n)+'" placeholder="項目"><textarea data-dk="d" rows="2" placeholder="說明">'+esc(d.d)+'</textarea><div class="ic-mv"><button class="ic-btn ic-b2 ic-bs" data-act="dup" data-di="'+i+'" title="往上移"'+(i===0?' disabled':'')+'>▲</button><button class="ic-btn ic-b2 ic-bs" data-act="ddown" data-di="'+i+'" title="往下移"'+(i===l.detail.length-1?' disabled':'')+'>▼</button></div><button class="ic-btn ic-b2 ic-bs" data-act="ddel" data-di="'+i+'" title="刪除這一列">✕</button></div>';}).join('')
+     +l.detail.map(function(d,i){return '<div class="ic-drow" data-di="'+i+'"><div class="ic-hd" title="按住拖曳，調整順序">⠿</div><input type="text" data-dk="n" value="'+esc(d.n)+'" placeholder="項目"><textarea data-dk="d" rows="2" placeholder="說明">'+esc(d.d)+'</textarea><div class="ic-mv"><button class="ic-btn ic-b2 ic-bs" data-act="dup" data-di="'+i+'" title="往上移"'+(i===0?' disabled':'')+'>▲</button><button class="ic-btn ic-b2 ic-bs" data-act="ddown" data-di="'+i+'" title="往下移"'+(i===l.detail.length-1?' disabled':'')+'>▼</button></div><button class="ic-btn ic-b2 ic-bs" data-act="ddel" data-di="'+i+'" title="刪除這一列">✕</button></div>';}).join('')
      +'<select data-pick="1" style="width:auto;max-width:100%;margin-right:6px">'+pickOpts(l)+'</select><button class="ic-btn ic-b2 ic-bs" data-act="dadd">＋ 空白列（自行輸入）</button></div>';
   }
   return h+'</div>';
