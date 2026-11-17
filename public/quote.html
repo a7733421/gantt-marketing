@@ -957,7 +957,7 @@ async function generate(){
   curNo='Q'+($('cDate').value||'').replace(/-/g,'').slice(2)+'-'+AREACODE[$('cBrand').value]+'-'+String(n).padStart(3,'0');
   $('sTitle').textContent=title();
   $('sDue').textContent='即日起至 '+minguo($('cDue').value)+' 付款即享優惠';
-  $('sMeta').innerHTML='<div>客戶：'+esc($('cName').value||'—')+'</div><div>報價單號：'+curNo+'</div><div>聯絡人：'+esc($('cContact').value||'—')+(($('cTel').value)?'　電話：'+esc($('cTel').value):'')+'</div><div>承辦業務：'+esc($('cSales').value||'—')+'</div><div>報價日期：'+$('cDate').value+'</div><div>優惠截止：'+$('cDue').value+'</div>';
+  $('sMeta').innerHTML='<div>客戶：'+esc($('cName').value||'—')+'</div><div>聯絡人：'+esc($('cContact').value||'—')+(($('cTel').value)?'　電話：'+esc($('cTel').value):'')+'</div>';
   var h='',hasAd=false;
   cats.forEach(function(c){
     var cl=ls.filter(function(l){return l.cat===c;});if(!cl.length)return;if(c==='ad')hasAd=true;
