@@ -120,6 +120,58 @@ html,body{margin:0;padding:0;background:#f3f5f8;}
 .ic-ad .ic-rules{font-size:13px;color:#374151;margin-top:14px;border:1px solid #cfd6df;border-radius:6px;padding:10px;white-space:pre-wrap;}
 .ic-ad .ic-sign{margin-top:14px;font-size:13px;border:1px solid #cfd6df;border-radius:6px;padding:10px;}
 .ic-ad .ic-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111827;color:#ffffff;padding:8px 16px;border-radius:20px;font-size:14px;display:none;z-index:20;}
+
+.ic-ad .ic-sum .ic-fin{font-size:18px;color:#0f3d5e;}
+.ic-ad .ic-sv{display:none;}
+.ic-ad .ic-styl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px dashed #cfd6df;font-size:13px;}
+.ic-ad .ic-styl span{color:#6b7280;margin-right:2px;}
+.ic-ad .ic-styl em{color:#9ca3af;font-style:normal;font-size:12px;margin-left:6px;}
+.ic-ad .ic-styl button{border:1px solid #cfd6df;background:#fff;border-radius:16px;padding:4px 12px;font-size:13px;cursor:pointer;color:#374151;}
+.ic-ad .ic-styl button.ic-on{background:#0f3d5e;border-color:#0f3d5e;color:#fff;}
+.ic-ad .ic-sheet *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+/* 2 典雅質感 */
+.ic-ad .ic-sheet.ic-s2{font-family:'Noto Serif TC','Source Han Serif TC','PMingLiU','Songti TC',serif;padding:44px 40px;border:1px solid #e7e2d6;border-radius:2px;color:#2b2b2b;}
+.ic-ad .ic-sheet.ic-s2 h2{font-size:24px;letter-spacing:.35em;color:#1f2937;font-weight:600;padding-bottom:14px;border-bottom:1px solid #b8975a;margin-bottom:14px;}
+.ic-ad .ic-sheet.ic-s2 .ic-deadline{background:transparent;border:0;border-top:1px solid #e7e2d6;border-bottom:1px solid #e7e2d6;border-radius:0;color:#8a6d3b;font-weight:500;letter-spacing:.08em;padding:8px;}
+.ic-ad .ic-sheet.ic-s2 th{background:transparent;color:#1f2937;border:0;border-top:2px solid #1f2937;border-bottom:1px solid #1f2937;letter-spacing:.12em;font-weight:600;}
+.ic-ad .ic-sheet.ic-s2 td{border-bottom:1px solid #eee8da;}
+.ic-ad .ic-sheet.ic-s2 td.ic-cat{background:#faf7f1;color:#8a6d3b;letter-spacing:.2em;font-weight:600;}
+.ic-ad .ic-sheet.ic-s2 .ic-dcap,.ic-ad .ic-sheet.ic-s2 table.ic-dt td.ic-dn{color:#8a6d3b;}
+.ic-ad .ic-sheet.ic-s2 table.ic-dt th{background:#faf7f1;color:#5c4a28;border:1px solid #e7e2d6;}
+.ic-ad .ic-sheet.ic-s2 table.ic-dt td{border:1px solid #eee8da;}
+.ic-ad .ic-sheet.ic-s2 .ic-sum .ic-fin{color:#8a6d3b;font-size:20px;border-top:1px solid #b8975a;padding-top:6px;}
+.ic-ad .ic-sheet.ic-s2 .ic-rules,.ic-ad .ic-sheet.ic-s2 .ic-sign{border:0;border-top:1px solid #d9cdb4;border-radius:0;padding:12px 0 0;}
+/* 3 商務藍 */
+.ic-ad .ic-sheet.ic-s3 h2{background:#185fa5;color:#fff;border-radius:8px;padding:14px;letter-spacing:.1em;}
+.ic-ad .ic-sheet.ic-s3 th{background:#185fa5;}
+.ic-ad .ic-sheet.ic-s3 td.ic-cat{background:#e6f1fb;color:#0c447c;border-left:4px solid #185fa5;}
+.ic-ad .ic-sheet.ic-s3 .ic-deadline{background:#e6f1fb;border-color:#85b7eb;color:#0c447c;}
+.ic-ad .ic-sheet.ic-s3 .ic-sum .ic-fin{color:#fff;background:#185fa5;padding:8px 10px;font-size:19px;}
+.ic-ad .ic-sheet.ic-s3 .ic-sum .ic-fin:first-of-type{border-radius:6px 0 0 6px;}
+.ic-ad .ic-sheet.ic-s3 .ic-sum .ic-fin:last-child{border-radius:0 6px 6px 0;}
+.ic-ad .ic-sheet.ic-s3 .ic-dcap,.ic-ad .ic-sheet.ic-s3 table.ic-dt td.ic-dn{color:#0c447c;}
+.ic-ad .ic-sheet.ic-s3 table.ic-dt th{background:#e6f1fb;color:#0c447c;}
+/* 4 重點優惠 */
+.ic-ad .ic-sheet.ic-s4 h2{color:#993c1d;font-size:26px;}
+.ic-ad .ic-sheet.ic-s4 .ic-deadline{background:#d85a30;border-color:#d85a30;color:#fff;font-size:16px;padding:9px;border-radius:8px;}
+.ic-ad .ic-sheet.ic-s4 th{background:#444441;}
+.ic-ad .ic-sheet.ic-s4 td.ic-cat{background:#faeeda;color:#633806;}
+.ic-ad .ic-sheet.ic-s4 .ic-sv{display:block;color:#3b6d11;}
+.ic-ad .ic-sheet.ic-s4 .ic-sum .ic-fin{color:#d85a30;font-size:28px;line-height:1.2;border-top:2px solid #d85a30;padding-top:8px;}
+.ic-ad .ic-sheet.ic-s4 .ic-dcap,.ic-ad .ic-sheet.ic-s4 table.ic-dt td.ic-dn{color:#993c1d;}
+.ic-ad .ic-sheet.ic-s4 table.ic-dt th{background:#faeeda;color:#633806;}
+/* 5 精簡一頁 */
+.ic-ad .ic-sheet.ic-s5{padding:14px 16px;font-size:12px;}
+.ic-ad .ic-sheet.ic-s5 h2{font-size:16px;text-align:left;margin:0 0 4px;}
+.ic-ad .ic-sheet.ic-s5 .ic-deadline{font-size:12px;padding:3px 6px;margin:4px 0;text-align:left;}
+.ic-ad .ic-sheet.ic-s5 .ic-meta{font-size:11px;grid-template-columns:1fr 1fr 1fr;gap:1px 10px;margin:4px 0;}
+.ic-ad .ic-sheet.ic-s5 th,.ic-ad .ic-sheet.ic-s5 td{padding:3px 6px;font-size:12px;}
+.ic-ad .ic-sheet.ic-s5 th{background:#444441;}
+.ic-ad .ic-sheet.ic-s5 td.ic-dtl{display:none;}
+.ic-ad .ic-sheet.ic-s5 .ic-sum{font-size:13px;margin-top:6px;gap:2px 10px;}
+.ic-ad .ic-sheet.ic-s5 .ic-sum .ic-fin{font-size:15px;}
+.ic-ad .ic-sheet.ic-s5 .ic-rules,.ic-ad .ic-sheet.ic-s5 .ic-sign{font-size:10.5px;margin-top:6px;padding:5px 7px;}
+@media (max-width:760px){.ic-ad .ic-sheet.ic-s5 .ic-meta{grid-template-columns:1fr 1fr;}}
 @media (max-width:760px){
 .ic-ad .ic-drow{grid-template-columns:28px 1fr auto 40px;}
 .ic-ad .ic-drow input{grid-column:2 / 3;}
@@ -173,7 +225,7 @@ html,body{background:#ffffff;}
         <div><label class="ic-f">承辦業務</label><input type="text" id="cSales" placeholder="例：丁丁"></div>
         
         <div><label class="ic-f">客戶身分</label><select id="cType"><option value="會員">會員</option><option value="外網客戶">外網客戶（非會員）</option></select></div>
-        <div><label class="ic-f">文件類型</label><select id="cDoc"><option value="quote">綜合報價單（全部項目）</option><option value="adpkg">廣告優惠專案單（僅主機＋廣告）</option></select></div>
+        <div><label class="ic-f">文件類型</label><select id="cDoc"><option value="quote">綜合報價單（全部項目）</option><option value="web">民宿網站建置（網站＋主機＋功能加購）</option><option value="adpkg">廣告優惠專案單（僅主機＋廣告）</option><option value="media">攝影影音行銷（拍攝＋短影音＋攻略曝光）</option><option value="ops">廣告代操與儲值金</option></select></div>
         <div><label class="ic-f">計價方式（稅）</label><select id="cTax"><option value="0">稅內含（預設，大多數客戶）</option><option value="1">稅外加 5%（少數客戶）</option></select></div>
         <div><label class="ic-f">報價日期</label><input type="date" id="cDate"></div>
         <div><label class="ic-f">付款優惠截止日</label><input type="date" id="cDue"></div>
@@ -294,6 +346,7 @@ html,body{background:#ffffff;}
 </div>
 
 <div class="ic-sheet" id="sheet">
+  <div class="ic-noprint ic-styl" id="styl"><span>版型</span><button data-sty="1">經典表格</button><button data-sty="2">典雅質感</button><button data-sty="3">商務藍</button><button data-sty="4">重點優惠</button><button data-sty="5">精簡一頁</button><em>換版型不會產生新單號</em></div>
   <h2 id="sTitle"></h2>
   <div class="ic-deadline" id="sDue"></div>
   <div class="ic-meta" id="sMeta"></div>
@@ -873,8 +926,9 @@ function totals(){var t=calc(),ext=$('cTax').value==='1';$('tOrig').textContent=
 // ===== 報價單 =====
 function minguo(d){var x=new Date(d);return '民國 '+(x.getFullYear()-1911)+' 年 '+(x.getMonth()+1)+' 月 '+x.getDate()+' 日';}
 var curNo='';
-function docCats(){return $('cDoc').value==='adpkg'?['host','ad']:CATORDER;}
-function title(){var b=BR[$('cBrand').value];return $('cDoc').value==='adpkg'?b.n+'－'+$('cType').value+'廣告優惠專案':'景騰多媒體報價單';}
+var DOCCATS={adpkg:['host','ad'],web:['web','host','feat'],media:['photo'],ops:['ops']};
+function docCats(){return DOCCATS[$('cDoc').value]||CATORDER;}
+function title(){var b=BR[$('cBrand').value];var DT={web:'景騰多媒體 民宿網站建置報價單',media:'景騰多媒體 攝影影音行銷報價單',ops:'景騰多媒體 廣告代操報價單'};return $('cDoc').value==='adpkg'?b.n+'－'+$('cType').value+'廣告優惠專案':(DT[$('cDoc').value]||'景騰多媒體報價單');}
 function payText(t){
   var m=$('cPay').value,dep=Number($('cDeposit').value)||0,f=t.final;
   if(m==='0')return '付款方式：簽約後一次付清 '+num(f)+' 元。';
@@ -888,6 +942,12 @@ function detailRow(l){
    +ds.map(function(d){return '<tr><td class="ic-dn">'+esc(d.n)+'</td><td class="ic-dd">'+esc(d.d).replace(/\n/g,'<br>')+'</td></tr>';}).join('')
    +'</tbody></table></td></tr>';
 }
+var STY=1;try{var _sv=Number(localStorage.getItem('quoteStyle'));if(_sv>=1&&_sv<=5)STY=_sv;}catch(e){}
+function applySty(){
+  var sh=$('sheet');sh.className=sh.className.replace(/\s*ic-s[1-5]\b/g,'')+' ic-s'+STY;
+  document.querySelectorAll('#styl button').forEach(function(b){b.className=Number(b.getAttribute('data-sty'))===STY?'ic-on':'';});
+}
+$('styl').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;STY=Number(b.getAttribute('data-sty'));try{localStorage.setItem('quoteStyle',String(STY));}catch(x){}applySty();});
 async function generate(){
   if(!cart.length){toast('請先選擇項目');return;}
   var cats=docCats(),ls=cart.filter(function(l){return cats.indexOf(l.cat)>-1;});
@@ -915,15 +975,16 @@ async function generate(){
   if(t.disc)s+='<div>額外折讓</div><div>- '+num(t.disc)+' 元</div>';
   if($('cTax').value==='1')s+='<div>營業稅 5%（以上項目金額為未稅價）</div><div>'+num(t.tax)+' 元</div>';else s+='<div style="color:#6b7280">以上金額皆為含稅價</div><div></div>';
   if(t.pass)s+='<div>儲值金（不計稅）</div><div>'+num(t.pass)+' 元</div>';
-  s+='<div style="font-size:18px;color:#0f3d5e"><b>專案優惠價（含稅）</b></div><div style="font-size:18px;color:#0f3d5e">'+num(t.final)+' 元</div>';
+  var sv=t.orig-(t.sub-t.disc);if(sv>0)s+='<div class="ic-sv">您省下</div><div class="ic-sv">'+num(sv)+' 元</div>';
+  s+='<div class="ic-fin"><b>專案優惠價（含稅）</b></div><div class="ic-fin">'+num(t.final)+' 元</div>';
   $('sSum').innerHTML=s;
   $('sPay').textContent=adpkg?'':payText(t);$('sPay').style.display=adpkg?'none':'block';
   var rules='備註與條款\n'+$('cNote').value;
   if(hasAd){var mem=$('cType').value==='會員';rules+='\n\n廣告刊登說明\n'+(mem?RULE_M:RULE_M.filter(function(x,i){return i!==0;})).map(function(r,i){return (i+1)+'. '+r;}).join('\n');}
   $('sRules').textContent=rules;
   $('sSign').innerHTML='確認簽章：　　　　　　　　　　　中華民國　'+(new Date().getFullYear()-1911)+'　年　　月　　日<br>景騰多媒體股份有限公司（統編 24285548）'+(b.u?' ／ '+b.u:'')+'<br>電話：03-9565626 / 03-9560407 ／ 傳真：03-9572464 ／ 地址：宜蘭縣羅東鎮倉前路3號 ／ E-Mail：ete@ete.com.tw';
-  store.saveQuote({no:curNo,customer:$('cName').value,contact:$('cContact').value,tel:$('cTel').value,sales:$('cSales').value,region:$('cBrand').value,custType:$('cType').value,docType:$('cDoc').value,tax:$('cTax').value==='1'?'excl':'incl',date:$('cDate').value,due:$('cDue').value,discount:Number($('cDisc').value)||0,total:t.final,lines:JSON.stringify(ls),totals:JSON.stringify(t)});
-  $('sheet').className='ic-sheet ic-show';$('sheet').scrollIntoView&&$('sheet').scrollIntoView({behavior:'smooth'});
+  store.saveQuote({no:curNo,customer:$('cName').value,contact:$('cContact').value,tel:$('cTel').value,sales:$('cSales').value,region:$('cBrand').value,custType:$('cType').value,docType:$('cDoc').value,style:STY,tax:$('cTax').value==='1'?'excl':'incl',date:$('cDate').value,due:$('cDue').value,discount:Number($('cDisc').value)||0,total:t.final,lines:JSON.stringify(ls),totals:JSON.stringify(t)});
+  $('sheet').className='ic-sheet ic-show';applySty();$('sheet').scrollIntoView&&$('sheet').scrollIntoView({behavior:'smooth'});
 }
 function textVer(){
   var cats=docCats(),t=calc(),s='【'+title()+'】'+curNo+'\n客戶：'+($('cName').value||'—')+'　聯絡人：'+($('cContact').value||'—')+'\n付款優惠截止：'+minguo($('cDue').value)+'\n';
