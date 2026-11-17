@@ -1070,13 +1070,16 @@ $('bLine').onclick=function(){var a=document.createElement('a');a.href='https://
 $('bCopy').onclick=function(){var x=textVer();function fb(){var q=document.createElement('textarea');q.value=x;document.body.appendChild(q);q.select();try{document.execCommand('copy');toast('已複製');}catch(e){toast('複製失敗');}q.remove();}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(x).then(function(){toast('已複製');},fb);}else fb();};
 var PRINT_W=730,PRINT_H=1030;
-function fitReset(){var sh=$('sheet');sh.style.transform='';sh.style.transformOrigin='';sh.style.width='';sh.style.height='';sh.style.overflow='';sh.classList.remove('ic-meas');}
+function fitReset(){var sh=$('sheet');sh.style.zoom='';sh.style.width='';sh.style.maxWidth='';sh.style.transform='';sh.style.transformOrigin='';sh.style.marginBottom='';sh.style.height='';sh.style.overflow='';sh.classList.remove('ic-meas');}
 function fitPrint(){
   var sh=$('sheet');fitReset();if(!$('fit1').checked||!sh.classList.contains('ic-show'))return 1;
-  sh.classList.add('ic-meas');var z=1,h=0;
-  for(var i=0;i<5;i++){sh.style.width=(PRINT_W/z)+'px';h=sh.offsetHeight;var nz=Math.min(1,z*PRINT_H/(h*z)*1);nz=Math.min(1,PRINT_H/h);if(Math.abs(nz-z)<0.005)break;z=nz;}
-  if(z<1){z=Math.floor(z*100)/100;sh.style.width=(PRINT_W/z)+'px';h=sh.offsetHeight;sh.style.transformOrigin='top left';sh.style.transform='scale('+z+')';sh.style.height=Math.ceil(h*z)+'px';sh.style.overflow='hidden';}
-  else sh.style.width='';
+  sh.classList.add('ic-meas');sh.style.maxWidth='none';var z=1,vh=0;
+  for(var i=0;i<10;i++){
+    sh.style.zoom=z;sh.style.width=(PRINT_W/z)+'px';vh=sh.getBoundingClientRect().height;
+    if(vh<=PRINT_H&&(z>=1||vh>=PRINT_H*0.96))break;
+    z=Math.min(1,z*PRINT_H/vh*0.995);
+  }
+  if(z>=1){sh.style.zoom='';sh.style.width='';sh.style.maxWidth='';}
   sh.classList.remove('ic-meas');window.__fitZ=z;return z;
 }
 window.addEventListener('beforeprint',function(){fitPrint();});
